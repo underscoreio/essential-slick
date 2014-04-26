@@ -1,0 +1,263 @@
+= Core Slick
+Working with Relational Databases in Scala with Slick 2
+:toc:
+:source-highlighter: pygments
+
+[[preface]]
+== Preface
+
+Slick is a Scala library for working with databases: querying, inserting data, updating data, and representing a schema.  Queries are written in Scala and type checked by the compiler. Slick aims to make working with a database similar to working with regular Scala collections.
+
+This material is aimed at a Scala developer who has:
+
+* taken the _Core Scala_ course or equivalent; 
+* a good understanding of relation databases (rows, columns, joins, indexes) and SQL; and
+* has a working Scala and relational database installed (PostgreSQL is the example we use).
+
+It is useful to have experience using the SBT build tool.
+
+
+
+////
+
+
+
+
+
+////
+
+
+== Orientation
+
+(big picture example stuff)
+
+(don't worry about details like projects and tags, we'll get to them later)
+
+(followed by hands on getting there)
+
+
+== Hands On
+
+This section gets us working with Scala and Slick, creating a tables in a database, inserting rows, running simple queries.
+
+=== RDBS Configuration
+
+For this example we will use PostgreSQL 9. (TODO: link to that nice mac tool here).
+
+[source,sql]
+.Create a Database and Login from `psql`
+----
+CREATE DATABASE "core-slick" WITH ENCODING 'UTF8';
+CREATE USER "core" WITH PASSWORD 'trustno1';
+GRANT ALL ON DATABASE "core-slick" TO core;
+----
+
+Check you can login:
+
+[source,bash]
+----
+$ psql -d core-slick core
+----
+
+
+[CAUTION]
+.Supported Databases
+====
+Slick supports PostgreSQL, MySQL, Derby, H2, SQLite, and Microsoft Access.
+
+To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_. 
+
+====
+
+
+=== The SBT Project
+
+To use Slick we create a regular Scala project and reference the Slick dependencies:
+
+[source, scala]
+.build.sbt
+----
+name := "core-slick-example"
+
+version := "1.0"
+
+scalaVersion := "2.10.3"
+
+libraryDependencies += "com.typesafe.slick" %% "slick" % "2.0.1" 
+
+libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.6.4" 
+
+libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1101-jdbc41"
+----
+
+(To do: explain the dependencies)
+
+
+When you've created _build.sbt_ (or downloaded the example project), run SBT and the dependencies will be fetched.
+
+[NOTE]
+.IDEs
+====
+If you're working with IntelliJ IDEA or the Eclipse Scala IDE, our _core-slick-example_ project includes the plugins to generate the IDE project files:
+
+----
+sbt> eclipse
+----
+
+or
+
+----
+sbt> gen-idea
+----
+
+...and then open the project directory in your IDE.  For example, this is _File -> Import -> Existing Project_ menu.
+
+====
+
+
+=== Our First Table
+
+
+[source,scala]
+.schema.scala
+----
+package underscoreio.schema
+
+import scala.slick.driver.PostgresDriver.simple._
+
+object Example1 extends App {
+
+  class Planet(tag: Tag) extends Table[(Int,String)](tag, "planet") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
+    def * = (id, name)
+  }
+
+  val planets = TableQuery[Planet]
+
+  Database.forURL("jdbc:postgresql:core-slick", user="core", password="trustno1", driver = "org.postgresql.Driver") withSession {
+    implicit session =>
+
+      planets.ddl.create
+  }
+}
+----
+
+Running this application will create the schema. You can run it from yuor IDE, or with `sbt run underscoreio.schema.Example1`.
+
+[source]
+----
+core-slick=# \d
+             List of relations
+ Schema |     Name      |   Type   | Owner
+--------+---------------+----------+-------
+ public | planet        | table    | core
+ public | planet_id_seq | sequence | core
+(2 rows)
+
+core-slick=# \d planet
+                                 Table "public.planet"
+ Column |          Type          |                      Modifiers
+--------+------------------------+-----------------------------------------------------
+ id     | integer                | not null default nextval('planet_id_seq'::regclass)
+ name   | character varying(254) | not null
+Indexes:
+    "planet_pkey" PRIMARY KEY, btree (id)
+----
+
+
+(lots to discuss here)
+
+* What is a `Tag`?
+
+* What is a projection (`*`) and why do I need to define it?
+
+* Hoes does `Table[(Int,String)]` match up to `id` and `name` fields?
+
+* What is a `TableQuery`?
+
+* What is a session?
+
+* Note that driver is specified. You might want to mix in something else (e.g., H2 for testing).
+
+
+==== Schema Creation
+
+Our table, `planet`, was created with `table.dd.create`.  That's convenient for us, but Slick's schema management is very simple. For example, if you run `create` twice, you'll see:
+
+----
+org.postgresql.util.PSQLException: ERROR: relation "planet" already exists
+----
+
+That's because `create` blindly issues SQL commands:
+
+[source,scala]
+----
+println(planets.ddl.createStatements.mkString)
+----
+
+...will output:
+
+[source,sql]
+----
+create table "planet" ("id" SERIAL NOT NULL PRIMARY KEY,"name" VARCHAR(254) NOT NULL)
+----
+
+(There's a corresponding `dropStatements` that does the reverse).
+
+To make our example easier to work with, we can query the database meta data and find out if our table already exists before we create it:
+
+[source,scala]
+----
+if (MTable.getTables(planets.baseTableRow.tableName).firstOption.isEmpty)
+  planets.ddl.create
+----
+
+But that's about all we can do within Slick for creating tables. We'll look at other tools for managing schema migrations later.
+
+////
+
+////
+
+
+
+== Terminology
+
+Lifted Embedding
+
+
+
+== Connecting, Transactions, Sessions
+
+== Table, Rows and Column Customisation
+
+
+
+== Code Generation for Existing Databases
+
+
+== Queries Compose
+
+== Schema Migration
+
+== Plain SQL
+
+== Testing
+
+Cake for mixing in a different driver
+
+== Connection Pools
+
+== Working with Multiple Databases
+
+
+== Writing your own Driver
+
+== Useful Links
+
+* http://groups.google.com/group/scalaquery[The Slick Mailing List] (the group is called "scalaquery" as that was the original name for the technology that we now call Slick).
+
+* http://www.postgresql.org/docs/9.3/static/index.html[PostgreSQL manual].
+
+
+
