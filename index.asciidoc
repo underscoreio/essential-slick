@@ -499,11 +499,6 @@ The arguments to `update` must match the result of the query.  In this example, 
 
 
 
-== Connecting, Transactions, Sessions
-
-
-
-
 == Structuring the Schema
 
 [source,scala]
@@ -535,10 +530,70 @@ import Tables._
 ----
 
 
+== Connecting, Transactions, Sessions
+
+While we're restructuring, we'll move the `Database.forURL` code into a method:
+
+
+[source,scala]
+----
+object Tables extends {
+    val profile = scala.slick.driver.PostgresDriver
+} with Tables {
+  val db = Database.forURL("jdbc:postgresql:core-slick", 
+               user="core", password="trustno1", 
+               driver = "org.postgresql.Driver")
+}
+----
+
+This will allow us to run `db.withSession` anywhere we want to interact with the database.
+
+You can think of a session as the connection to the database. You need it anytime you want to run a query, or lookup database metadata.  
+
+The session comes from a `Database` which you can create in a number of ways:
+
+* `forDataSource` - when working with a `javax.sql.DataSource`
+
+* `forName` - if you are using JNDI.
+
+* `forURL` - which is what we've been using.
+
+The `withSession` method ensures that the session is closed once the method returns. This means you don't have to worry about closing connections.  It also means you must not "leak sessions" out of the method, for example by returning the session object (even inside a `Future`).
+
+Inside a session, each interaction with the database happens in "auto commit" mode.  If you want to manage transactions yourself, use the session object to create a transaction:
+
+[source,scala]
+----
+session.withTransaction {
+ // Queries here as usual
+}
+----
+
+The transaction will commit at the end of the block unless an exception is thrown, or you call `session.rollback` at any point.
+
+
+=== Exercises
+
+* Create a transaction to delete Earth, but rollback inside the transaction.  Check the database still contains Earth.
+
+* In the following code, will you see "Almost done..." printed?
+
+[source,scala]
+----
+session.withTransaction {
+    planets.delete
+    session.rollback()
+    println("Almost done...")
+}
+----
+
+
+
 
 ==  Using Case Classes
 
 [source,scala]
+.schema4.scala
 ----
 object Tables extends {
   val profile = scala.slick.driver.PostgresDriver
@@ -569,6 +624,8 @@ import Tables._
 ----
 
 Initialisation pattern.
+
+naming: PlanetRow, Planets v. Planet, PlanetTable
 
 
 === Inserting data
@@ -604,7 +661,167 @@ planets ++= Seq(
 
 == Joins
 
-FK
+
+insert diagram here
+
+[source,scala]
+.schema5.scala
+----
+trait Tables {
+  val profile: scala.slick.driver.JdbcProfile
+  import profile.simple._
+
+  case class Planet(name: String, distance: Double, id: Long=0L)
+
+  class PlanetTable(tag: Tag) extends Table[Planet](tag, "planet") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
+    def distance = column[Double]("distance_au")
+    def * = (name, distance, id) <> (Planet.tupled, Planet.unapply)
+  }
+
+  lazy val planets = TableQuery[PlanetTable]
+
+  case class Moon(name: String, planetId: Long, id: Long=0L)
+
+  class MoonTable(tag: Tag) extends Table[Moon](tag, "moon") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
+    def planetId = column[Long]("planet_id")
+
+    def * = (name, planetId, id) <> (Moon.tupled, Moon.unapply)
+
+    def planet = foreignKey("planet_fk", planetId, planets)(_.id)
+
+  }
+
+  lazy val moons = TableQuery[MoonTable]
+}
+----
+
+
+
+Now that we have more tables, our automatic schema creation code becomes a little more complicated:
+
+[source,scala]
+----
+def exists[T <: Table[_]](table: TableQuery[T])(implicit session: Session) : Boolean =
+  MTable.getTables(table.baseTableRow.tableName).firstOption.isDefined
+
+def dropAndCreate(implicit session: Session) : Unit = {
+  if (exists(moons)) moons.ddl.drop
+  if (exists(planets)) planets.ddl.drop
+  (planets.ddl ++ moons.ddl).create
+}
+----
+
+Although `(planets.ddl ++ moons.ddl).drop` is smart enough to drop tables and constraints in the correct order, it will also try to drop tables that do not exists. This leads to a runtime error. To avoid that, we test and drop.
+
+The resulting table creation SQL will be:
+
+[source,sql]
+----
+create table "planet" (
+  "name" VARCHAR(254) NOT NULL,
+  "distance_au" DOUBLE PRECISION NOT NULL,
+  "id" SERIAL NOT NULL PRIMARY KEY
+)
+
+create table "moon" (
+  "name" VARCHAR(254) NOT NULL,
+  "planet_id" BIGINT NOT NULL,
+  "id" SERIAL NOT NULL PRIMARY KEY
+)
+
+alter table "moon" add constraint "planet_fk" foreign key("planet_id")
+----
+
+Inserting data does not change, except that we need to query for the ID of the planets for the moon-to-planet relationship:
+
+[source,sql]
+----
+db.withSession {
+  implicit session =>
+
+    // Create the database table:
+    dropAndCreate
+
+    // Populate Planets:
+
+    planets ++= Seq(
+      Planet("Earth", 1.0)
+      Planet("Mercury",  0.4),
+      Planet("Venus",    0.7),
+      Planet("Mars" ,    1.5),
+      Planet("Jupiter",  5.2),
+      Planet("Saturn",   9.5),
+      Planet("Uranus",  19.0),
+      Planet("Neptune", 30.0)
+    )
+
+    // We want to look up a planet by name to create the association
+    def idOf(planetName: String) : Long =
+      planets.filter(_.name === planetName).map(_.id).first
+
+    val earthId = idOf("Earth")
+    val marsId = idOf("Mars")
+    
+    moons ++= Seq(
+      Moon("The Moon", earthId),
+      Moon("Phobos", marsId),
+      Moon("Deimos",  marsId)
+    )
+}
+----
+
+For the moons we execute two queries for the planet IDs, then three inserts.  The resulting database is:
+
+----
+core-slick=# select * from moon;
+   name   | planet_id | id
+----------+-----------+----
+ The Moon |         1 |  1
+ Phobos   |         4 |  2
+ Deimos   |         4 |  3
+(3 rows)
+----
+
+
+=== Explicit Joins
+
+
+[source,scala]
+----
+val query = for {
+  (planet, moon) <- moons innerJoin planets on (_.planetId === _.id)
+} yield (planet.name, moon.name)
+----
+
+[source,sql]
+----
+select x2."name", x3."name" from (select x4."name" as "name", x4."planet_id" as "planet_id", x4."id" as "id" from "moon" x4) x2 inner join (select x5."name" as "name", x5."distance_au" as "distance_au", x5."id" as "id" from "planet" x5) x3 on x2."planet_id" = x3."id"
+----
+
+=== Implicit Joins
+
+
+[source,scala]
+----
+val query = for {
+  p <- planets
+  m <- moons
+  if m.planetId === p.id
+} yield (p.name, m.name)
+----
+
+[source,sql]
+----
+select x2."name", x3."name" from "planet" x2, "moon" x3 where x3."planet_id" = x2."id"
+
+----
+
+
+
 
 t1.join(t2).on(condition)
 
