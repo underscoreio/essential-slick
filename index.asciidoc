@@ -110,7 +110,7 @@ or
 sbt> gen-idea
 ----
 
-...and then open the project directory in your IDE.  For example, this is _File -> Import -> Existing Project_ menu.
+...and then open the project directory in your IDE.  For Eclipse, this is _File -> Import -> Existing Project_ menu.
 
 ====
 
@@ -146,7 +146,7 @@ object Example1 extends App {
 
 Running this application will create the schema. You can run it from your IDE, or with `sbt run underscoreio.schema.Example1`.
 
-If you example the schema, there should be no surprises here:
+If you example the schema, there should be no surprises:
 
 [source]
 ----
@@ -262,6 +262,8 @@ planets ++= Seq(
 
 Each `+=` or `++=` executes in its own transaction.
 
+NB: result is a count or Option of count.
+
 We've had to specify the id, name and distance, but this may be surprising because the ID is an auto incrementing field.  What Slick does, when inserting this data, is ignore the ID:
 
 ----
@@ -346,6 +348,8 @@ You can enable a variety of events to be logged:
 
 === Running Queries in the REPL
 
+For experimenting with queries it's convenient to use the Scala REPL and create an implicit session to work with.  In the "core-slick-example" SBT project, run the `console` command to enter the Scala REPL with the Slick dependencies loaded and ready to use:
+
 ----
 > console
 [info] Starting scala interpreter...
@@ -357,7 +361,7 @@ Type :help for more information.
 scala> import scala.slick.driver.PostgresDriver.simple._
 import scala.slick.driver.PostgresDriver.simple._
 
-scala> import  underscoreio.schema.Example2._
+scala> import underscoreio.schema.Example2._
 import underscoreio.schema.Example2._
 
 scala> implicit val session = Database.forURL("jdbc:postgresql:core-slick", user="core", password="trustno1", driver = "org.postgresql.Driver").createSession
@@ -370,21 +374,120 @@ res0: Seq[(Int, String, Double)] = Vector((1,Earth,1.0), (2,Mercury,0.4), (3,Ven
 
 === Exercises
 
-What happens if you used 5 rather than 5.0 in the query?
+* What happens if you used 5 rather than 5.0 in the query?
 
+* 1AU is roughly 150 million kilometers. Can you run query to return the distances in kilometers? Where is the conversion to kilometers performed? Is it in Scala or in the database?
 
+* How would you count the number of planets? Hint: in the Scala collections the method `length` gives you the size of the collection.
+
+* Select the planet with the name "Earth".  You'll need to know that equals in Slick is represented by `===` (three equals signs).  It's also useful to know that `=!=` is not equals.
+
+* Using a for comprehension, select the planet with the id of 1.  What happens if you try to find a planet with an id of 999?  
+
+* You know that for comprehensions are sugar for `map`, `flatMap`, and `filter`.  Use `filter` to find the planet with an id of 1, and then the planet with an id of 999. Hint: `first` and `firstOption` are useful alternatives to `run`.
+
+* The method `startsWith` tests to see if a string starts with a particular sequence of characters.  For example `"Earth".startsWith("Ea")` is `true`.  Find all the planets with a name that starts with "E".  What query does the database run?
+
+* Slick implements the method `like`. Find all the planets with an "a" in their name.
+
+* Find all the planets with an "a" in their name that are more than 5 AU from the Sun.
 
 
 === Sorting
+
+As you've seen, Slick can produce sensible queries from for comprehensions:
+
+[source,scala]
+----
+(for { 
+  p <- planets 
+  if p.name like "%a%" 
+  if p.distance > 5.0 
+ } yield p ).run
+----
+
+This equates to the query:
+
+[source,sql]
+----
+select 
+  s17."id", s17."name", s17."distance_au" 
+from 
+ "planet" s17 
+where 
+ (s17."name" like '%a%') and (s17."distance_au" > 5.0)
+----
+
+We can take a query and add a sort order to it:
+
+[source,scala]
+----
+val query = for { p <- planets if p.distance > 5.0} yield p
+query.sortBy(row => row.distance.asc).run
+----
+
+(Or `desc` to go the other way). 
+
+This will run as:
+
+[source,sql]
+----
+select 
+  s22."id", s22."name", s22."distance_au" 
+from 
+  "planet" s22 
+where 
+  s22."distance_au" > 5.0 
+order by 
+  s22."distance_au"
+----
+
+...to produce:
+
+[source,scala]
+----
+Vector((5,Jupiter,5.2), (6,Saturn,9.5), (7,Uranus,19.0), (8,Neptune,30.0))
+----
+
+What's important here is that we are taking a query, using `sortBy` to create another query, before running it.  Query composition is a topic we will return to later.
 
 
 === The Types Involved in a Query
 
 
-=== Update
+
+=== Update & Delete
+
+Queries are used for update and delete operations, replacing `run` with `update` or `delete`.
+
+For example, we don't quite have the distance between the Sun and Uranus right:
+
+[source,scala]
+----
+val udist = planets.filter(_.name === "Uranus").map(_.distance)
+udist.update(19.2)
+----
+
+WHen `update` is called, the database will receive:
+
+[source,sql]
+----
+update "planet" set "distance_au" = ? where "planet"."name" = 'Uranus'
+----
+
+The arguments to `update` must match the result of the query.  In this example, we are just returning the distance, so we just modify the distance.
 
 
+==== Exercises
 
+
+* Modify both the distance and name of a planet.  Hint: you can do this with one call to `update`.
+
+* Delete Earth.
+
+* Delete all the planets with a distance less than 5.0.
+
+* Double the distance of all the planets. (You need to do this client-side, not in the database)
 
 
 ////
@@ -399,27 +502,94 @@ What happens if you used 5 rather than 5.0 in the query?
 == Connecting, Transactions, Sessions
 
 
+
+
 == Structuring the Schema
 
 [source,scala]
 ----
 object Tables extends {
-   val profile = scala.slick.driver.PostgresDriver
+  val profile = scala.slick.driver.PostgresDriver
 } with Tables
+
+trait Tables {
+
+  val profile: scala.slick.driver.JdbcProfile
+  import profile.simple._
+
+  class Planet(tag: Tag) extends Table[(Int,String,Double)](tag, "planet") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
+    def distance = column[Double]("distance_au")
+    def * = (id, name, distance)
+  }
+
+  lazy val planets = TableQuery[Planet]
+}
+
+// Our application:
+
+import Tables._
+
+// session, queries, go here...
 ----
 
-(initialization pattern)
 
+
+==  Using Case Classes
 
 [source,scala]
 ----
-trait Tables {
-	val profile: scala.slick.drivers.JdbcProfile
-	import profile.simple._
+object Tables extends {
+  val profile = scala.slick.driver.PostgresDriver
+} with Tables
 
-	// classes, implicits go here as usual.
+trait Tables {
+
+  val profile: scala.slick.driver.JdbcProfile
+  import profile.simple._
+
+  case class Planet(name: String, distance: Double, id: Long=0L)
+
+  class PlanetTable(tag: Tag) extends Table[Planet](tag, "planet") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
+    def distance = column[Double]("distance_au")
+    def * = (name, distance, id) <> (Planet.tupled, Planet.unapply)
+  }
+
+  lazy val planets = TableQuery[PlanetTable]
 }
+
+// Our application:
+
+import Tables._
+
+// session, queries, go here...
 ----
+
+Initialisation pattern.
+
+
+=== Inserting data
+
+[source,scala]
+----
+planets += Planet("Earth", 1.0)
+
+planets ++= Seq(
+  Planet("Mercury",  0.4),
+  Planet("Venus",    0.7),
+  Planet("Mars" ,    1.5),
+  Planet("Jupiter",  5.2),
+  Planet("Saturn",   9.5),
+  Planet("Uranus",  19.0),
+  Planet("Neptune", 30.0)
+)
+----
+
+
+=== Queries
 
 
 
@@ -427,6 +597,7 @@ trait Tables {
 
 - NULL columms
 - PK
+
 
 
 
@@ -439,22 +610,45 @@ t1.join(t2).on(condition)
 
 
 
+
 == Queries Compose 
 
-Reuse. 
+Reuse. Only runs when you say.  Keep to a `Query` for as long as possible.
 
 
-Only runs when you say.  Keep to a `Query` for as long as possible.
+== Drop and Take
+
+planets.drop(2).take(3)
+
+
+== Unions
+
+(q1 union q2).run without dups, or ++ for union all
+
+
+== Calling Functions
+
+----
+  val dayOfWeek = SimpleFunction[Int]("day_of_week")
+
+    val q1 = for {
+      (dow, q) <- salesPerDay.map(s => (dayOfWeek2(s.day), s.count)).groupBy(_._1)
+    } yield (dow, q.map(_._2).sum)
+----
+
 
 == Query Extensions
 
 E.g., pagination or byName("Mars")
 
 
+
+
 == Dynamic Queries
 
 need to upper case everything??
 
+----
 implict.... dynamicSort(keys: String*) : Query[T,E] = {
 	keys match {
 	  case nil = query
@@ -468,36 +662,25 @@ implict.... dynamicSort(keys: String*) : Query[T,E] = {
 	}
 }
 }
+----
 
 danger... access to user suppliued input!!
 
+----
 dynamicSort("street.desc", "city.desc")
-
-
-
-== Working with Case Classes
-
-----
-case class Planet(val name: String, val size: Int)
-
-class PlanetTable(tag: Tag) extends Table[Planet](tag, "planet") {
-  def name = column[String]("name")
-  def * = (name, distance).<>[Planet,Tuple2[String,Float]] (
-    (t: Tuple2[String,Float]) => Planet.apply(t._1, t._2),
-    (p: Planet) => Some(p.name, p.distance)
-  )
-}
 ----
 
-----
-  def * = (name, distance).<>[Planet.tupled, Planet.unapply] (
-----
+
+
 
 
 == Aggregations
 
 counts, grouping and all that.
 
+max, min, sum, avg
+
+broupBy
 
 == Virtual Columns and Server Side Casts
 
@@ -527,6 +710,10 @@ https://skillsmatter.com/skillscasts/4577-patterns-for-slick-database-applicatio
 table1.joinOn(table2) : Query[(T1,T2),(Ta,Tb)]
 
 via implicit joinCondition for T1,T2
+
+
+== Compiled Queries
+
 
 
 
