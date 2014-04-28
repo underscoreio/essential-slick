@@ -175,7 +175,7 @@ Indexes:
 
 * What is a `Tag`?  "The Tag carries the information about the identity of the Table instance and how to create a new one with a different identity. Its implementation is hidden away in TableQuery.apply to prevent instantiation of Table objects outside of a TableQuery"
 
-* Hoes does `Table[(Int,String)]` match up to `id` and `name` fields? - that's how Slick is going to represent rows. We can customize that to be something other than a tuple, a case class in particular.
+* How does `Table[(Int,String)]` match up to `id` and `name` fields? - that's how Slick is going to represent rows. We can customize that to be something other than a tuple, a case class in particular.
 
 * What is a projection (`*`) and why do I need to define it?  It's the default for queries and inserts. We will see how to convert this into more useful representation.
 
@@ -881,7 +881,7 @@ implict.... dynamicSort(keys: String*) : Query[T,E] = {
 }
 ----
 
-danger... access to user suppliued input!!
+danger... access to user supplied input!!
 
 ----
 dynamicSort("street.desc", "city.desc")
