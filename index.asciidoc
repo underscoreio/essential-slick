@@ -11,8 +11,9 @@ Slick is a Scala library for working with databases: querying, inserting data, u
 This material is aimed at a Scala developer who has:
 
 * taken the _Core Scala_ course or equivalent; 
-* a good understanding of relation databases (rows, columns, joins, indexes) and SQL; and
-* access to a relational database (PostgreSQL is the example we use).
+* a good understanding of relation databases (rows, columns, joins, indexes) and SQL; 
+* access to a relational database (PostgreSQL is the example we use); and
+* JDK 7 installed, along with an editor or IDE (Scala IDE for Eclipse, or IntelliJ).
 
 It is useful to have experience using the SBT build tool.
 
@@ -144,7 +145,7 @@ object Example1 extends App {
 }
 ----
 
-Running this application will create the schema. You can run it from your IDE, or with `sbt run underscoreio.schema.Example1`.
+Running this application will create the schema. You can run it from your IDE, or with `sbt "run-main underscoreio.schema.Example1"`.
 
 If you example the schema, there should be no surprises:
 
@@ -173,7 +174,7 @@ Indexes:
 
 (lots to discuss about the code)
 
-* What is a `Tag`?  "The Tag carries the information about the identity of the Table instance and how to create a new one with a different identity. Its implementation is hidden away in TableQuery.apply to prevent instantiation of Table objects outside of a TableQuery"
+* What is a `Tag`?  "The Tag carries the information about the identity of the Table instance and how to create a new one with a different identity. Its implementation is hidden away in TableQuery.apply to prevent instantiation of Table objects outside of a TableQuery" and "The tag is a table alias. You can use the same table in a query twice by tagging it two different ways. I believe Slick assigns the tags for you."
 
 * How does `Table[(Int,String)]` match up to `id` and `name` fields? - that's how Slick is going to represent rows. We can customize that to be something other than a tuple, a case class in particular.
 
@@ -183,7 +184,7 @@ Indexes:
 
 * What is a session?
 
-Note that driver is specified. You might want to mix in something else (e.g., H2 for testing).
+Note that driver is specified. You might want to mix in something else (e.g., H2 for testing). See later.
 
 Note we can talk about having longer column values later.
 
@@ -246,8 +247,7 @@ We'll look at other tools for managing schema migrations later.
 ----
 // Populate with some data:
 
-planets +=
-  (100, "Earth",    1.0)
+planets += (100, "Earth",  1.0)
 
 planets ++= Seq(
   (200, "Mercury",  0.4),
@@ -262,7 +262,7 @@ planets ++= Seq(
 
 Each `+=` or `++=` executes in its own transaction.
 
-NB: result is a count or Option of count.
+NB: result is a row count `Int` for a single insert, or `Option[Int]` for a batch insert. It's optional because not all databases support returning a count for batches.
 
 We've had to specify the id, name and distance, but this may be surprising because the ID is an auto incrementing field.  What Slick does, when inserting this data, is ignore the ID:
 
@@ -284,8 +284,7 @@ core-slick=# select * from planet;
 This is, generally, what you want to happen, and applies only to auto incrementing fields. If the ID was not auto incrementing, the ID values we supplied (100,200 and so on) would have been used.
 
 
-NB: insert / forceInsert to ignore/include the ID column
-
+If you really want to include the ID column in the insert, use the `forceInsert` method.
 
 
 === A Simple Query
@@ -354,23 +353,34 @@ For experimenting with queries it's convenient to use the Scala REPL and create 
 > console
 [info] Starting scala interpreter...
 [info]
+
+Session created, but you may want to also import a schema. For example:
+
+    import underscoreio.schema.Example1._
+ or import underscoreio.schema.Example5.Tables._
+
+import scala.slick.driver.PostgresDriver.simple._
+db: slick.driver.PostgresDriver.backend.DatabaseDef = scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$5@6dbc2f23
+session: slick.driver.PostgresDriver.backend.Session = scala.slick.jdbc.JdbcBackend$BaseSession@5dbadb1d
 Welcome to Scala version 2.10.3 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_45).
 Type in expressions to have them evaluated.
 Type :help for more information.
 
-scala> import scala.slick.driver.PostgresDriver.simple._
-import scala.slick.driver.PostgresDriver.simple._
-
 scala> import underscoreio.schema.Example2._
 import underscoreio.schema.Example2._
 
-scala> implicit val session = Database.forURL("jdbc:postgresql:core-slick", user="core", password="trustno1", driver = "org.postgresql.Driver").createSession
-session: slick.driver.PostgresDriver.backend.Session = scala.slick.jdbc.JdbcBackend$BaseSession@4f1e8443
+scala> planets.run
+08:34:36.053 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."name", x2."distance_au" from "planet" x2
+res1: Seq[(Int, String, Double)] = Vector((1,Earth,1.0), (2,Mercury,0.4), (3,Venus,0.7), (4,Mars,1.5), (5,Jupiter,5.2), (6,Saturn,9.5), (7,Uranus,19.0), (8,Neptune,30.0), (9,Earth,1.0))
 
-planets.run
-res0: Seq[(Int, String, Double)] = Vector((1,Earth,1.0), (2,Mercury,0.4), (3,Venus,0.7), (4,Mars,1.5), (5,Jupiter,5.2), (6,Saturn,9.5), (7,Uranus,19.0), (8,Neptune,30.0))
+scala> planets.firstOption
+08:34:42.320 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."name", x2."distance_au" from "planet" x2
+res2: Option[(Int, String, Double)] = Some((1,Earth,1.0))
 
+scala>
 ----
+
+
 
 === Exercises
 
@@ -978,6 +988,7 @@ Joda! See https://mackler.org/LearningSlick2/
 
 == Testing
 
+https://groups.google.com/forum/#!topic/scalaquery/gDblUdKKrSY
 
 
 == Terminology
@@ -1012,6 +1023,9 @@ e.g., super.code + MORE STUFF. Nice autojoin example in https://skillsmatter.com
 
 == Writing your own Driver
 
+
+
+== Answers to Exercises
 
 
 
