@@ -1,20 +1,45 @@
-This is an [AsciiDoc](http://asciidoctor.org/docs/asciidoc-syntax-quick-reference/) document.
+Essential Slick
+--------------
 
-To convert it to HTML:
+Getting Started
+---------------
 
-    $ gem install asciidoctor
+You'll need to install the grunt project dependencies the first time you check the project out:
 
-    $ asciidoctor index.asciidoc
-    $ open index.html 
+~~~
+brew install pandoc
+npm install -g grunt-cli
+npm install
+~~~
 
-To convert to PDF, well, [there are instructions for that](https://github.com/asciidoctor/asciidoctor-fopub/blob/master/README.adoc).
-   
-To enable [live preview](http://asciidoctor.org/docs/editing-asciidoc-with-live-preview/):
+Building
+--------
 
-    $ gem install guard guard-shell rb-inotify
-        
-    $ guard start
+Use the following commands to build a single format:
 
-...but I couldn't get that to work.
+~~~
+grunt pdf
+grunt html
+grunt epub
+~~~
 
-There is an AsciiDoc mode for Sublime Text.
+All targets are placed in the `dist` directory.
+
+Run the following to build all formats, start a web server to serve them all,
+and rebuild if you change any files:
+
+~~~
+grunt watch
+~~~
+
+Use the following to build all a ZIP of all formats:
+
+~~~
+grunt zip
+~~~
+
+The default grunt behaviour is to run `zip`:
+
+~~~
+grunt
+~~~
