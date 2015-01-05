@@ -1,4 +1,4 @@
-## Custom Types
+# Custom Types
 
 ~~~ scala
 class SupplierId(val value: Int) extends AnyVal
@@ -31,9 +31,7 @@ class Suppliers(tag: Tag) extends
 ~~~
 
 
-
-
-## Dates and Time
+# Dates and Time
 
 Joda! See https://mackler.org/LearningSlick2/
 

@@ -1,4 +1,4 @@
-##  Using Case Classes
+#  Using Case Classes
 
 
 ~~~ scala
@@ -35,7 +35,7 @@ Initialisation pattern.
 naming: PlanetRow, Planets v. Planet, PlanetTable
 
 
-### Inserting data
+## Inserting data
 
 
 ~~~ scala
@@ -53,6 +53,4 @@ planets ++= Seq(
 ~~~
 
 
-### Queries
-
-
+## Queries

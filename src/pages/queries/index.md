@@ -1,19 +1,18 @@
-## Queries Compose
+# Queries Compose
 
 Reuse. Only runs when you say.  Keep to a `Query` for as long as possible.
 
-
-## Drop and Take
+# Drop and Take
 
 planets.drop(2).take(3)
 
 
-## Unions
+# Unions
 
 (q1 union q2).run without dups, or ++ for union all
 
 
-## Calling Functions
+# Calling Functions
 
 ~~~ scala
   val dayOfWeek = SimpleFunction[Int]("day_of_week")
@@ -24,14 +23,11 @@ planets.drop(2).take(3)
 ~~~
 
 
-## Query Extensions
+# Query Extensions
 
 E.g., pagination or byName("Mars")
 
-
-
-
-## Dynamic Queries
+# Dynamic Queries
 
 need to upper case everything??
 
@@ -58,15 +54,15 @@ dynamicSort("street.desc", "city.desc")
 ~~~
 
 
-## Aggregations
+# Aggregations
 
 counts, grouping and all that.
 
 max, min, sum, avg
 
-broupBy
+groupBy
 
-## Virtual Columns and Server Side Casts
+# Virtual Columns and Server Side Casts
 
 def x = whatever
 

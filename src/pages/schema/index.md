@@ -1,4 +1,4 @@
-## Structuring the Schema
+# Structuring the Schema
 
 
 ~~~ scala
@@ -28,7 +28,7 @@ import Tables._
 // session, queries, go here...
 ~~~
 
-### Connecting, Transactions, Sessions
+## Connecting, Transactions, Sessions
 
 While we're restructuring, we'll move the `Database.forURL` code into a method:
 [source,scala]
@@ -68,7 +68,7 @@ session.withTransaction {
 The transaction will commit at the end of the block unless an exception is thrown, or you call `session.rollback` at any point.
 
 
-### Exercises
+## Exercises
 
 * Create a transaction to delete Earth, but rollback inside the transaction.  Check the database still contains Earth.
 

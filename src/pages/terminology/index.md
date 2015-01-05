@@ -1,3 +1,3 @@
-## Terminology
+# Terminology
 
 Lifted Embedding

@@ -1,5 +1,4 @@
-## Joins
-
+# Joins
 
 insert diagram here
 
@@ -120,10 +119,7 @@ core-slick=# select * from moon;
 (3 rows)
 ~~~
 
-
-### Explicit Joins
-
-
+## Explicit Joins
 
 ~~~ scala
 val query = for {
@@ -136,7 +132,7 @@ val query = for {
 select x2."name", x3."name" from (select x4."name" as "name", x4."planet_id" as "planet_id", x4."id" as "id" from "moon" x4) x2 inner join (select x5."name" as "name", x5."distance_au" as "distance_au", x5."id" as "id" from "planet" x5) x3 on x2."planet_id" = x3."id"
 ~~~
 
-### Implicit Joins
+## Implicit Joins
 
 ~~~ scala
 val query = for {
@@ -145,7 +141,6 @@ val query = for {
   if m.planetId === p.id
 } yield (p.name, m.name)
 ~~~
-
 
 ~~~ sql
 select x2."name", x3."name" from "planet" x2, "moon" x3 where x3."planet_id" = x2."id"

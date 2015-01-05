@@ -1,7 +1,6 @@
-## Basics
+# Basics
 
-### Our First Table
-
+## Our First Table
 
 ~~~ scala
 package underscoreio.schema
@@ -19,7 +18,10 @@ object Example1 extends App {
 
   lazy val planets = TableQuery[Planet]
 
-  Database.forURL("jdbc:postgresql:essential-slick", user="core", password="trustno1", driver = "org.postgresql.Driver") withSession {
+  Database.forURL("jdbc:postgresql:essential-slick",
+                  user="core",
+                  password="trustno1",
+                  driver = "org.postgresql.Driver") withSession {
     implicit session =>
       planets.ddl.create
   }
@@ -27,7 +29,7 @@ object Example1 extends App {
 }
 ~~~
 
-Running this application will create the schema. It can be run from an IDE, or with `sbt "run-main underscoreio.schema.Example1"`.
+Running this application will create the schema. It can be run from an IDE, or with `sbt run-main underscoreio.schema.Example1`.
 
 The schema can be examined via `psql`, there should be no surprises:
 
@@ -71,7 +73,7 @@ Note we can talk about having longer column values later.
 The `O` for PK or Auto means "Options".
 
 
-#### Schema Creation
+## Schema Creation
 
 Our table, `planet`, was created with `table.dd.create`.  That's convenient for us, but Slick's schema management is very simple. For example, if you run `create` twice, you'll see:
 
@@ -116,7 +118,7 @@ We'll look at other tools for managing schema migrations later.
 
 
 
-### Inserting Data
+## Inserting Data
 
 
 ~~~ scala
@@ -144,7 +146,7 @@ We've had to specify the id, name and distance, but this may be surprising becau
 ~~~ sql
 essential-slick=# select * from planet;
  id |  name   | distance_au
-~~~+~~~~~~-+~~~~~~~~~-
+----+---------+-------------
   1 | Earth   |           1
   2 | Mercury |         0.4
   3 | Venus   |         0.7
@@ -162,7 +164,7 @@ This is, generally, what you want to happen, and applies only to auto incrementi
 If you really want to include the ID column in the insert, use the `forceInsert` method.
 
 
-#### A Simple Query
+## A Simple Query
 
 Let's fetch all the planets in the inner solar system:
 
@@ -218,7 +220,7 @@ You can enable a variety of events to be logged:
 
 
 
-### Running Queries in the REPL
+## Running Queries in the REPL
 
 For experimenting with queries it's convenient to use the Scala REPL and create an implicit session to work with.  In the "essential-slick-example" SBT project, run the `console` command to enter the Scala REPL with the Slick dependencies loaded and ready to use:
 
@@ -255,7 +257,7 @@ scala>
 
 
 
-### Exercises
+## Exercises
 
 * What happens if you used 5 rather than 5.0 in the query?
 
@@ -276,7 +278,7 @@ scala>
 * Find all the planets with an "a" in their name that are more than 5 AU from the Sun.
 
 
-### Sorting
+## Sorting
 
 As you've seen, Slick can produce sensible queries from for comprehensions:
 
@@ -331,11 +333,11 @@ Vector((5,Jupiter,5.2), (6,Saturn,9.5), (7,Uranus,19.0), (8,Neptune,30.0))
 What's important here is that we are taking a query, using `sortBy` to create another query, before running it.  Query composition is a topic we will return to later.
 
 
-### The Types Involved in a Query
+## The Types Involved in a Query
 
 
 
-### Update & Delete
+## Update & Delete
 
 Queries are used for update and delete operations, replacing `run` with `update` or `delete`.
 
@@ -346,7 +348,7 @@ val udist = planets.filter(_.name === "Uranus").map(_.distance)
 udist.update(19.2)
 
 
-WHen `update` is called, the database will receive:
+When `update` is called, the database will receive:
 
 
 ~~~ sql
@@ -356,7 +358,7 @@ update "planet" set "distance_au" = ? where "planet"."name" = 'Uranus'
 The arguments to `update` must match the result of the query.  In this example, we are just returning the distance, so we just modify the distance.
 
 
-### Exercises
+## Exercises
 
 
 * Modify both the distance and name of a planet.  Hint: you can do this with one call to `update`.

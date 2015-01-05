@@ -1,6 +1,6 @@
-## More on Joins
+# More on Joins
 
-### Outer Joins
+## Outer Joins
 
 `leftJoin` - dealing with NULL values
 
@@ -8,8 +8,7 @@ map all columns to option types via `.?` (nullable column)
 
 slick will do this for you one day.
 
-
-### Auto Join
+## Auto Join
 
 https://skillsmatter.com/skillscasts/4577-patterns-for-slick-database-applications
 

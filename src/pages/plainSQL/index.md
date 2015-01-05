@@ -1,6 +1,6 @@
-## Plain SQL
+# Plain SQL
 
-## Code Generation for Existing Databases
+# Code Generation for Existing Databases
 
 - basic usage
 
@@ -9,15 +9,15 @@
 - SourceCodeGenerator(model).code hook for adding more stuff.
 e.g., super.code + MORE STUFF. Nice autojoin example in https://skillsmatter.com/skillscasts/4577-patterns-for-slick-database-applications 31 mins in.
 
-## Connection Pools
+# Connection Pools
 
-## Schema Migration
+# Schema Migration
 
-## Working with Multiple Databases
+# Working with Multiple Databases
 
-## Writing your own Driver
+# Writing your own Driver
 
-## Useful Links
+# Useful Links
 
 * link to that nice mac postgresql app
 
