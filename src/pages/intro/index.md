@@ -1,19 +1,16 @@
 # Introduction
 
-*Essential Play* is aimed at beginner-to-intermediate Scala developers who want to get started using the [Play 2][link-play] web framework. The material presented focuses on Play version 2.3, although the approaches introduced are generally applicable to Play 2.2+.
+*Essential Slick* is aimed at beginner-to-intermediate Scala developers who want to get started using the [Slick][link-slick] framework.
 
-By the end of the course we will have a solid foundation in each of the main libraries Play provides for building sites and services:
+Slick is a Scala library for working with databases: querying, inserting data, updating data, and representing a schema.  Queries are written in Scala and type checked by the compiler. Slick aims to make working with a database similar to working with regular Scala collections.
 
- - Routing, controllers, and actions
- - Manipulating requests and responses
- - Generating HTML
- - Parsing and validating form data
- - Reading and writing JSON
- - Asynchronous request handling
- - Calling external web services
+This material is aimed at a Scala developer who has:
 
-<!--
-As coursework we will build a simple chat application from the ground up. We will start with a very basic web site and end up building a complete service-oriented architecture with each concern separated out to a separate microservice.
--->
+* taken the [Essential Scala][link-essential-scala] course or equivalent;
+* a good understanding of relation databases (rows, columns, joins, indexes) and SQL;
+* access to a relational database; and
+* JDK 7 installed, along with an editor or IDE (Scala IDE for Eclipse, or IntelliJ).
 
-Many thanks to [Richard Dallaway][link-twitter-richard], [Jonathan Ferguson][link-twitter-jono], [Noel Welsh][link-twitter-noel], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
+The material presented focuses on Slick version 2.0.3, examples use [Postgres][link-postgres] as the relational database.
+
+Many thanks to [Jonathan Ferguson][link-twitter-jono] and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
