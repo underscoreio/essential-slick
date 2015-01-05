@@ -24,6 +24,16 @@ module.exports = (grunt) ->
     src/pages/getting-started/index.md
     src/pages/orientation/index.md
     src/pages/basics/index.md
+    src/pages/schema/index.md
+    src/pages/case-classes/index.md
+    src/pages/tables/index.md
+    src/pages/joins/index.md
+    src/pages/queries/index.md
+    src/pages/joins/more.md
+    src/pages/custom/index.md
+    src/pages/testing/index.md
+    src/pages/terminology/index.md
+    src/pages/plainSQL/index.md
     src/pages/links.md
   """
 

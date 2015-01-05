@@ -8,7 +8,7 @@ This section will cover setting up an environment so as to be able to execute ex
     * JDK 7
     * SBT 13.5
 
-### Database Configuration
+### Database
 
 As mentioned during the introduction PostgresSQL version 9 is used throughout the book for examples. If it is not currently installed, it can be downloaded from the [Postgres][link-postgres-download] website.
 
@@ -34,7 +34,7 @@ To work with DB2, SQL Server or Oracle you need a commercial license. These are 
 </div>
 
 
-### An SBT Project
+### SBT
 
 To use Slick create a regular Scala project and reference the Slick dependencies.  This can be accomplished using SBT by creating a file `build.sbt` with the contents below:
 
