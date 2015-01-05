@@ -45,7 +45,7 @@ _Objectives: (a) provide the right way to work with data in slick; (b)  introduc
 
 ## 4. Joins [and queries?]
 
-_Objective Show how joins can be established and general querying magic. Lots of pictures in this chapter. _ 
+_Objective Show how joins can be established and general querying magic. Lots of pictures in this chapter._ 
 
 - implicit v explicit
 - one to one
