@@ -19,21 +19,14 @@ module.exports = (grunt) ->
     lines.split(/[ \r\n]+/).join(" ")
 
   pandocSources = joinLines """
-    src/pages/intro/index.md
-    src/pages/intro/conventions.md
-    src/pages/getting-started/index.md
-    src/pages/orientation/index.md
-    src/pages/basics/index.md
-    src/pages/schema/index.md
-    src/pages/case-classes/index.md
-    src/pages/tables/index.md
-    src/pages/joins/index.md
-    src/pages/queries/index.md
-    src/pages/joins/more.md
-    src/pages/custom/index.md
-    src/pages/testing/index.md
-    src/pages/terminology/index.md
-    src/pages/plainSQL/index.md
+    src/pages/introduction.md
+    src/pages/conventions.md
+    src/pages/basics.md
+    src/pages/data_modeling.md
+    src/pages/joins.md
+    src/pages/query_composition.md
+    src/pages/testing.md
+    src/pages/schema_management.md
     src/pages/links.md
   """
 
