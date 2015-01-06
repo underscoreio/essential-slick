@@ -10,8 +10,6 @@ Slick is a Scala library to provide access to relational databases in a simliar 
 
 ## Basic Concepts
 
-### Schema
-
 The class below represents a single row of the `message` table, which is constructed from three columns `id`, `from` and `message`. A way is needed to access, persist and alter instances of these class. This is achived via the `TableQuery` instance.
 
 ~~~ scala
@@ -34,41 +32,66 @@ The `message` table can be queried as though they were Scala collections. For in
   } yield message
 ~~~
 
-However not until it is instructed to do so. Making queries reusable and composable.
+However not until it is instructed to do so, making queries lazy, reusable and composable.
 
 ~~~ scala
 val messages_from_jono:List[Message] = query.list
 ~~~~
 
-
-## Our First Table
+Database connecitivty will be required. This is provided by a slick driver and session.
 
 ~~~ scala
-package underscoreio.schema
-
 import scala.slick.driver.PostgresDriver.simple._
 
-object Example1 extends App {
+...
 
-  class Planet(tag: Tag) extends Table[(Int,String,Double)](tag, "planet") {
-    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("name")
-    def distance = column[Double]("distance_au")
-    def * = (id, name, distance)
-  }
-
-  lazy val planets = TableQuery[Planet]
 
   Database.forURL("jdbc:postgresql:essential-slick",
                   user="core",
                   password="trustno1",
                   driver = "org.postgresql.Driver") withSession {
     implicit session =>
-      planets.ddl.create
+      ...
   }
-
 }
 ~~~
+
+The import indicates which database to connect to, in the above case PostgresSQL. `Database.forURL` creates a `DatabaseManager` which provides connections to the database.
+
+Finally, a way to compile the code is needed. This is delegated to `sbt`, below is a simple build script which declares the minimum dependencies needed; Slick, the appropriate database driver, PostgresSQL in this case, and a logging library, which Slick requires for it's internal debug logging.
+
+~~~ scala
+name := "essential-slick"
+
+version := "1.0"
+
+scalaVersion := "2.11.4"
+
+libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
+
+libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1101-jdbc41"
+
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
+
+~~~
+
+
+### Exercise
+
+1. Get the above runnings. This will ensure your environment is configured correctly for future exercises and examples in the book.
+
+ > clone example and run sbt  or see appendix X to walk through creating the project.
+
+TODO: STILL NEED TO CREATE THE DATABASE
+
+TODO: MOVE getting started to be appendix X
+
+
+
+
+
+
+<!--
 
 Running this application will create the schema. It can be run from an IDE, or with `sbt run-main underscoreio.schema.Example1`.
 
@@ -410,4 +433,4 @@ The arguments to `update` must match the result of the query.  In this example, 
 
 * Double the distance of all the planets. (You need to do this client-side, not in the database)
 
-
+-->
