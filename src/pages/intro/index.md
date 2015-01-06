@@ -11,6 +11,6 @@ This material is aimed at a Scala developer who has:
 * access to a relational database; and
 * JDK 7 installed, along with an editor or IDE (Scala IDE for Eclipse, or IntelliJ).
 
-The material presented focuses on Slick version 2.0.3, examples use [Postgres][link-postgres] as the relational database.
+The material presented focuses on Slick version 2.1.0, examples use [Postgres][link-postgres] as the relational database.
 
 Many thanks to [Jonathan Ferguson][link-twitter-jono] and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.

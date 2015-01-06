@@ -1,5 +1,46 @@
 # Basics
 
+## Orientation
+
+Slick is a Scala library to provide access to relational databases in a simliar fashion to Scala collections. It is type safe. Tables, columns and queries are defined in Scala.
+
+## Slick isn't an ORM
+
+//TODO
+
+## Basic Concepts
+
+### Schema
+
+The class below represents a single row of the `message` table, which is constructed from three columns `id`, `from` and `message`. A way is needed to access, persist and alter instances of these class. This is achived via the `TableQuery` instance.
+
+~~~ scala
+class Message(tag: Tag) extends Table[(Int,String,String)](tag, "message") {
+    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+    def from = column[String]("from")
+    def message = column[String]("message")
+    def * = (id, from, message)
+  }
+
+val messages = TableQuery[Message]
+~~~
+
+The `message` table can be queried as though they were Scala collections. For instance, the query below  will return all messages from the user `jono`.
+
+~~~ scala
+  val query = for {
+    message <- messages
+    if message.from === "jono"
+  } yield message
+~~~
+
+However not until it is instructed to do so. Making queries reusable and composable.
+
+~~~ scala
+val messages_from_jono:List[Message] = query.list
+~~~~
+
+
 ## Our First Table
 
 ~~~ scala
