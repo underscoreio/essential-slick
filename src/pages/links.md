@@ -6,3 +6,5 @@
 [link-twitter-noel]:                      http://twitter.com/noelwelsh
 [link-twitter-richard]:                   http://twitter.com/d6y
 [link-underscore]:                        http://underscore.io
+[link-sbt]:                               http://scala-sbt.org
+[link-example]:                           https://github.com/underscore/essential-slick-code

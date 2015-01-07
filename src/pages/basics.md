@@ -10,7 +10,9 @@ Slick is a Scala library to provide access to relational databases in a simliar 
 
 ## Basic Concepts
 
-The class below represents a single row of the `message` table, which is constructed from three columns `id`, `from` and `message`. A way is needed to access, persist and alter instances of these class. This is achived via the `TableQuery` instance.
+The class below represents a single row of the `message` table, which is constructed from three columns `id`, `from` and `message`.
+
+Access to persist and alter instances of these class is achieved via the `TableQuery` instance.
 
 ~~~ scala
 class Message(tag: Tag) extends Table[(Int,String,String)](tag, "message") {
@@ -23,7 +25,7 @@ class Message(tag: Tag) extends Table[(Int,String,String)](tag, "message") {
 val messages = TableQuery[Message]
 ~~~
 
-The `message` table can be queried as though they were Scala collections. For instance, the query below  will return all messages from the user `jono`.
+The `message` table can be queried as though it is a Scala collection. For instance, the query below  will return all messages from the user `jono`.
 
 ~~~ scala
   val query = for {
@@ -76,48 +78,173 @@ libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
 ~~~
 
 
-### Exercise
+### Exercises
 
-1. Get the above runnings. This will ensure your environment is configured correctly for future exercises and examples in the book.
+The objective of exercises for this chapter are to set up your enivronment.  This will enable you to execute examples and particpate in future exercises.  Commands to be executed on the filesystem are assumed to be rooted in a directory `essential-slick`.
 
- > clone example and run sbt  or see appendix X to walk through creating the project.
+**Database**
 
-TODO: STILL NEED TO CREATE THE DATABASE
+<div class="callout callout-info">
+As mentioned during the introduction PostgresSQL version 9 is used throughout the book for examples. If it is not currently installed, it can be downloaded from the [Postgres][link-postgres-download] website.
+</div>
 
-TODO: MOVE getting started to be appendix X
+Create a database named `essential-slick` with user `essential`. This will be used for all examples and can be created with the following:
 
+~~~ sql
+CREATE DATABASE "essential-slick" WITH ENCODING 'UTF8';
+CREATE USER "essential" WITH PASSWORD 'trustno1';
+GRANT ALL ON DATABASE "essential-slick" TO essential;
+~~~
 
+Confirm the database has been created and can be accessed:
 
+~~~ bash
+$ psql -d essential-slick essential
+~~~
 
+<div class="callout callout-info">
+Slick supports PostgreSQL, MySQL, Derby, H2, SQLite, and Microsoft Access.
 
+To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
+</div>
+
+**sbt**
+
+<div class="callout callout-info">
+If you do not have `sbt` installed, there are instructions on the [scala-sbt][link-sbt] about how to do this.
+</div>
+
+To use Slick, create a regular Scala project and reference the Slick dependencies.  This can be accomplished using SBT by creating a file `build.sbt` with the contents below:
+
+<div class="callout callout-info">
+  **git project**
+
+  If you are uninterested in copying the next few sections, we have a GitHub [project][link-example] containing the build file, directory structure and scala files.
+
+  There will be branch per chapter if you want to follow along without typing the code.
+</div>
+
+~~~ scala
+name := "essential-slick"
+
+version := "1.0"
+
+scalaVersion := "2.11.4"
+
+libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
+
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
+
+libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1101-jdbc41"
+~~~
 
 <!--
+(To do: explain the dependencies)
 
-Running this application will create the schema. It can be run from an IDE, or with `sbt run-main underscoreio.schema.Example1`.
+Do we want to do this here or later on?
+
+-->
+
+Once `build.sbt` is created, SBT can be run and the dependencies will be fetched.
+
+<div class="callout callout-info">
+If working with IntelliJ IDEA or the Eclipse Scala IDE, the _essential-slick-example_ project includes the plugins to generate the IDE project files:
+
+~~~ scala
+sbt> eclipse
+~~~
+
+or
+
+~~~ scala
+sbt> gen-idea
+~~~~
+
+The projects can then be opened in an IDE.  For Eclipse, this is _File -> Import -> Existing Project_ menu.
+</div>
+
+**Scala**
+
+Finally, we are here, some code.
+
+~~~ scala
+package io.underscore.slick
+
+import scala.slick.driver.PostgresDriver.simple._
+
+object ExerciseOne extends App {
+
+  final case class Message(from: String, message: String, id: Long = 0L)
+
+  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def from = column[String]("from")
+    def message = column[String]("message")
+    def * = (from, message, id) <> (Message.tupled, Message.unapply)
+  }
+
+  lazy val messages = TableQuery[MessageTable]
+
+  Database.forURL("jdbc:postgresql:essential-slick",
+                                 user = "essential",
+                              password = "trustno1",
+                   driver = "org.postgresql.Driver") withSession {
+      implicit session ⇒
+
+      //Create Schema
+      messages.ddl.create
+
+      //Define a query
+      val query = for {
+        message ← messages
+        if message.from === "jono"
+      } yield message
+
+      //Execute a query.
+      val messages_from_jono: List[Message] = query.list
+
+      //Display the results of the query
+      println(s" ${messages_from_jono}")
+  }
+
+}
+~~~
+
+Running this application will create the schema. It can be run from an IDE, or with `sbt "runMain io.underscore.slick.ExerciseOne"`.
 
 The schema can be examined via `psql`, there should be no surprises:
 
 ~~~ sql
-
-essential-slick=# \d
-             List of relations
- Schema |     Name      |   Type   | Owner
---------+---------------+----------+-------
- public | planet        | table    | core
- public | planet_id_seq | sequence | core
+essential-slick=> \d
+               List of relations
+ Schema |      Name      |   Type   |   Owner
+--------+----------------+----------+-----------
+ public | message        | table    | essential
+ public | message_id_seq | sequence | essential
 (2 rows)
 
-essential-slick=# \d planet
-                                   Table "public.planet"
-   Column    |          Type          |                      Modifiers
--------------+------------------------+-----------------------------------------------------
- id          | integer                | not null default nextval('planet_id_seq'::regclass)
- name        | character varying(254) | not null
- distance_au | double precision       | not null
+essential-slick=> \d message
+                                 Table "public.message"
+ Column  |          Type          |                      Modifiers
+---------+------------------------+------------------------------------------------------
+ from    | character varying(254) | not null
+ message | character varying(254) | not null
+ id      | bigint                 | not null default nextval('message_id_seq'::regclass)
 Indexes:
-    "planet_pkey" PRIMARY KEY, btree (id)
+    "message_pkey" PRIMARY KEY, btree (id)
 ~~~
 
+Don't worry too much about the code at this point in time. We'll go into more detail later in the book. The important points are:
+
+  * Slick should have created the schema,
+  * Running the application should have returned `List()`, as there are currently no messages in the database, let alone from `jono`.
+
+## Take home Points
+
+I liked these in Essential Scala, do we want them here? I have no idea what they are for this chapter, possibly "If you couldn't get this working, reconsider your career", but that seems a little harsh.
+
+
+<!--
 (lots to discuss about the code)
 
 * What is a `Tag`?  "The Tag carries the information about the identity of the Table instance and how to create a new one with a different identity. Its implementation is hidden away in TableQuery.apply to prevent instantiation of Table objects outside of a TableQuery" and "The tag is a table alias. You can use the same table in a query twice by tagging it two different ways. I believe Slick assigns the tags for you."
