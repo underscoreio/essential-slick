@@ -25,19 +25,19 @@ class Message(tag: Tag) extends Table[(Int,String,String)](tag, "message") {
 val messages = TableQuery[Message]
 ~~~
 
-The `message` table can be queried as though it is a Scala collection. For instance, the query below  will return all messages from the user `jono`.
+The `message` table can be queried as though it is a Scala collection. For instance, the query below  will return all messages from the user `HAL`.
 
 ~~~ scala
   val query = for {
     message <- messages
-    if message.from === "jono"
+    if message.from === "HAL"
   } yield message
 ~~~
 
 However not until it is instructed to do so, making queries lazy, reusable and composable.
 
 ~~~ scala
-val messages_from_jono:List[Message] = query.list
+val messages_from_HAL:List[Message] = query.list
 ~~~~
 
 Database connecitivty will be required. This is provided by a slick driver and session.
@@ -114,7 +114,7 @@ To work with DB2, SQL Server or Oracle you need a commercial license. These are 
 If you do not have `sbt` installed, there are instructions on the [scala-sbt][link-sbt] about how to do this.
 </div>
 
-To use Slick, create a regular Scala project and reference the Slick dependencies.  This can be accomplished using SBT by creating a file `build.sbt` with the contents below:
+To use Slick, create a regular Scala project and reference the Slick dependencies.
 
 <div class="callout callout-info">
   **git project**
@@ -123,6 +123,8 @@ To use Slick, create a regular Scala project and reference the Slick dependencie
 
   There will be branch per chapter if you want to follow along without typing the code.
 </div>
+
+This can be accomplished using SBT by creating a file `build.sbt` with the contents below:
 
 ~~~ scala
 name := "essential-slick"
@@ -197,20 +199,24 @@ object ExerciseOne extends App {
       //Define a query
       val query = for {
         message ← messages
-        if message.from === "jono"
+        if message.from === "HAL"
       } yield message
 
       //Execute a query.
-      val messages_from_jono: List[Message] = query.list
+      val messages_from_HAL: List[Message] = query.list
 
       //Display the results of the query
-      println(s" ${messages_from_jono}")
+      println(s" ${messages_from_HAL}")
   }
 
 }
 ~~~
 
-Running this application will create the schema. It can be run from an IDE, or with `sbt "runMain io.underscore.slick.ExerciseOne"`.
+Running this application will create the schema. It can be run from an IDE, or with `sbt` from the command-line:
+
+~~~ bash
+$sbt "runMain io.underscore.slick.ExerciseOne"
+~~~
 
 The schema can be examined via `psql`, there should be no surprises:
 
@@ -237,7 +243,216 @@ Indexes:
 Don't worry too much about the code at this point in time. We'll go into more detail later in the book. The important points are:
 
   * Slick should have created the schema,
-  * Running the application should have returned `List()`, as there are currently no messages in the database, let alone from `jono`.
+  * Running the application should have returned `List()`, as there are currently no messages in the database, let alone from `HAL`.
+
+** Schema Management **
+
+Running the application more than once will give an error as `messages.ddl.create` attempts to create the message table. It doesn't check if the table already exists.
+
+To make our example easier to work with, we could query the database meta data and find out if our table already exists before we create it:
+
+~~~ scala
+if (MTable.getTables(messages.baseTableRow.tableName).firstOption.isEmpty)
+  messages.ddl.create
+~~~~
+
+However, for our simple example we'll end up dropping and creating the schema each time:
+
+~~~ scala
+MTable.getTables(messages.baseTableRow.tableName).firstOption match {
+  case None =>
+    messages.ddl.create
+  case Some(t) =>
+    messages.ddl.drop
+    messages.ddl.create
+ }
+~~~
+
+We'll look at other tools for managing schema migrations later.
+
+** Inserting Data **
+
+The following can be found in ExerciseTwo of the GitHub project, which will save a bit of typing. It can be run from the console using the following:
+
+~~~ bash
+$ sbt "runMain io.underscore.slick.ExerciseTwo"
+~~~
+
+~~~ scala
+
+      // Populate with some data:
+      messages += Message("Dave Bowman", "Hello, HAL. Do you read me, HAL?")
+
+      messages ++= Seq(
+        Message("HAL", "Affirmative, Dave. I read you."),
+        Message("Dave Bowman", "Open the pod bay doors, HAL."),
+        Message("HAL", "I'm sorry, Dave. I'm afraid I can't do that."),
+        Message("Dave Bowman", "What's the problem?"),
+        Message("HAL", "I think you know what the problem is just as well as I do."),
+        Message("Dave Bowman", "What are you talking about, HAL?"),
+        Message("HAL", "This mission is too important for me to allow you to jeopardize it."),
+        Message("Dave Bowman", "I don't know what you're talking about, HAL."),
+        Message("HAL", "I know that you and Frank were planning to disconnect me, and I'm afraid that's something I cannot allow to happen."),
+        Message("Dave Bowman", "[feigning ignorance] Where the hell did you get that idea, HAL?"),
+        Message("HAL", "Dave, although you took very thorough precautions in the pod against my hearing you, I could see your lips move."),
+        Message("Dave Bowman", "Alright, HAL. I'll go in through the emergency airlock."),
+        Message("HAL", "Without your space helmet, Dave? You're going to find that rather difficult."),
+        Message("Dave Bowman", "HAL, I won't argue with you anymore! Open the doors!"),
+        Message("HAL", "Dave, this conversation can serve no purpose anymore. Goodbye."))
+~~~
+
+Each `+=` or `++=` executes in its own transaction.
+
+NB: result is a row count `Int` for a single insert, or `Option[Int]` for a batch insert. It's optional because not all databases support returning a count for batches.
+
+~~~ sql
+essential-slick=> select * from message;
+    from     |                                                       message                                                       | id
+-------------+---------------------------------------------------------------------------------------------------------------------+----
+ Dave Bowman | Hello, HAL. Do you read me, HAL?                                                                                    |  1
+ HAL         | Affirmative, Dave. I read you.                                                                                      |  2
+ Dave Bowman | Open the pod bay doors, HAL.                                                                                        |  3
+ HAL         | I'm sorry, Dave. I'm afraid I can't do that.                                                                        |  4
+ Dave Bowman | What's the problem?                                                                                                 |  5
+ HAL         | I think you know what the problem is just as well as I do.                                                          |  6
+ Dave Bowman | What are you talking about, HAL?                                                                                    |  7
+ HAL         | This mission is too important for me to allow you to jeopardize it.                                                 |  8
+ Dave Bowman | I don't know what you're talking about, HAL.                                                                        |  9
+ HAL         | I know that you and Frank were planning to disconnect me, and I'm afraid that's something I cannot allow to happen. | 10
+ Dave Bowman | [feigning ignorance] Where the hell did you get that idea, HAL?                                                     | 11
+ HAL         | Dave, although you took very thorough precautions in the pod against my hearing you, I could see your lips move.    | 12
+ Dave Bowman | Alright, HAL. I'll go in through the emergency airlock.                                                             | 13
+ HAL         | Without your space helmet, Dave? You're going to find that rather difficult.                                        | 14
+ Dave Bowman | HAL, I won't argue with you anymore! Open the doors!                                                                | 15
+ HAL         | Dave, this conversation can serve no purpose anymore. Goodbye.                                                      | 16
+(16 rows)
+~~~
+
+This is, generally, what you want to happen, and applies only to auto incrementing fields.
+
+<!--If the ID was not auto incrementing, the ID values we supplied (100,200 and so on) would have been used. -->
+
+If you really want to include the ID column in the insert, use the `forceInsert` method.
+
+
+** A Simple Query **
+
+Let's count all messages sent by HAL:
+
+~~~ scala
+//Define the query
+val query = for {
+  message ← messages
+  if message.from === "HAL"
+} yield message
+
+//Execute a query.
+val number_of_messages_from_HAL:Int = query.size.run
+
+println(s"There are ${number_of_messages_from_HAL} messages from HAL.")
+~~~
+
+This produces:
+
+~~~ scala
+There are 8 messages from HAL.
+~~~
+
+What did Slick do to produce those results?  It ran this:
+
+~~~ sql
+select x2.x3 from (select count(1) as x3 from (select x4."from" as x5, x4."message" as x6, x4."id" as x7 from "message" x4 where x4."from" = 'HAL') x8) x2
+~~~~
+
+Note that it did not fetch all the planets and filter them. There's something more interesting going on that that.
+
+
+<div class="callout callout-info">
+#### Logging What Slick is Doing
+
+Slick uses a logging framework called SLFJ.  You can configure this to capture information about the queries being run, and the log to different back ends.  The "essential-slick-example" project uses a logging back-end called _Logback_, which is configured in the file _src/main/resources/logback.xml_.  In that file we enable statement logging by turning up the logging to debug level:
+
+~~~ xml
+<logger name="scala.slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
+~~~
+
+When we next run a query, each statement will be recorded on standard output:
+
+~~~
+18:49:43.557 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: drop table "planet"
+18:49:43.564 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: create table "planet" ("id" SERIAL NOT NULL PRIMARY KEY,"name" VARCHAR(254) NOT NULL,"distance_au" DOUBLE PRECISION NOT NULL)
+~~~
+
+
+You can enable a variety of events to be logged:
+
+* `scala.slick.jdbc.JdbcBackend.statement` - which is for statement logging, as you've seen.
+* `scala.slick.session` - for session information, such as connections being opened.
+* `scala.slick` - for everything!  This is usually too much.
+
+</div>
+
+
+
+
+## Running Queries in the REPL
+
+For experimenting with queries it's convenient to use the Scala REPL and create an implicit session to work with.  In the "essential-slick-example" SBT project, run the `console` command to enter the Scala REPL with the Slick dependencies loaded and ready to use:
+
+~~~ scala
+> console
+[info] Starting scala interpreter...
+[info]
+
+Session created, but you may want to also import a schema. For example:
+
+    import underscoreio.schema.Example1._
+ or import underscoreio.schema.Example5.Tables._
+
+import scala.slick.driver.PostgresDriver.simple._
+db: slick.driver.PostgresDriver.backend.DatabaseDef = scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$5@6dbc2f23
+session: slick.driver.PostgresDriver.backend.Session = scala.slick.jdbc.JdbcBackend$BaseSession@5dbadb1d
+Welcome to Scala version 2.10.3 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_45).
+Type in expressions to have them evaluated.
+Type :help for more information.
+
+scala> import underscoreio.schema.Example2._
+import underscoreio.schema.Example2._
+
+scala> planets.run
+08:34:36.053 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."name", x2."distance_au" from "planet" x2
+res1: Seq[(Int, String, Double)] = Vector((1,Earth,1.0), (2,Mercury,0.4), (3,Venus,0.7), (4,Mars,1.5), (5,Jupiter,5.2), (6,Saturn,9.5), (7,Uranus,19.0), (8,Neptune,30.0), (9,Earth,1.0))
+
+scala> planets.firstOption
+08:34:42.320 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."name", x2."distance_au" from "planet" x2
+res2: Option[(Int, String, Double)] = Some((1,Earth,1.0))
+
+scala>
+~~~
+
+
+
+## Exercises
+
+* What happens if you used 5 rather than 5.0 in the query?
+
+* 1AU is roughly 150 million kilometers. Can you run query to return the distances in kilometers? Where is the conversion to kilometers performed? Is it in Scala or in the database?
+
+* How would you count the number of planets? Hint: in the Scala collections the method `length` gives you the size of the collection.
+
+* Select the planet with the name "Earth".  You'll need to know that equals in Slick is represented by `===` (three equals signs).  It's also useful to know that `=!=` is not equals.
+
+* Using a for comprehension, select the planet with the id of 1.  What happens if you try to find a planet with an id of 999?
+
+* You know that for comprehensions are sugar for `map`, `flatMap`, and `filter`.  Use `filter` to find the planet with an id of 1, and then the planet with an id of 999. Hint: `first` and `firstOption` are useful alternatives to `run`.
+
+* The method `startsWith` tests to see if a string starts with a particular sequence of characters.  For example `"Earth".startsWith("Ea")` is `true`.  Find all the planets with a name that starts with "E".  What query does the database run?
+
+* Slick implements the method `like`. Find all the planets with an "a" in their name.
+
+* Find all the planets with an "a" in their name that are more than 5 AU from the Sun.
+
+
 
 ## Take home Points
 
