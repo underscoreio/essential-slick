@@ -234,12 +234,13 @@ essential-slick=> \d
 (2 rows)
 
 essential-slick=> \d message
-                                 Table "public.message"
- Column  |          Type          |                      Modifiers
----------+------------------------+------------------------------------------------------
- from    | character varying(254) | not null
- message | character varying(254) | not null
- id      | bigint                 | not null default nextval('message_id_seq'::regclass)
+                                    Table "public.message"
+ Column  |            Type             |                      Modifiers
+---------+-----------------------------+------------------------------------------------------
+ id      | bigint                      | not null default nextval('message_id_seq'::regclass)
+ from    | character varying(254)      | not null
+ content | character varying(254)      | not null
+ when    | timestamp without time zone | not null
 Indexes:
     "message_pkey" PRIMARY KEY, btree (id)
 ~~~
