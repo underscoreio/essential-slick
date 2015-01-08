@@ -270,7 +270,7 @@ MTable.getTables(messages.baseTableRow.tableName).firstOption match {
 
 We'll look at other tools for managing schema migrations later.
 
-** Inserting Data **
+**Inserting Data**
 
 The following can be found in ExerciseTwo of the GitHub project, which will save a bit of typing. It can be run from the console using the following:
 
@@ -364,7 +364,7 @@ What did Slick do to produce those results?  It ran this:
 select x2.x3 from (select count(1) as x3 from (select x4."from" as x5, x4."message" as x6, x4."id" as x7 from "message" x4 where x4."from" = 'HAL') x8) x2
 ~~~~
 
-Note that it did not fetch all the planets and filter them. There's something more interesting going on that that.
+Note that it did not fetch all messages and filter them. There's something more interesting going on that that.
 
 
 <div class="callout callout-info">
@@ -379,10 +379,9 @@ Slick uses a logging framework called SLFJ.  You can configure this to capture i
 When we next run a query, each statement will be recorded on standard output:
 
 ~~~
-18:49:43.557 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: drop table "planet"
-18:49:43.564 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: create table "planet" ("id" SERIAL NOT NULL PRIMARY KEY,"name" VARCHAR(254) NOT NULL,"distance_au" DOUBLE PRECISION NOT NULL)
+18:49:43.557 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: drop table "message"
+18:49:43.564 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: create table "message" ("from" VARCHAR(254) NOT NULL,"content" VARCHAR(254) NOT NULL,"id" BIGSERIAL NOT NULL PRIMARY KEY)
 ~~~
-
 
 You can enable a variety of events to be logged:
 
@@ -393,9 +392,9 @@ You can enable a variety of events to be logged:
 </div>
 
 
+**Running Queries in the REPL**
 
-
-## Running Queries in the REPL
+THIS NEEDS TO BE UPDATED
 
 For experimenting with queries it's convenient to use the Scala REPL and create an implicit session to work with.  In the "essential-slick-example" SBT project, run the `console` command to enter the Scala REPL with the Slick dependencies loaded and ready to use:
 
