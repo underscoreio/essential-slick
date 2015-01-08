@@ -15,14 +15,17 @@ The class below represents a single row of the `message` table, which is constru
 Access to persist and alter instances of these class is achieved via the `TableQuery` instance.
 
 ~~~ scala
-class Message(tag: Tag) extends Table[(Int,String,String)](tag, "message") {
-    def id = column[Int]("id", O.PrimaryKey, O.AutoInc)
+  final case class Message(id: Long = 0L, from: String, content: String, when: DateTime)
+
+  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def from = column[String]("from")
-    def message = column[String]("message")
-    def * = (id, from, message)
+    def content = column[String]("content")
+    def when = column[DateTime]("when")
+    def * = (id, from, content, when) <> (Message.tupled, Message.unapply)
   }
 
-val messages = TableQuery[Message]
+  lazy val messages = TableQuery[MessageTable]
 ~~~
 
 The `message` table can be queried as though it is a Scala collection. For instance, the query below  will return all messages from the user `HAL`.
@@ -174,15 +177,16 @@ package io.underscore.slick
 
 import scala.slick.driver.PostgresDriver.simple._
 
-object ExerciseOne extends App {
+object ExerciseOne extends Exercise {
 
-  final case class Message(from: String, message: String, id: Long = 0L)
+  final case class Message(id: Long = 0L, from: String, content: String, when: DateTime)
 
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def from = column[String]("from")
-    def message = column[String]("message")
-    def * = (from, message, id) <> (Message.tupled, Message.unapply)
+    def content = column[String]("content")
+    def when = column[DateTime]("when")
+    def * = (id, from, content, when) <> (Message.tupled, Message.unapply)
   }
 
   lazy val messages = TableQuery[MessageTable]
@@ -280,25 +284,27 @@ $ sbt "runMain io.underscore.slick.ExerciseTwo"
 
 ~~~ scala
 
+      val time = new DateTime(2001,2,17,10,22,50,51)
+
       // Populate with some data:
-      messages += Message("Dave Bowman", "Hello, HAL. Do you read me, HAL?")
+      messages += Message(0,"Dave Bowman", "Hello, HAL. Do you read me, HAL?", time)
 
       messages ++= Seq(
-        Message("HAL", "Affirmative, Dave. I read you."),
-        Message("Dave Bowman", "Open the pod bay doors, HAL."),
-        Message("HAL", "I'm sorry, Dave. I'm afraid I can't do that."),
-        Message("Dave Bowman", "What's the problem?"),
-        Message("HAL", "I think you know what the problem is just as well as I do."),
-        Message("Dave Bowman", "What are you talking about, HAL?"),
-        Message("HAL", "This mission is too important for me to allow you to jeopardize it."),
-        Message("Dave Bowman", "I don't know what you're talking about, HAL."),
-        Message("HAL", "I know that you and Frank were planning to disconnect me, and I'm afraid that's something I cannot allow to happen."),
-        Message("Dave Bowman", "[feigning ignorance] Where the hell did you get that idea, HAL?"),
-        Message("HAL", "Dave, although you took very thorough precautions in the pod against my hearing you, I could see your lips move."),
-        Message("Dave Bowman", "Alright, HAL. I'll go in through the emergency airlock."),
-        Message("HAL", "Without your space helmet, Dave? You're going to find that rather difficult."),
-        Message("Dave Bowman", "HAL, I won't argue with you anymore! Open the doors!"),
-        Message("HAL", "Dave, this conversation can serve no purpose anymore. Goodbye."))
+        Message(0,"HAL", "Affirmative, Dave. I read you.", time.plusSeconds(2)),
+        Message(10,"Dave Bowman", "Open the pod bay doors, HAL.", time.plusSeconds(2)),
+        Message(20,"HAL", "I'm sorry, Dave. I'm afraid I can't do that.", time.plusSeconds(2)),
+        Message(30,"Dave Bowman", "What's the problem?", time.plusSeconds(2)),
+        Message(40,"HAL", "I think you know what the problem is just as well as I do.", time.plusSeconds(3)),
+        Message(50,"Dave Bowman", "What are you talking about, HAL?", time.plusSeconds(2)),
+        Message(60,"HAL", "This mission is too important for me to allow you to jeopardize it.", time.plusSeconds(4)),
+        Message(70,"Dave Bowman", "I don't know what you're talking about, HAL.", time.plusSeconds(3)),
+        Message(80,"HAL", "I know that you and Frank were planning to disconnect me, and I'm afraid that's something I cannot allow to happen.", time.plusSeconds(2)),
+        Message(90,"Dave Bowman", "[feigning ignorance] Where the hell did you get that idea, HAL?", time.plusSeconds(6)),
+        Message(100,"HAL", "Dave, although you took very thorough precautions in the pod against my hearing you, I could see your lips move.", time.plusSeconds(3)),
+        Message(110,"Dave Bowman", "Alright, HAL. I'll go in through the emergency airlock.", time.plusSeconds(9)),
+        Message(120,"HAL", "Without your space helmet, Dave? You're going to find that rather difficult.", time.plusSeconds(4)),
+        Message(130,"Dave Bowman", "HAL, I won't argue with you anymore! Open the doors!", time.plusSeconds(5)),
+        Message(140,"HAL", "Dave, this conversation can serve no purpose anymore. Goodbye.", time.plusSeconds(2)))
 ~~~
 
 Each `+=` or `++=` executes in its own transaction.
@@ -307,37 +313,36 @@ NB: result is a row count `Int` for a single insert, or `Option[Int]` for a batc
 
 ~~~ sql
 essential-slick=> select * from message;
-    from     |                                                       message                                                       | id
--------------+---------------------------------------------------------------------------------------------------------------------+----
- Dave Bowman | Hello, HAL. Do you read me, HAL?                                                                                    |  1
- HAL         | Affirmative, Dave. I read you.                                                                                      |  2
- Dave Bowman | Open the pod bay doors, HAL.                                                                                        |  3
- HAL         | I'm sorry, Dave. I'm afraid I can't do that.                                                                        |  4
- Dave Bowman | What's the problem?                                                                                                 |  5
- HAL         | I think you know what the problem is just as well as I do.                                                          |  6
- Dave Bowman | What are you talking about, HAL?                                                                                    |  7
- HAL         | This mission is too important for me to allow you to jeopardize it.                                                 |  8
- Dave Bowman | I don't know what you're talking about, HAL.                                                                        |  9
- HAL         | I know that you and Frank were planning to disconnect me, and I'm afraid that's something I cannot allow to happen. | 10
- Dave Bowman | [feigning ignorance] Where the hell did you get that idea, HAL?                                                     | 11
- HAL         | Dave, although you took very thorough precautions in the pod against my hearing you, I could see your lips move.    | 12
- Dave Bowman | Alright, HAL. I'll go in through the emergency airlock.                                                             | 13
- HAL         | Without your space helmet, Dave? You're going to find that rather difficult.                                        | 14
- Dave Bowman | HAL, I won't argue with you anymore! Open the doors!                                                                | 15
- HAL         | Dave, this conversation can serve no purpose anymore. Goodbye.                                                      | 16
+ id |    from     |                                                       content                                                       |          when
+----+-------------+---------------------------------------------------------------------------------------------------------------------+-------------------------
+  1 | Dave Bowman | Hello, HAL. Do you read me, HAL?                                                                                    | 2001-02-17 10:22:50.051
+  2 | HAL         | Affirmative, Dave. I read you.                                                                                      | 2001-02-17 10:22:52.051
+  3 | Dave Bowman | Open the pod bay doors, HAL.                                                                                        | 2001-02-17 10:22:52.051
+  4 | HAL         | I'm sorry, Dave. I'm afraid I can't do that.                                                                        | 2001-02-17 10:22:52.051
+  5 | Dave Bowman | What's the problem?                                                                                                 | 2001-02-17 10:22:52.051
+  6 | HAL         | I think you know what the problem is just as well as I do.                                                          | 2001-02-17 10:22:53.051
+  7 | Dave Bowman | What are you talking about, HAL?                                                                                    | 2001-02-17 10:22:52.051
+  8 | HAL         | This mission is too important for me to allow you to jeopardize it.                                                 | 2001-02-17 10:22:54.051
+  9 | Dave Bowman | I don't know what you're talking about, HAL.                                                                        | 2001-02-17 10:22:53.051
+ 10 | HAL         | I know that you and Frank were planning to disconnect me, and I'm afraid that's something I cannot allow to happen. | 2001-02-17 10:22:52.051
+ 11 | Dave Bowman | [feigning ignorance] Where the hell did you get that idea, HAL?                                                     | 2001-02-17 10:22:56.051
+ 12 | HAL         | Dave, although you took very thorough precautions in the pod against my hearing you, I could see your lips move.    | 2001-02-17 10:22:53.051
+ 13 | Dave Bowman | Alright, HAL. I'll go in through the emergency airlock.                                                             | 2001-02-17 10:22:59.051
+ 14 | HAL         | Without your space helmet, Dave? You're going to find that rather difficult.                                        | 2001-02-17 10:22:54.051
+ 15 | Dave Bowman | HAL, I won't argue with you anymore! Open the doors!                                                                | 2001-02-17 10:22:55.051
+ 16 | HAL         | Dave, this conversation can serve no purpose anymore. Goodbye.                                                      | 2001-02-17 10:22:52.051
 (16 rows)
 ~~~
 
 This is, generally, what you want to happen, and applies only to auto incrementing fields.
 
-<!--If the ID was not auto incrementing, the ID values we supplied (100,200 and so on) would have been used. -->
+If the ID was not auto incrementing, the ID values we supplied (10,20 and so on) would have been used.
 
 If you really want to include the ID column in the insert, use the `forceInsert` method.
 
-
 ** A Simple Query **
 
-Let's count all messages sent by HAL:
+Let's get all messages sent by HAL:
 
 ~~~ scala
 //Define the query
@@ -347,21 +352,21 @@ val query = for {
 } yield message
 
 //Execute a query.
-val number_of_messages_from_HAL:Int = query.size.run
+val messages_from_hal:Int = query.run
 
-println(s"There are ${number_of_messages_from_HAL} messages from HAL.")
+println(messages_from_hal)
 ~~~
 
 This produces:
 
 ~~~ scala
-There are 8 messages from HAL.
+Vector(Message(2,HAL,Affirmative, Dave. I read you.,2001-02-17T10:22:52.051+11:00), Message(4,HAL,I'm sorry, Dave. I'm afraid I can't do that.,2001-02-17T10:22:52.051+11:00), Message(6,HAL,I think you know what the problem is just as well as I do.,2001-02-17T10:22:53.051+11:00), Message(8,HAL,This mission is too important for me to allow you to jeopardize it.,2001-02-17T10:22:54.051+11:00), Message(10,HAL,I know that you and Frank were planning to disconnect me, and I'm afraid that's something I cannot allow to happen.,2001-02-17T10:22:52.051+11:00), Message(12,HAL,Dave, although you took very thorough precautions in the pod against my hearing you, I could see your lips move.,2001-02-17T10:22:53.051+11:00), Message(14,HAL,Without your space helmet, Dave? You're going to find that rather difficult.,2001-02-17T10:22:54.051+11:00), Message(16,HAL,Dave, this conversation can serve no purpose anymore. Goodbye.,2001-02-17T10:22:52.051+11:00))
 ~~~
 
 What did Slick do to produce those results?  It ran this:
 
 ~~~ sql
-select x2.x3 from (select count(1) as x3 from (select x4."from" as x5, x4."message" as x6, x4."id" as x7 from "message" x4 where x4."from" = 'HAL') x8) x2
+select s18."id", s18."from", s18."content", s18."when" from "message" s18 where s18."from" = 'HAL'
 ~~~~
 
 Note that it did not fetch all messages and filter them. There's something more interesting going on that that.
@@ -380,7 +385,8 @@ When we next run a query, each statement will be recorded on standard output:
 
 ~~~
 18:49:43.557 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: drop table "message"
-18:49:43.564 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: create table "message" ("from" VARCHAR(254) NOT NULL,"content" VARCHAR(254) NOT NULL,"id" BIGSERIAL NOT NULL PRIMARY KEY)
+18:49:43.564 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: create table "message" ("id" BIGSERIAL NOT NULL PRIMARY KEY,"from" VARCHAR(254) NOT NULL,"content" VARCHAR(254) NOT NULL,"when" TIMESTAMP NOT NULL)
+
 ~~~
 
 You can enable a variety of events to be logged:
@@ -394,8 +400,6 @@ You can enable a variety of events to be logged:
 
 **Running Queries in the REPL**
 
-THIS NEEDS TO BE UPDATED
-
 For experimenting with queries it's convenient to use the Scala REPL and create an implicit session to work with.  In the "essential-slick-example" SBT project, run the `console` command to enter the Scala REPL with the Slick dependencies loaded and ready to use:
 
 ~~~ scala
@@ -405,8 +409,8 @@ For experimenting with queries it's convenient to use the Scala REPL and create 
 
 Session created, but you may want to also import a schema. For example:
 
-    import underscoreio.schema.Example1._
- or import underscoreio.schema.Example5.Tables._
+    import io.underscore.slick.ExerciseTwo._
+
 
 import scala.slick.driver.PostgresDriver.simple._
 db: slick.driver.PostgresDriver.backend.DatabaseDef = scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$5@6dbc2f23
@@ -415,42 +419,33 @@ Welcome to Scala version 2.10.3 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_4
 Type in expressions to have them evaluated.
 Type :help for more information.
 
-scala> import underscoreio.schema.Example2._
-import underscoreio.schema.Example2._
+scala> import io.underscore.slick.ExerciseTwo._
+import io.underscore.slick.ExerciseTwo._
 
 scala> planets.run
-08:34:36.053 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."name", x2."distance_au" from "planet" x2
-res1: Seq[(Int, String, Double)] = Vector((1,Earth,1.0), (2,Mercury,0.4), (3,Venus,0.7), (4,Mars,1.5), (5,Jupiter,5.2), (6,Saturn,9.5), (7,Uranus,19.0), (8,Neptune,30.0), (9,Earth,1.0))
+16:14:04.702 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."from", x2."content", x2."when" from "message" x2
+res4: Seq[io.underscore.slick.ExerciseTwo.MessageTable#TableElementType] = Vector(Message(1,Dave Bowman,Hello, HAL. Do you read me, HAL?,2001-02-17T10:22:50.051+11:00), Message(2,HAL,Affirmative, Dave. I read you.,2001-02-17T10:22:52.051+11:00), Message(3,Dave Bowman,Open the pod bay doors, HAL.,2001-02-17T10:22:52.051+11:00), Message(4,HAL,I'm sorry, Dave. I'm afraid I can't do that.,2001-02-17T10:22:52.051+11:00), Message(5,Dave Bowman,What's the problem?,2001-02-17T10:22:52.051+11:00), Message(6,HAL,I think you know what the problem is just as well as I do.,2001-02-17T10:22:53.051+11:00), Message(7,Dave Bowman,What are you talking about, HAL?,2001-02-17T10:22:52.051+11:00), Message(8,HAL,This mission is too important for me to allow you to jeopardize it.,2001-02-17T10:22:54.051+11:00...
 
 scala> planets.firstOption
-08:34:42.320 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."name", x2."distance_au" from "planet" x2
-res2: Option[(Int, String, Double)] = Some((1,Earth,1.0))
+16:14:23.006 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: select x2."id", x2."from", x2."content", x2."when" from "message" x2
+res5: Option[io.underscore.slick.ExerciseTwo.MessageTable#TableElementType] = Some(Message(1,Dave Bowman,Hello, HAL. Do you read me, HAL?,2001-02-17T10:22:50.051+11:00))
 
 scala>
 ~~~
 
-
-
 ## Exercises
 
-* What happens if you used 5 rather than 5.0 in the query?
+* How would you count the number of messages? Hint: in the Scala collections the method `length` gives you the size of the collection.
 
-* 1AU is roughly 150 million kilometers. Can you run query to return the distances in kilometers? Where is the conversion to kilometers performed? Is it in Scala or in the database?
+* Using a for comprehension, select the message with the id of 1.  What happens if you try to find a message with an id of 999?
 
-* How would you count the number of planets? Hint: in the Scala collections the method `length` gives you the size of the collection.
+* You know that for comprehensions are sugar for `map`, `flatMap`, and `filter`.  Use `filter` to find the message with an id of 1, and then the message with an id of 999. Hint: `first` and `firstOption` are useful alternatives to `run`.
 
-* Select the planet with the name "Earth".  You'll need to know that equals in Slick is represented by `===` (three equals signs).  It's also useful to know that `=!=` is not equals.
+* The method `startsWith` tests to see if a string starts with a particular sequence of characters.  For example `"Earth".startsWith("Ea")` is `true`.  Find all the messages with a name that starts with "Dave".  What query does the database run?
 
-* Using a for comprehension, select the planet with the id of 1.  What happens if you try to find a planet with an id of 999?
+* Slick implements the method `like`. Find all the messages with an "Frank" in their content.
 
-* You know that for comprehensions are sugar for `map`, `flatMap`, and `filter`.  Use `filter` to find the planet with an id of 1, and then the planet with an id of 999. Hint: `first` and `firstOption` are useful alternatives to `run`.
-
-* The method `startsWith` tests to see if a string starts with a particular sequence of characters.  For example `"Earth".startsWith("Ea")` is `true`.  Find all the planets with a name that starts with "E".  What query does the database run?
-
-* Slick implements the method `like`. Find all the planets with an "a" in their name.
-
-* Find all the planets with an "a" in their name that are more than 5 AU from the Sun.
-
+* Find all the messages with an "I" in their content, sent by "HAL".
 
 
 ## Take home Points
