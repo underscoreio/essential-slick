@@ -2,13 +2,95 @@
 
 ## Orientation
 
-Slick is a Scala library to provide access to relational databases in a simliar fashion to Scala collections. It is type safe. Tables, columns and queries are defined in Scala.
+Slick is a Scala library for accessing relational databases. The code you write with Slick looks a lot like code you'd write using the Scala collections library. You can treat a query like a collection and `map` and `filter` it, or use a for comprehension. This is how we'll be working with Slick for the majority of this text.
 
-## Slick isn't an ORM
+However, if that's not your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in **chapter or section TODO**.
 
-//TODO
+Whichever style you use, your queries are type safe, meaning the compiler will spot some kinds of mistake you might make. A further benefit is that your queries _compose_, allowing you to build up expressions to run against the database.
 
-## Basic Concepts
+Aside from querying, Slick of course deals with database connections, transactions, schema, foreign keys, auto incrementing fields and all the things you might expect from any database library. You can even drop right down below Slick to the level of dealing with Java's JDBC concepts, if that's something you're familiar with and find you need.
+
+We will explain what all these phrases mean and how they work in practice as we go.
+
+<div class="callout callout-info">
+**Slick isn't an ORM**
+
+If you've used database libraries such as _Hibernate_ or _Active Record_ you might expect Slick to be an Object-Relational Mapping (ORM) tool. It's not. And it's best not to try to think of Slick in that way.
+
+Instead, think of Slick in terms of being closer to the concepts of the database itself: rows and columns. We're not going to argue the pros and cons of ORMs here, but if this is an area that interests you, take a look at ["Coming from ORM to Slick"][link-ref-orm].
+
+If you've not familiar with ORMs, congratulations. You already have one less thing to worry about!
+</div>
+
+
+## Structure of this Book
+
+The aim of this first chapter is to introduce core concepts, and to get you up and running with Slick.  We'll start that in a moment.
+
+The example we'll be using is of a chat application. Think of it as the database behind a _Slack_, _Flowdock_, or an _IRC_ application. It will have users, messages, and rooms. These will be modeled as tables, relationships between tables, and various kinds of queries to run across the tables.
+
+For now, we're going to start just with a table for messages.
+
+
+## Getting Started
+
+All the examples in this book will be using the [_SQLite_][link-sqlite-home] database.  You might prefer to use _MySQL_, or _PostgreSQL_, or some other database. At the end of this chapter we'll point you at the changes you'll need to make to work with other databases.
+
+But stick with SQLite for at least this first chapter, so you can get confidence using Slick without running into too many complications.
+
+### Database Install
+
+We've picked SQLite because it is simple and easy to install. You may even already have it installed.
+
+_TODO: INSTALL INSTRUCTIONS FOR MAC, WINDOWS, LINUX_.
+
+### Creating a Database
+
+_TODO: I think we should manually create the schema here to save introducing DDL in this first section._
+
+_TODO: Also populate data by hand?_
+
+
+### Creating an SBT Project
+
+To use Slick, create a regular Scala SBT project and reference the Slick dependencies.  If you don't have SBT installed, follow the instructions at the [scala-sbt site][link-sbt].
+
+Here's a simple build script, _build.sbt_:
+
+~~~ scala
+name := "essential-slick"
+
+version := "1.0"
+
+scalaVersion := "2.11.4"
+
+libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
+
+libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1101-jdbc41"
+
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
+~~~
+
+It declares the minimum dependencies needed:
+
+- Slick itself;
+- the appropriate database driver; and
+- a logging library, which Slick requires for its internal debug logging.
+
+
+We'll run this script later in this chapter.
+
+
+<div class="callout callout-info">
+  **Download the Code for this Chapter**
+
+  If you don't want to type in the code for the next few section we have a [GitHub project][link-example] containing the build file, directory structure and Scala source files.
+
+  Once you have cloned the project you will find a branch per chapter. Access this chapter with the command `git checkout chapter1`.
+</div>
+
+
+### First Table and Row
 
 The class below represents a single row of the `message` table, which is constructed from three columns `id`, `from` and `message`.
 
@@ -28,22 +110,41 @@ Access to persist and alter instances of these class is achieved via the `TableQ
   lazy val messages = TableQuery[MessageTable]
 ~~~
 
-The `message` table can be queried as though it is a Scala collection. For instance, the query below  will return all messages from the user `HAL`.
+
+_TODO: We need to expand here. And at least touch on tupled, unapply and `*`, at the very least to say don't worry_.
+
+
+### First Query
+
+The `message` table can be queried as though it is a Scala collection. For instance, the query below will return all messages from the user `HAL`.
 
 ~~~ scala
-  val query = for {
+  val halSays = for {
     message <- messages
     if message.from === "HAL"
   } yield message
 ~~~
 
-However not until it is instructed to do so, making queries lazy, reusable and composable.
+
+It's important to note that this is _not_ executing a query. The type of `halSays` is `TODO`. This is important, allowing us to compose queries.
+
+Note also that we use `===` and not `==` in the for comprehension. _TODO: Explain_.
+
+_TODO: Possibly also show this as a `messages.filter` ? _.
+
+_TODO: Possibly quickly show constitutionality by getting a halSaidAnHourAgo query?_
+
+_TODO: briefly touch on running. Say we'll see it later once we have a Session_.
 
 ~~~ scala
-val messages_from_HAL:List[Message] = query.list
+val messages_from_HAL: List[Message] = query.list
 ~~~~
 
-Database connecitivty will be required. This is provided by a slick driver and session.
+
+
+### Database Connections and Sessions
+
+Database connectivity will be required. This is provided by a slick driver and session.
 
 ~~~ scala
 import scala.slick.driver.PostgresDriver.simple._
@@ -63,114 +164,15 @@ import scala.slick.driver.PostgresDriver.simple._
 
 The import indicates which database to connect to, in the above case PostgresSQL. `Database.forURL` creates a `DatabaseManager` which provides connections to the database.
 
-Finally, a way to compile the code is needed. This is delegated to `sbt`, below is a simple build script which declares the minimum dependencies needed; Slick, the appropriate database driver, PostgresSQL in this case, and a logging library, which Slick requires for it's internal debug logging.
+_TODO: TALK ABOUT SESSION HERE_
 
-~~~ scala
-name := "essential-slick"
-
-version := "1.0"
-
-scalaVersion := "2.11.4"
-
-libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
-
-libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1101-jdbc41"
-
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
-
-~~~
+_TODO: TALK ABOUT IMPLICIT SESSION TOO_
 
 
-### Exercises
 
-The objective of exercises for this chapter are to set up your enivronment.  This will enable you to execute examples and particpate in future exercises.  Commands to be executed on the filesystem are assumed to be rooted in a directory `essential-slick`.
+### Putting it All Together
 
-**Database**
-
-<div class="callout callout-info">
-As mentioned during the introduction PostgresSQL version 9 is used throughout the book for examples. If it is not currently installed, it can be downloaded from the [Postgres][link-postgres-download] website.
-</div>
-
-Create a database named `essential-slick` with user `essential`. This will be used for all examples and can be created with the following:
-
-~~~ sql
-CREATE DATABASE "essential-slick" WITH ENCODING 'UTF8';
-CREATE USER "essential" WITH PASSWORD 'trustno1';
-GRANT ALL ON DATABASE "essential-slick" TO essential;
-~~~
-
-Confirm the database has been created and can be accessed:
-
-~~~ bash
-$ psql -d essential-slick essential
-~~~
-
-<div class="callout callout-info">
-Slick supports PostgreSQL, MySQL, Derby, H2, SQLite, and Microsoft Access.
-
-To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
-</div>
-
-**sbt**
-
-<div class="callout callout-info">
-If you do not have `sbt` installed, there are instructions on the [scala-sbt][link-sbt] about how to do this.
-</div>
-
-To use Slick, create a regular Scala project and reference the Slick dependencies.
-
-<div class="callout callout-info">
-  **git project**
-
-  If you are uninterested in copying the next few sections, we have a GitHub [project][link-example] containing the build file, directory structure and scala files.
-
-  There will be branch per chapter if you want to follow along without typing the code.
-</div>
-
-This can be accomplished using SBT by creating a file `build.sbt` with the contents below:
-
-~~~ scala
-name := "essential-slick"
-
-version := "1.0"
-
-scalaVersion := "2.11.4"
-
-libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
-
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
-
-libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1101-jdbc41"
-~~~
-
-<!--
-(To do: explain the dependencies)
-
-Do we want to do this here or later on?
-
--->
-
-Once `build.sbt` is created, SBT can be run and the dependencies will be fetched.
-
-<div class="callout callout-info">
-If working with IntelliJ IDEA or the Eclipse Scala IDE, the _essential-slick-example_ project includes the plugins to generate the IDE project files:
-
-~~~ scala
-sbt> eclipse
-~~~
-
-or
-
-~~~ scala
-sbt> gen-idea
-~~~~
-
-The projects can then be opened in an IDE.  For Eclipse, this is _File -> Import -> Existing Project_ menu.
-</div>
-
-**Scala**
-
-Finally, we are here, some code.
+Our complete Scala project becomes:
 
 ~~~ scala
 package io.underscore.slick
@@ -206,11 +208,11 @@ object ExerciseOne extends Exercise {
         if message.from === "HAL"
       } yield message
 
-      //Execute a query.
-      val messages_from_HAL: List[Message] = query.list
+      //Execute a query
+      val hallSays: List[Message] = query.list
 
       //Display the results of the query
-      println(s" ${messages_from_HAL}")
+      println(s"${hallSays}")
   }
 
 }
@@ -219,8 +221,14 @@ object ExerciseOne extends Exercise {
 Running this application will create the schema. It can be run from an IDE, or with `sbt` from the command-line:
 
 ~~~ bash
-$sbt "runMain io.underscore.slick.ExerciseOne"
+$ sbt "runMain io.underscore.slick.ExerciseOne"
 ~~~
+
+_TODO: Just `run` if we have branches for chapters?_
+
+
+### SUGGEST DELETING THIS SECTION
+
 
 The schema can be examined via `psql`, there should be no surprises:
 
@@ -274,6 +282,13 @@ MTable.getTables(messages.baseTableRow.tableName).firstOption match {
 ~~~
 
 We'll look at other tools for managing schema migrations later.
+
+
+
+
+
+
+## Inserting and Deleting Data --- I THINK MOVE THIS TO AFTER EXERCISES AND THEN ADD MORE EXERCISES FOR EXPLORING INSERTING DATA
 
 **Inserting Data**
 
@@ -436,6 +451,11 @@ scala>
 
 ## Exercises
 
+
+
+The objective of exercises for this chapter are to set up your enivronment.  This will enable you to execute examples and particpate in future exercises.  Commands to be executed on the filesystem are assumed to be rooted in a directory `essential-slick`.
+
+
 * How would you count the number of messages? Hint: in the Scala collections the method `length` gives you the size of the collection.
 
 * Using a for comprehension, select the message with the id of 1.  What happens if you try to find a message with an id of 999?
@@ -447,6 +467,34 @@ scala>
 * Slick implements the method `like`. Find all the messages with an "Frank" in their content.
 
 * Find all the messages with an "I" in their content, sent by "HAL".
+
+
+## Using Different Database Products
+
+<div class="callout callout-info">
+As mentioned during the introduction PostgresSQL version 9 is used throughout the book for examples. If it is not currently installed, it can be downloaded from the [Postgres][link-postgres-download] website.
+</div>
+
+Create a database named `essential-slick` with user `essential`. This will be used for all examples and can be created with the following:
+
+~~~ sql
+CREATE DATABASE "essential-slick" WITH ENCODING 'UTF8';
+CREATE USER "essential" WITH PASSWORD 'trustno1';
+GRANT ALL ON DATABASE "essential-slick" TO essential;
+~~~
+
+Confirm the database has been created and can be accessed:
+
+~~~ bash
+$ psql -d essential-slick essential
+~~~
+
+<div class="callout callout-info">
+Slick supports PostgreSQL, MySQL, Derby, H2, SQLite, and Microsoft Access.
+
+To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
+</div>
+
 
 
 ## Take home Points
