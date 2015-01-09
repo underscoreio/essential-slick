@@ -4,9 +4,9 @@
 
 Slick is a Scala library for accessing relational databases. The code you write with Slick looks a lot like code you'd write using the Scala collections library. You can treat a query like a collection and `map` and `filter` it, or use a for comprehension. This is how we'll be working with Slick for the majority of this text.
 
-However, if that's not your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in **chapter or section TODO**.
+Your queries are type safe, meaning the compiler will spot some kinds of mistake you might make. A further benefit is that your queries _compose_, allowing you to build up expressions to run against the database.
 
-Whichever style you use, your queries are type safe, meaning the compiler will spot some kinds of mistake you might make. A further benefit is that your queries _compose_, allowing you to build up expressions to run against the database.
+However, if that's not your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in **chapter or section TODO**.
 
 Aside from querying, Slick of course deals with database connections, transactions, schema, foreign keys, auto incrementing fields and all the things you might expect from any database library. You can even drop right down below Slick to the level of dealing with Java's JDBC concepts, if that's something you're familiar with and find you need.
 
@@ -46,14 +46,59 @@ _TODO: INSTALL INSTRUCTIONS FOR MAC, WINDOWS, LINUX_.
 
 ### Creating a Database
 
-_TODO: I think we should manually create the schema here to save introducing DDL in this first section._
+To give us something to work with, we will manually create a database and put some data into it. The database will be called _basics.db_:
 
-_TODO: Also populate data by hand?_
+~~~ bash
+$ sqlite3 basics.db
+SQLite version 3.8.5 2014-08-15 22:37:57
+Enter ".help" for usage hints.
+sqlite>
+~~~
+
+In later chapters we'll see how Slick can create schemas for us, but for now we'll do this by hand at the `sqlite>` prompt:
+
+~~~ sql
+CREATE TABLE "message" (
+  "id"      INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  "sender"  VARCHAR(254) NOT NULL,
+  "content" VARCHAR(254) NOT NULL,
+  "ts"      TIMESTAMP NOT NULL);
+~~~
+
+<div class="callout callout-info">
+**SQLite Commands**
+
+Commands in the SQLite shell start with a dot:
+
+* `.tables` to list the names of tables.
+* `.schema` to display the schema details.
+* `.help` to see other commands.
+* `.quit` to exit the shell.
+
+Note that SQLite requires SQL expressions to end in a semi-colon.
+</div>
+
+Now that we have a table, we can insert some data for us to use later. Again, do this at the `sqlite>` prompt.
+
+~~~ sql
+INSERT INTO "message" (sender,content,ts) VALUES
+  ('Dave', 'Hello, HAL. Do you read me, HAL?', '2001-02-17 10:22:50.0');
+INSERT INTO "message" (sender,content,ts) VALUES
+  ('HAL', 'Affirmative, Dave. I read you.', '2001-02-17 10:22:52.0');
+INSERT INTO "message" (sender,content,ts) VALUES
+  ('Dave', 'Open the pod bay doors, HAL.', '2001-02-17 10:22:54.0');
+INSERT INTO "message" (sender,content,ts) VALUES
+  ('HAL', 'I''m sorry, Dave. I''m afraid I can''t do that.', '2001-02-17 10:22:56.0');
+~~~
+
+After inserting the data, if you're familiar with SQL feel free to run a query to the `sqlite>` prompt to check the data is there as you expect it.
 
 
 ### Creating an SBT Project
 
-To use Slick, create a regular Scala SBT project and reference the Slick dependencies.  If you don't have SBT installed, follow the instructions at the [scala-sbt site][link-sbt].
+Now we're going to model this database in Slick, connect to it, query it, and later we'll modify the add to the data. To do this we'll need a Scala project.
+
+We'll create a regular Scala SBT project and reference the Slick dependencies.  If you don't have SBT installed, follow the instructions at the [scala-sbt site][link-sbt].
 
 Here's a simple build script, _build.sbt_:
 
@@ -86,7 +131,7 @@ We'll run this script later in this chapter.
 
   If you don't want to type in the code for the next few section we have a [GitHub project][link-example] containing the build file, directory structure and Scala source files.
 
-  Once you have cloned the project you will find a branch per chapter. Access this chapter with the command `git checkout chapter1`.
+  Once you have cloned the project you will find a branch per chapter. Access this chapter with the command `git checkout basics`.
 </div>
 
 
@@ -97,31 +142,40 @@ The class below represents a single row of the `message` table, which is constru
 Access to persist and alter instances of these class is achieved via the `TableQuery` instance.
 
 ~~~ scala
-  final case class Message(id: Long = 0L, from: String, content: String, when: DateTime)
+final case class Message(id: Long = 0L, sender: String, content: String, ts: DateTime)
 
-  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
-    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def from = column[String]("from")
-    def content = column[String]("content")
-    def when = column[DateTime]("when")
-    def * = (id, from, content, when) <> (Message.tupled, Message.unapply)
-  }
+final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def sender  = column[String]("sender")
+  def content = column[String]("content")
+  def ts      = column[DateTime]("ts")
+  def * = (id, sender, content, ts) <> (Message.tupled, Message.unapply)
+}
 
-  lazy val messages = TableQuery[MessageTable]
+lazy val messages = TableQuery[MessageTable]
 ~~~
 
-Don't worry to much about what is going on here with methods such as `*`, `tupled` and `unapply`, we'll be looking at these at the beginning of the next chapter.
+There's plenty going on in this short code snippet. In particular there are three concepts being introduced:
 
+- the representation of a row of data, as a case class called `Message`;
+- the schema for a table, as the class `MessageTable`; and
+- a table query, `messages`, which is the entry point for manipulating the table.
+
+Note that `MessageTable` defines columns and constraints on those columns.  These are mostly easy to read. For example, `id` is a column of `Long` values, which is the primary key and auto-increments.
+
+The mysterious `*` is the _default projection_, which is what you'll get back from a query on the table by default. In this case we are mapping the data into and out of the `Message` case class using the `<>` operator that Slick provides.
+
+Don't worry to much about what is going on here with methods such as `*`, `tupled`, and `unapply`, as we'll be looking at these in detail at the beginning of the next chapter.
 
 ### First Query
 
 The `message` table can be queried as though it is a Scala collection. For instance, the query below will return all messages from the user `HAL`.
 
 ~~~ scala
-  val halSays = for {
-    message <- messages
-    if message.from === "HAL"
-  } yield message
+val halSays = for {
+  message <- messages
+  if message.from === "HAL"
+} yield message
 ~~~
 
 
