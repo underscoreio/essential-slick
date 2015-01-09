@@ -110,8 +110,7 @@ Access to persist and alter instances of these class is achieved via the `TableQ
   lazy val messages = TableQuery[MessageTable]
 ~~~
 
-
-_TODO: We need to expand here. And at least touch on tupled, unapply and `*`, at the very least to say don't worry_.
+Don't worry to much about what is going on here with methods such as `*`, `tupled` and `unapply`, we'll be looking at these at the beginning of the next chapter.
 
 
 ### First Query
@@ -298,6 +297,7 @@ The following can be found in ExerciseTwo of the GitHub project, which will save
 $ sbt "runMain io.underscore.slick.ExerciseTwo"
 ~~~
 
+<!-- I know the times are wrong, we'll be fixing it in the next chapter. -->
 ~~~ scala
 
       val time = new DateTime(2001,2,17,10,22,50,51)
