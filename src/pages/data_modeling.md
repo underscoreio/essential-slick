@@ -105,7 +105,7 @@ Foreign keys are declared in a similar manner to compound primary keys, with the
    * the `TableQuery`that the foreign key belongs to, and
    * a function on the supplied `TableQuery[T]` taking the supplied column(s) as parameters and returning an instance of `T`.
 
-As an example let's improve our model by replacing the `from` column in `Message` with a foreign key to the `User` primary key.
+As an example let's improve our model by replacing the `sender` column in `Message` with a foreign key to the `User` primary key.
 
 ~~~ scala
 
@@ -138,9 +138,19 @@ As an example let's improve our model by replacing the `from` column in `Message
 
 This will produce the following table:
 
+<!-- I've formatted this for readability -->
 ~~~ sql
-sqlite> .schema user
-CREATE TABLE "user" ("id" INTEGER NOT NULL,"name" VARCHAR(254) NOT NULL);
+sqlite> .schema message
+CREATE TABLE "message" ("id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+             "sender" INTEGER NOT NULL,
+             "to" INTEGER,"content" VARCHAR(254) NOT NULL,
+             "ts" TIMESTAMP NOT NULL,
+             constraint
+                  "sender_fk" foreign key("sender") references "user"("id")
+                  on update NO ACTION on delete NO ACTION,
+             constraint
+                  "to_fk" foreign key("to") references "user"("id")
+                  on update NO ACTION on delete NO ACTION);
 ~~~
 
 <div class="callout callout-info">
