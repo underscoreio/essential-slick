@@ -171,27 +171,28 @@ _TODO use a value class to define message content._
 
 ##Null columns
 
-Thus far we have only looked at non null columns, however sometimes we will wish to modal optional data. Slick handles this in an idiomatic scala fashion using `Option[T]`. Let's expand our data model to allow direct messaging by adding the ability to define a recipient to `Message`:
+Thus far we have only looked at non null columns, however sometimes we will wish to modal optional data. Slick handles this in an idiomatic scala fashion using `Option[T]`. Let's expand our data model to allow direct messaging by adding the ability to define a recipient on `Message`, which we will label `to`:
 
 ~~~ scala
 
-  final case class Message(id: Long, from: Long, to: Option[Long], content: String, when: DateTime)
+  final case class Message(id: Long, sender: Long, to: Option[Long], content: String, ↩
+                           ts: Timestamp)
 
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def fromId = column[Long]("from")
-    def from = foreignKey("from_fk", fromId, users)(_.id)
+    def senderId = column[Long]("sender")
+    def sender = foreignKey("sender_fk", senderId, users)(_.id)
     def toId = column[Option[Long]]("to")
     def to = foreignKey("to_fk", toId, users)(_.id)
     def content = column[String]("content")
-    def when = column[DateTime]("when")
+    def ts = column[Timestamp]("ts")
 
-    def * = (id, fromId, toId, content, when) <> (Message.tupled, Message.unapply)
+    def * = (id, senderId, toId, content, ts) <> (Message.tupled, Message.unapply)
+
   }
 
 ~~~
-
 
 <div class="callout callout-info">
 ***Equality***
@@ -200,6 +201,11 @@ While nullability is treated in an idiomatic Scala fashion using `Option[T]`. It
 
 </div>
 
+###Exercises
+
+1. How do we write a query for messages: without a recipient?
+2. How do we write a query for messages with a recipient?
+3. How do we write a query for messages with a given recipient?
 
 ##Row and column control (autoinc etc)
 
@@ -208,7 +214,7 @@ While nullability is treated in an idiomatic Scala fashion using `Option[T]`. It
 
 ##Custom types & mapping
 
-  - explain `when` in Message
+  - explain `ts` in Message
 
 
 ##Example using date and time?
