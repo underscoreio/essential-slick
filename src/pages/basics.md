@@ -111,7 +111,7 @@ scalaVersion := "2.11.4"
 
 libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
 
-libraryDependencies += "org.postgresql" % "postgresql" % "9.3-1101-jdbc41"
+libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.8.7"
 
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
 ~~~
@@ -200,22 +200,22 @@ val messages_from_HAL: List[Message] = query.list
 Database connectivity will be required. This is provided by a slick driver and session.
 
 ~~~ scala
-import scala.slick.driver.PostgresDriver.simple._
+import scala.slick.driver.SQLiteDriver.simple._
 
 ...
 
 
-  Database.forURL("jdbc:postgresql:essential-slick",
+  Database.forURL("jdbc:sqlite:essential-slick.db",
                   user="core",
                   password="trustno1",
-                  driver = "org.postgresql.Driver") withSession {
+                  driver = "org.sqlite.JDBC") withSession {
     implicit session =>
       ...
   }
 }
 ~~~
 
-The import indicates which database to connect to, in the above case PostgresSQL. `Database.forURL` creates a `DatabaseManager` which provides connections to the database.
+The import indicates which database to connect to, in the above case SQLite. `Database.forURL` creates a `DatabaseManager` which provides connections to the database.
 
 _TODO: TALK ABOUT SESSION HERE_
 
@@ -230,42 +230,36 @@ Our complete Scala project becomes:
 ~~~ scala
 package io.underscore.slick
 
-import scala.slick.driver.PostgresDriver.simple._
+import scala.slick.driver.SQLiteDriver.simple._
+import java.sql.Timestamp
 
-object ExerciseOne extends Exercise {
+object ExerciseOne extends App {
 
-  final case class Message(id: Long = 0L, from: String, content: String, when: DateTime)
+  final case class Message(id: Long = 0L,from: String, content: String, when: Timestamp)
 
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def from = column[String]("from")
+    def sender = column[String]("sender")
     def content = column[String]("content")
-    def when = column[DateTime]("when")
-    def * = (id, from, content, when) <> (Message.tupled, Message.unapply)
+    def ts = column[Timestamp]("ts")
+    def * = (id,sender, content, ts) <> (Message.tupled, Message.unapply)
   }
 
   lazy val messages = TableQuery[MessageTable]
 
-  Database.forURL("jdbc:postgresql:essential-slick",
-                                 user = "essential",
-                              password = "trustno1",
-                   driver = "org.postgresql.Driver") withSession {
-      implicit session ⇒
-
-      //Create Schema
-      messages.ddl.create
+  Database.forURL("jdbc:sqlite:essential-slick.db", user = "essential", password = "trustno1", driver = "org.sqlite.JDBC") withSession {
+    implicit session ⇒
 
       //Define a query
       val query = for {
         message ← messages
-        if message.from === "HAL"
+        if message.sender === "HAL"
       } yield message
 
-      //Execute a query
-      val hallSays: List[Message] = query.list
+      //Execute a query.
+      val messages_from_HAL: List[Message] = query.list
 
-      //Display the results of the query
-      println(s"${hallSays}")
+      println(s" ${messages_from_HAL}")
   }
 
 }
@@ -278,68 +272,6 @@ $ sbt "runMain io.underscore.slick.ExerciseOne"
 ~~~
 
 _TODO: Just `run` if we have branches for chapters?_
-
-
-### SUGGEST DELETING THIS SECTION
-
-
-The schema can be examined via `psql`, there should be no surprises:
-
-~~~ sql
-essential-slick=> \d
-               List of relations
- Schema |      Name      |   Type   |   Owner
---------+----------------+----------+-----------
- public | message        | table    | essential
- public | message_id_seq | sequence | essential
-(2 rows)
-
-essential-slick=> \d message
-                                    Table "public.message"
- Column  |            Type             |                      Modifiers
----------+-----------------------------+------------------------------------------------------
- id      | bigint                      | not null default nextval('message_id_seq'::regclass)
- from    | character varying(254)      | not null
- content | character varying(254)      | not null
- when    | timestamp without time zone | not null
-Indexes:
-    "message_pkey" PRIMARY KEY, btree (id)
-~~~
-
-Don't worry too much about the code at this point in time. We'll go into more detail later in the book. The important points are:
-
-  * Slick should have created the schema,
-  * Running the application should have returned `List()`, as there are currently no messages in the database, let alone from `HAL`.
-
-** Schema Management **
-
-Running the application more than once will give an error as `messages.ddl.create` attempts to create the message table. It doesn't check if the table already exists.
-
-To make our example easier to work with, we could query the database meta data and find out if our table already exists before we create it:
-
-~~~ scala
-if (MTable.getTables(messages.baseTableRow.tableName).firstOption.isEmpty)
-  messages.ddl.create
-~~~~
-
-However, for our simple example we'll end up dropping and creating the schema each time:
-
-~~~ scala
-MTable.getTables(messages.baseTableRow.tableName).firstOption match {
-  case None =>
-    messages.ddl.create
-  case Some(t) =>
-    messages.ddl.drop
-    messages.ddl.create
- }
-~~~
-
-We'll look at other tools for managing schema migrations later.
-
-
-
-
-
 
 ## Inserting and Deleting Data --- I THINK MOVE THIS TO AFTER EXERCISES AND THEN ADD MORE EXERCISES FOR EXPLORING INSERTING DATA
 
@@ -474,18 +406,19 @@ For experimenting with queries it's convenient to use the Scala REPL and create 
 
 ~~~ scala
 > console
+[info] Compiling 9 Scala sources to /Users/jonoabroad/developer/company/underscore.io/essential-slick-example/target/scala-2.11/classes...
 [info] Starting scala interpreter...
 [info]
 
 Session created, but you may want to also import a schema. For example:
 
     import io.underscore.slick.ExerciseTwo._
+ or import underscoreio.schema.Example5.Tables._
 
-
-import scala.slick.driver.PostgresDriver.simple._
-db: slick.driver.PostgresDriver.backend.DatabaseDef = scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$5@6dbc2f23
-session: slick.driver.PostgresDriver.backend.Session = scala.slick.jdbc.JdbcBackend$BaseSession@5dbadb1d
-Welcome to Scala version 2.10.3 (Java HotSpot(TM) 64-Bit Server VM, Java 1.7.0_45).
+import scala.slick.driver.SQLiteDriver.simple._
+db: slick.driver.SQLiteDriver.backend.DatabaseDef = scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$4@6d8ec47d
+session: slick.driver.SQLiteDriver.backend.Session = scala.slick.jdbc.JdbcBackend$BaseSession@7b851a
+Welcome to Scala version 2.11.4 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_25).
 Type in expressions to have them evaluated.
 Type :help for more information.
 
