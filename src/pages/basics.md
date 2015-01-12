@@ -342,7 +342,7 @@ If the ID was not auto incrementing, the ID values we supplied (10,20 and so on)
 
 If you really want to include the ID column in the insert, use the `forceInsert` method.
 
-** A Simple Query **
+**A Simple Query**
 
 Let's get all messages sent by HAL:
 
