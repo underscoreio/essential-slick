@@ -209,15 +209,41 @@ While nullability is treated in an idiomatic Scala fashion using `Option[T]`. It
 
 ##Row and column control (autoinc etc)
 
-
-
+__TODO__
 
 ##Custom types & mapping
 
-  - explain `ts` in Message
+Custom types & mappings allow us to use richer types than Slick or SQL support.
 
+Let's explore custom types and mappings by improving `Message` to use Joda-Time's `DateTime`.  `DateTime` offers a richer API than the existing `Timestamp`, allowing us
+to ...
 
-##Example using date and time?
+~~ scala
+
+  implicit def dateTime  =
+      MappedColumnType.base[DateTime, Timestamp](
+        dt => new Timestamp(dt.getMillis),
+        ts => new DateTime(ts.getTime)
+  )
+
+  final case class Message(id: Long, sender: Long, to: Option[Long], content: String, ts: DateTime)
+
+  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def senderId = column[Long]("sender")
+    def sender = foreignKey("sender_fk", senderId, users)(_.id)
+    def toId = column[Option[Long]]("to")
+    def to = foreignKey("to_fk", toId, users)(_.id)
+    def content = column[String]("content")
+    def ts = column[DateTime]("ts")
+
+    def * = (id, senderId, toId, content, ts) <> (Message.tupled, Message.unapply)
+  }
+
+}
+
+~~~
 
 ##Virtual columns and server-side casts here?
 
