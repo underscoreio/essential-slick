@@ -11,7 +11,7 @@ Brief overview of chapter objectives.
 We model rows of a table using either tuples or case classes. In either case, they contain the types of the columns we wish to expose.  Let's look a simple example of both, we'll define a `user` so we don't need to store their name in the `message` table.
 
 ~~~ scala
-  final type  TupleUser = (Long,String)
+  type  TupleUser = (Long,String)
 
   final case class CaseUser(id:Long,name:String)
 ~~~
@@ -86,7 +86,7 @@ essential-slick-> \d user
  name   | character varying(254) | not null
 Indexes:
     "pk_user" PRIMARY KEY, btree (id, name)
- ~~~
+~~~
 
 Foreign keys are declared in a similar manner to compound primary keys, with the method --- `foreignKey`. `foreignKey` takes four required parameters:
    * a name;
@@ -180,12 +180,10 @@ Thus far we have only looked at non null columns, however sometimes we will wish
 ~~~
 
 
-<div class="callout callout-warn">
+<div class="callout callout-info">
 ***Equality***
 
 While nullability is treated in an idiomatic Scala fashion using `Option[T]`. It behaves differently.
-
-
 
 </div>
 
