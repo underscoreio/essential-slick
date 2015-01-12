@@ -68,24 +68,35 @@ In the first we declare a column is a primary key using class `O` which provides
 def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 ~~~
 
-The second method uses a method `primaryKey` which takes two parameters --- a name and a tuple of columns.
-This is useful when defining compound primary keys.  As an example, if we wished to have a primary key of both `id` and `name` on the `User` table, we would do the following:
+The second method uses a method `primaryKey` which takes two parameters --- a name and a tuple of columns.  This is useful when defining compound primary keys.
+
+<!--  Im aware this has nothing to do with the messaging example, I wanted something separate as I'm working around an issue with sqlite and autoincrement fields.
+      As sooon as one defines O.AutoInc on a field slick or the driver is creating SQL marking the field as a PK.
+    -->
+As an example, let us define a table `ColourShape` which has two columns `colour` and `shape` which has a composite primary key consisting of both columns.
 
 ~~~ scala
-def pk = primaryKey("pk_user", (id,name))
+
+  final case class ColourShape(colour: Long, shape: String)
+
+  final class ColourShapeTable(tag: Tag) extends Table[ColourShape](tag, "colour_shape") {
+    def colour = column[Long]("colour")
+    def shape = column[String]("shape")
+
+    def pk = primaryKey("colour_shape_pk", (colour,shape))
+
+    def * = (colour,shape) <> (ColourShape.tupled, ColourShape.unapply)
+
+  }
+
+  lazy val coluredShapes = TableQuery[ColourShapeTable]
+
 ~~~
 
 This would produce the following table:
 
 ~~~ sql
-essential-slick-> \d user
-                                 Table "public.user"
- Column |          Type          |                     Modifiers
---------+------------------------+---------------------------------------------------
- id     | bigint                 | not null default nextval('user_id_seq'::regclass)
- name   | character varying(254) | not null
-Indexes:
-    "pk_user" PRIMARY KEY, btree (id, name)
+create table "colour_shape" ("colour" INTEGER NOT NULL,"shape" VARCHAR(254) NOT NULL,constraint "colour_shape_pk" primary key("colour","shape"))
 ~~~
 
 Foreign keys are declared in a similar manner to compound primary keys, with the method --- `foreignKey`. `foreignKey` takes four required parameters:
@@ -104,8 +115,8 @@ As an example let's improve our model by replacing the `from` column in `Message
   final class UserTable(tag: Tag) extends Table[User](tag, "user") {
     def id = column[Long]("id",O.PrimaryKey,O.AutoInc)
     def name = column[String]("name")
-    def * = (id, name) <> (User.tupled, User.unapply)
 
+    def * = (id, name) <> (User.tupled, User.unapply)
   }
 
   lazy val users = TableQuery[UserTable]
@@ -114,11 +125,11 @@ As an example let's improve our model by replacing the `from` column in `Message
 
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def fromId = column[Long]("from")
-    def from = foreignKey("from_fk", fromId, users)(_.id)
+    def senderId = column[Long]("sender")
+    def sender = foreignKey("sender_fk", senderId, users)(_.id)
     def content = column[String]("content")
     def when = column[DateTime]("when")
-    def * = (id, fromId, content, when) <> (Message.tupled, Message.unapply)
+    def * = (id, senderId, content, when) <> (Message.tupled, Message.unapply)
   }
 
   lazy val messages = TableQuery[MessageTable]
@@ -128,16 +139,8 @@ As an example let's improve our model by replacing the `from` column in `Message
 This will produce the following table:
 
 ~~~ sql
-essential-slick=> \d user;
-                                 Table "public.user"
- Column |          Type          |                     Modifiers
---------+------------------------+---------------------------------------------------
- id     | bigint                 | not null default nextval('user_id_seq'::regclass)
- name   | character varying(254) | not null
-Indexes:
-    "user_pkey" PRIMARY KEY, btree (id)
-Referenced by:
-    TABLE "message" CONSTRAINT "from_fk" FOREIGN KEY ("from") REFERENCES "user"(id)
+sqlite> .schema user
+CREATE TABLE "user" ("id" INTEGER NOT NULL,"name" VARCHAR(254) NOT NULL);
 ~~~
 
 <div class="callout callout-info">
