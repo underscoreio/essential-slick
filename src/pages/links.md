@@ -10,3 +10,4 @@
 [link-example]:                           https://github.com/underscore/essential-slick-code
 [link-ref-orm]:                           http://slick.typesafe.com/doc/3.0.0-M1/orm-to-slick.html
 [link-sqlite-home]:                       http://www.sqlite.org/
+[link-jodatime]:                          http://www.joda.org/joda-time/
