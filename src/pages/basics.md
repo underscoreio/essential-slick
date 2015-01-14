@@ -150,7 +150,7 @@ The case class below represents a single row of the `message` table, which is co
 four columns: a unique `id`, the `sender` of the message, the `content` of the message, and the time it was sent, `ts`:
 
 ~~~ scala
-final case class Message(id: Long = 0L, sender: String, content: String, ts: DateTime)
+final case class Message(id: Long = 0L, sender: String, content: String, ts: Timestamp)
 ~~~
 
 We combine this with the representation of a table. We're declaring the class as a `Table[Message]`:
@@ -160,7 +160,7 @@ final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def sender  = column[String]("sender")
   def content = column[String]("content")
-  def ts      = column[DateTime]("ts")
+  def ts      = column[Timestamp]("ts")
   def * = (id, sender, content, ts) <> (Message.tupled, Message.unapply)
 }
 ~~~
@@ -187,35 +187,7 @@ There's plenty going on in these three short code snippets. In particular there 
 
 If you're a fan of terminology, know that this is the _lifted embedded_ approach to Slick.  It is the standard, non-experimental, way to work with Slick.
 
-### Custom Column Mapping
-
-Our `ts` column represents a JodaTime `DateTime`.  [JodaTime](link-jodatime) is a great library for working with dates, times, intervals, durations, and timezones.
-
-Support for this is not built-in to Slick, but we want to show it here to illustrate how painless it is to map types to the database.  This is something you'll want to do in your applications: work with meaningful types in your code, and let Slick take care of how those types are turned into database values.
-
-The mapping for JodaTime `DateTime` is:
-
-~~~ scala
-import java.sql.Timestamp
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone.UTC
-
-implicit val jodaDateTimeType =
-  MappedColumnType.base[DateTime, Timestamp](
-    dt => new Timestamp(dt.getMillis),
-    ts => new DateTime(ts.getTime, UTC)
-  )
-~~~
-
-What we're providing here is two functions:
-
-- one that takes a `DateTime` and turns it into a database-friend value, namely a `Timestamp`; and
-- another that does the reverse, taking a database value and turning it into a `DataTime`.
-
-Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime` when working with Slick.
-
-With this mapping in place, we can make a query.
-
+With this in place, we can make a query.
 
 ### First Query
 
@@ -243,7 +215,10 @@ Note also that we use triple equals `===` and not `==` in the for comprehension.
 The `===` is the only special case to notice.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use `<`:
 
 ~~~ scala
-val recent: DateTime = DateTime.now minusMinutes 30
+val now = Calendar.getInstance()
+now.add(Calendar.MINUTE, -30)
+val recent: Timestamp = new Timestamp(now.getTimeInMillis())
+
 val recentMessages = halSays.filter(_.ts < recent)
 ~~~
 
@@ -304,27 +279,18 @@ package io.underscore.slick
 
 import scala.slick.driver.SQLiteDriver.simple._
 import java.sql.Timestamp
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone.UTC
 
 object ExerciseOne extends App {
 
-  // Support for Joda DateTime:
-  implicit val jodaDateTimeType =
-    MappedColumnType.base[DateTime, Timestamp](
-      dt => new Timestamp(dt.getMillis),
-      ts => new DateTime(ts.getTime, UTC)
-    )
-
   // Row representation:
-  final case class Message(id: Long = 0L, sender: String, content: String, ts: DateTime)
+  final case class Message(id: Long = 0L, sender: String, content: String, ts: Timestamp)
 
   // Schema:
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
     def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def sender  = column[String]("sender")
     def content = column[String]("content")
-    def ts      = column[DateTime]("ts")
+    def ts      = column[Timestamp]("ts")
     def * = (id, sender, content, ts) <> (Message.tupled, Message.unapply)
   }
 
@@ -358,8 +324,8 @@ $ sbt run
 The output will be something like this:
 
 ~~~
-Vector(Message(2,HAL,Affirmative, Dave. I read you.,1970-01-01T00:00:00.000Z),
-       Message(4,HAL,I'm sorry, Dave. I'm afraid I can't do that.,1970-01-01T00:00:00.000Z))
+Vector(Message(2,HAL,Affirmative, Dave. I read you.,2001-02-17 10:22:00),
+       Message(4,HAL,I'm sorry, Dave. I'm afraid I can't do that.,2001-02-17 10:22:08))
 ~~~
 
 ### Exercises

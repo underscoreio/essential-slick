@@ -211,38 +211,41 @@ While nullability is treated in an idiomatic Scala fashion using `Option[T]`. It
 
 __TODO__
 
-##Custom types & mapping
+### Custom Column Mapping
 
-Custom types & mappings allow us to use richer types than Slick or SQL support.
+<!--2.3.3 Creating an SBT Project -->
+We mentioned in the previous chapter our love for the library [JodaTime](link-jodatime) which is a great library for working with dates, times, intervals, durations, and timezones.
 
-Let's explore custom types and mappings by improving `Message` to use Joda-Time's `DateTime`.  `DateTime` offers a richer API than the existing `Timestamp`, allowing us
-to ...
+Our `ts` column is currently a `Timestamp`, let's look at how we can  represents a JodaTime `DateTime`.
 
-~~ scala
+Support for this is not built-in to Slick, but we want to show it here to illustrate how painless it is to map types to the database.  This is something you'll want to do in your applications: work with meaningful types in your code, and let Slick take care of how those types are turned into database values.
 
-  implicit def dateTime  =
-      MappedColumnType.base[DateTime, Timestamp](
-        dt => new Timestamp(dt.getMillis),
-        ts => new DateTime(ts.getTime)
+The mapping for JodaTime `DateTime` is:
+
+~~~ scala
+import java.sql.Timestamp
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone.UTC
+
+implicit val jodaDateTimeType =
+  MappedColumnType.base[DateTime, Timestamp](
+    dt => new Timestamp(dt.getMillis),
+    ts => new DateTime(ts.getTime, UTC)
   )
+~~~
 
-  final case class Message(id: Long, sender: Long, to: Option[Long], content: String, ts: DateTime)
+What we're providing here is two functions:
 
-  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+- one that takes a `DateTime` and turns it into a database-friend value, namely a `Timestamp`; and
+- another that does the reverse, taking a database value and turning it into a `DataTime`.
 
-    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def senderId = column[Long]("sender")
-    def sender = foreignKey("sender_fk", senderId, users)(_.id)
-    def toId = column[Option[Long]]("to")
-    def to = foreignKey("to_fk", toId, users)(_.id)
-    def content = column[String]("content")
-    def ts = column[DateTime]("ts")
+Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime` when working with Slick.
 
-    def * = (id, senderId, toId, content, ts) <> (Message.tupled, Message.unapply)
-  }
+With this mapping in place, we can refine our earlier query.
 
-}
-
+~~~ scala
+val recent: DateTime = DateTime.now minusMinutes 30
+val recentMessages = halSays.filter(_.ts < recent)
 ~~~
 
 ##Virtual columns and server-side casts here?
