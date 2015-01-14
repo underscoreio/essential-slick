@@ -1,51 +1,69 @@
 # Essential Slick
 
-## 1. Introduction
+- The things you wish you knew before you started using Slick
+- We want to get developers up and running with Slick.
+- We want them to structure their applications the way you do in reality.
+- We want them to see the features they'll need to use programming our way of programming.
+- In part based on our experiences with clients.
+- Not comprehensive; defer to the Slick Reference documentation.
+
+## Introduction
 
 - About this text, prerequisites, versions etc.
 - Conventions etc
 
-## 2. The Basics
+## The Basics
 
-_Objectives: get readers a working environment where they can try things out, and set scene for examples later in text_
+_Objectives: get readers a working environment where they can try things out. Touch on all the concepts, indicate we'll look at them later, but not hide anything. Show one way of working for this chapter, indicating there are other ways._
 
 - High-level orientation (short)
   - not an ORM
   - basic concepts
 
 - Introducing an example
-  - a RDBMS (it'll be postgres)
+  - a RDBMS
   - sbt
-  - table
-  - inserting data
+  - key concepts
   - simple queries
 
 - Exercises
 
-## 3. Data modeling
+
+## Manipulating Data
+
+- Insert
+
+- Update
+
+- Delete
+
+- Exercises
+
+
+## Data modeling
 
 _Objectives: (a) provide the right way to work with data in slick; (b)  introducing more query examples (update and delete)_
 
+- Application Structure
+  - traits and driver imports
+
 - Rows
-  - Case classes, tuples, HLists  
-  
-- Tables 
+  - Case classes, tuples, HLists
+
+- Tables
   - Null columns
   - Row and column control (autoinc etc)
   - Primary keys & value classes
 
 - Custom types & mapping
-
-- Example using date and time?
-
-- Virtual columns and server-side casts here?
+  - Enumerations
+  - Arbitrary classes?
 
 - Exercises
 
+## Joins [and queries?]
 
-## 4. Joins [and queries?]
-
-_Objective Show how joins can be established and general querying magic. Lots of pictures in this chapter._ 
+_Objective Show how joins can be established and general querying magic. Lots of pictures in this chapter._
 
 - implicit v explicit
 - one to one
@@ -58,8 +76,7 @@ _Objective Show how joins can be established and general querying magic. Lots of
 - Exercises (or possibly throughout)
 
 
-
-## 5. Query composition
+## Query composition
 
 _Objectives: demonstrate thinking in terms of queries and composing them_
 
@@ -69,12 +86,12 @@ _Objectives: demonstrate thinking in terms of queries and composing them_
 - Exercises
 
 
-## 6. Testing
+## Testing
 
 - ???
 
 
-## 7. Schema management
+## Schema management
 
 _Objective: prescribe a way for working with schemas_
 
@@ -89,7 +106,7 @@ _Objective: prescribe a way for working with schemas_
 
 Maybe in the second edition?
 
-## Compiled queries and optimization 
+## Compiled queries and optimization
 
 ## Appendix A: integration with Play 2.x
 
