@@ -82,17 +82,17 @@ Now that we have a table, we can insert some data for us to use later. Again, do
 
 ~~~ sql
 INSERT INTO "message" (sender,content,ts) VALUES
-  ('Dave', 'Hello, HAL. Do you read me, HAL?', '2001-02-17 10:22:50.0');
+  ('Dave', 'Hello, HAL. Do you read me, HAL?', 982405320);
 INSERT INTO "message" (sender,content,ts) VALUES
-  ('HAL', 'Affirmative, Dave. I read you.', '2001-02-17 10:22:52.0');
+  ('HAL', 'Affirmative, Dave. I read you.', 982405324);
 INSERT INTO "message" (sender,content,ts) VALUES
-  ('Dave', 'Open the pod bay doors, HAL.', '2001-02-17 10:22:54.0');
+  ('Dave', 'Open the pod bay doors, HAL.', 982405326);
 INSERT INTO "message" (sender,content,ts) VALUES
-  ('HAL', 'I''m sorry, Dave. I''m afraid I can''t do that.', '2001-02-17 10:22:56.0');
+  ('HAL', 'I''m sorry, Dave. I''m afraid I can''t do that.', 982405328);
 ~~~
 
+<!--  select id,sender,content, datetime(ts,"unixepoch") from message; -->
 After inserting the data, if you're familiar with SQL feel free to run a query to the `sqlite>` prompt to check the data is there as you expect it.
-
 
 ### Creating an SBT Project
 
