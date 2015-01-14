@@ -1,7 +1,7 @@
 {
   "name": "essential-slick",
   "version": "1.0.0",
-  "description": "Book on the Slick database mapping framework",
+  "description": "Book on the Slick database library",
   "dependencies": {
     "bootstrap": "^3.3.1",
     "coffeeify": "^1.0.0",
@@ -19,15 +19,17 @@
     "underscore": "^1.7.0"
   },
   "devDependencies": {
-    "grunt-css-url-embed": "^1.3.1"
+    "grunt-contrib-clean": "^0.6.0",
+    "grunt-css-url-embed": "^1.3.1",
+    "js-yaml": "^3.2.3"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git@bitbucket.org:underscoreio/essential-slick.git"
+    "url": "git@bitbucket.org:underscoreio/core-slick.git"
   },
-  "author": "Richard Dallaway",
+  "author": "Dave Gurnell",
   "license": "Closed source"
 }

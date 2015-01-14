@@ -56,36 +56,51 @@ $endfor$
 $if(date)$
 <p class="date">$date$</p>
 $endif$
-<img class="brand-logo" src="src/templates/images/brand.svg" alt="Underscore">
+<img class="brand-logo" src="lib/templates/images/brand.svg" alt="Underscore">
 </div>
 $endif$
 </div>
 </div>
 </header>
 
+<div class="container">
+
 $if(toc)$
 <nav class="toc">
-<div class="container">
-<h1>Contents</h1>
-$toc$
-</div>
-</nav>
-$endif$
+<div class="toc-contents">
+<h1>Cover Notes</h1>
+<p class="text-center">$title$</p>
+
+<p class="text-center">Copyright 2014 $author$.</p>
+
+<p class="text-center">Published by <a href="http://underscore.io">Underscore Consulting LLP</a>, Brighton, UK.</p>
+
+<hr>
 
 $for(include-before)$
 $include-before$
+
 $endfor$
 
-<article>
-<div class="container">
-$body$
+<h1>Contents</h1>
+$toc$
 </div>
+<p class="toc-toggle">
+  <a href="javascript:void 0" class="btn btn-default btn-block">Show cover notes and table of contents</a>
+</p>
+</nav>
+$endif$
+
+<article>
+$body$
 </article>
+
+</div>
 
 <footer>
   <div class="container">
     <div class="text-center">
-      <img class="footer-brand" src="src/templates/images/brand.svg" alt="Underscore" width="200px">
+      <img class="footer-brand" src="lib/templates/images/brand.svg" alt="Underscore" width="200px">
     </div>
 
 $for(include-after)$
@@ -96,7 +111,7 @@ $endfor$
       <div class="col-sm-6">
         <h5><a href="http://underscore.io">Underscore</a></h5>
         <ul class="list-unstyled">
-          <li><a href="http://underscore.io/training/booking.html">Book a Private Course</a></li>
+          <li><a href="http://underscore.io/training/bookings">Book a Private Course</a></li>
           <li><a href="http://underscore.io/training">Our Course Directory</a></li>
           <li><a href="http://underscore.io/consulting">Our Consulting Services</a></li>
           <li><a href="http://underscore.io/company">About Us</a></li>
@@ -104,7 +119,7 @@ $endfor$
       </div>
 
       <div class="col-sm-6">
-        <h5><a href="/contact.html">Contact</a></h5>
+        <h5><a href="http://underscore.io/contact">Contact</a></h5>
         <ul class="list-unstyled">
           <li><a href="http://underscore.io">http://underscore.io</a></li>
           <li><a href="tel:+442030955332">+44 (0)20 309 55332</a></li>
