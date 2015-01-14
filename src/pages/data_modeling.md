@@ -211,7 +211,7 @@ While nullability is treated in an idiomatic Scala fashion using `Option[T]`. It
 
 __TODO__
 
-### Custom Column Mapping
+##Custom Column Mapping
 
 <!--2.3.3 Creating an SBT Project -->
 We mentioned in the previous chapter our love for the library [JodaTime](link-jodatime) which is a great library for working with dates, times, intervals, durations, and timezones.
