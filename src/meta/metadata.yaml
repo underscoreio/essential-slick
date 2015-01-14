@@ -10,6 +10,7 @@ pages:
   - src/pages/introduction.md
   - src/pages/conventions.md
   - src/pages/basics.md
+  - src/pages/modifying_data.md
   - src/pages/data_modeling.md
   - src/pages/joins.md
   - src/pages/query_composition.md

@@ -11,3 +11,7 @@
 [link-ref-orm]:                           http://slick.typesafe.com/doc/3.0.0-M1/orm-to-slick.html
 [link-sqlite-home]:                       http://www.sqlite.org/
 [link-jodatime]:                          http://www.joda.org/joda-time/
+[link-slf4j]:                             http://www.slf4j.org/
+[link-logback]:                           http://logback.qos.ch/
+[link-source-extmeth]:                    https://github.com/slick/slick/blob/master/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
+
