@@ -138,7 +138,17 @@ We'll run this script later in this chapter.
   If you don't want to type in the code for the next few section we have a [GitHub project][link-example] containing the build file, directory structure, Scala source files, and a populated
   _basics.db_ SQLite database.  _TODO: CHECK THE DATABASE FILE WORKS ACROSS PLATFORMS._
 
-  Once you have cloned the project you will find a branch per chapter. Access this chapter with the command `git checkout basics`. _TODO: DO WE WANT BRANCHES? WOULD FOLDERS PER CHAPTER BE MUCH MORE CONVENIENT?_
+  Once you have cloned the project you will find a branch per chapter. Access this chapter with the command `git checkout basics`.
+
+  _TODO: DO WE WANT BRANCHES? WOULD FOLDERS PER CHAPTER BE MUCH MORE CONVENIENT?_
+
+  _TODO: Branches means there is less to distract the reader as they are working through the exercises._
+
+  _TODO: It also means we can ensure they have the correct environment set up - new database name, new data etc_
+
+  _TODO: That said, I need soem time to think about htis._
+
+  _TODO: I'll move some of these hand wavey TODOs into tickets either tomorrow or Friday_
 </div>
 
 
@@ -273,6 +283,11 @@ With a session we can execute our query. There are a number of calls you can mak
 Our complete Scala project becomes:
 
 _TODO: typing _io.underscore.slick_ is long. Shall we just use no packages for this chapter? It's not like this is a public library people will be importing and using as is._
+
+_TODO: Thoughts
+
+ People will judge the code in our books as being the quality we delivery and expect. While I agree with you that it is a lot to type, it will look a bit unprofessional with no package. What about code.foo ?
+_
 
 ~~~ scala
 package io.underscore.slick
