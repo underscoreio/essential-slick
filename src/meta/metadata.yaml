@@ -1,5 +1,21 @@
 ---
 title: Essential Slick
 author: Richard Dallaway
-date: "Pre-Release, January 2014"
+date: "Pre-Release, January 2015"
+filenameStem: "essential-slick"
+# Used by Pandoc to generate the PDF cover...
+# see src/css/book.css for HTML/ePub covers:
+coverColor: "F58B40"
+pages:
+  - src/pages/introduction.md
+  - src/pages/conventions.md
+  - src/pages/basics.md
+  - src/pages/modifying_data.md
+  - src/pages/data_modeling.md
+  - src/pages/joins.md
+  - src/pages/query_composition.md
+  - src/pages/testing.md
+  - src/pages/schema_management.md
+  - src/pages/links.md
+  - src/pages/solutions.md
 ...
