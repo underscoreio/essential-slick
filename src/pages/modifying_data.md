@@ -68,11 +68,11 @@ But to expand on that, consider this variation on the `halSays` query:
 val halText = halSays.map(_.content)
 ~~~
 
-That's a valid query, and will select just the `content` column from the `messages` table. But you'll find you cannot use that query with `delete`. It'll be a compile error as `delete` is defined for this kind of query. That's because the `halText` query is of type `Query[Rep[String], String, Seq]`, where as the `halSays` query is of type `Query[MessageTable, Message, Seq]`.
+That's a valid query, and will select just the `content` column from the `messages` table. But you'll find you cannot use that query with `delete`. It'll be a compile error as `delete` is defined for this kind of query. That's because the `halText` query is of type `Query[Column[String], String, Seq]`, where as the `halSays` query is of type `Query[MessageTable, Message, Seq]`.
 
-### `Rep[T]`
+### `Column[T]`
 
-What is this `Rep[String]` and why can't we delete using it?
+What is this `Column[String]` and why can't we delete using it?
 
 Recall we defined the column `content` as:
 
@@ -80,11 +80,11 @@ Recall we defined the column `content` as:
 def content = column[String]("content")
 ~~~
 
-The method `column` evaluates, in this case, to a `Rep[String]`. When we construct a query to return a column, the query will be in terms of a `Rep[String]`.  When we count the number of rows in a table, the query will be in terms of `Rep[Int]`.  More generally, a single value from the database will be a `Rep[T]` in the context of a query.
+The method `column` evaluates, in this case, to a `Column[String]`. When we construct a query to return a column, the query will be in terms of a `Column[String]`.  When we count the number of rows in a table, the query will be in terms of `Column[Int]`.  More generally, a single value from the database will be a `Column[T]` in the context of a query.
 
-All the operations you can perform on a column, such as `like` or `toLowerCase`, are added onto `Rep[T]` via _extension methods_.  These are implicit conversions provided by Slick.  If you're keen, you can go look at them all in the Slick source file [ExtensionMethods.scala][link-source-extmeth].
+All the operations you can perform on a column, such as `like` or `toLowerCase`, are added onto `Column[T]` via _extension methods_.  These are implicit conversions provided by Slick.  If you're keen, you can go look at them all in the Slick source file [ExtensionMethods.scala][link-source-extmeth].
 
-So `Rep[T]` is for values, and deleting based on a value makes no sense in Slick or SQL. Imagine the query `SELECT 42`. You can represent this in Slick as `Query(42)`. You can `run` the query, but you cannot `delete` on it. But deleting on a table, like `MessageTable`, that makes more sense.
+So `Column[T]` is for values, and deleting based on a value makes no sense in Slick or SQL. Imagine the query `SELECT 42`. You can represent this in Slick as `Query(42)`. You can `run` the query, but you cannot `delete` on it. But deleting on a table, like `MessageTable`, that makes more sense.
 
 ## Inserting Rows
 
