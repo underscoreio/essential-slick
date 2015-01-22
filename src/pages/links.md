@@ -14,4 +14,5 @@
 [link-slf4j]:                             http://www.slf4j.org/
 [link-logback]:                           http://logback.qos.ch/
 [link-source-extmeth]:                    https://github.com/slick/slick/blob/master/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
+[link-sip-named-default]:                 http://docs.scala-lang.org/sips/completed/named-and-default-arguments.html
 
