@@ -8,11 +8,10 @@
 [link-underscore]:                        http://underscore.io
 [link-sbt]:                               http://scala-sbt.org
 [link-example]:                           https://github.com/underscore/essential-slick-code
-[link-ref-orm]:                           http://slick.typesafe.com/doc/3.0.0-M1/orm-to-slick.html
-[link-sqlite-home]:                       http://www.sqlite.org/
+[link-ref-orm]:                           http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
+[link-h2-home]:                           http://www.h2database.com
 [link-jodatime]:                          http://www.joda.org/joda-time/
 [link-slf4j]:                             http://www.slf4j.org/
 [link-logback]:                           http://logback.qos.ch/
 [link-source-extmeth]:                    https://github.com/slick/slick/blob/master/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
 [link-sip-named-default]:                 http://docs.scala-lang.org/sips/completed/named-and-default-arguments.html
-

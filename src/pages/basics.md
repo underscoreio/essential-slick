@@ -34,65 +34,11 @@ For now, we're going to start just with a table for messages.
 
 ## Getting Started
 
-All the examples in this book will be using the [_SQLite_][link-sqlite-home] database.  You might prefer to use _MySQL_, or _PostgreSQL_, or some other database. At the end of this chapter we'll point you at the changes you'll need to make to work with other databases.
+All the examples in this book will be using the [H2][link-h2-home] database. You might prefer to use _MySQL_, or _PostgreSQL_, or some other database. At the end of this chapter we'll point you at the changes you'll need to make to work with other databases.
 
-But stick with SQLite for at least this first chapter, so you can get confidence using Slick without running into too many complications.
+But stick with H2 for at least this first chapter, so you can get confidence using Slick without running into too many complications.
 
-### Database Install
-
-We've picked SQLite because it is simple and easy to install. You may even already have it installed.
-
-_TODO: INSTALL INSTRUCTIONS FOR MAC, WINDOWS, LINUX_.
-
-### Creating a Database
-
-To give us something to work with, we will manually create a database and put some data into it. The database will be called _basics.db_:
-
-~~~ bash
-$ sqlite3 basics.db
-SQLite version 3.8.5 2014-08-15 22:37:57
-Enter ".help" for usage hints.
-sqlite>
-~~~
-
-In later chapters we'll see how Slick can create schemas for us, or use existing schemas to generate code. But for now we'll do this by hand at the `sqlite>` prompt:
-
-~~~ sql
-CREATE TABLE "message" (
-  "id"      INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  "sender"  VARCHAR(254) NOT NULL,
-  "content" VARCHAR(254) NOT NULL,
-  "ts"      TIMESTAMP NOT NULL);
-~~~
-
-<div class="callout callout-info">
-**SQLite Commands**
-
-Commands in the SQLite shell start with a dot:
-
-* `.tables` to list the names of tables.
-* `.schema` to display the schema details.
-* `.help` to see other commands.
-* `.quit` to exit the shell.
-
-Note that SQLite requires SQL expressions to end in a semi-colon.
-</div>
-
-Now that we have a table, we can insert some data for us to use later. Again, do this at the `sqlite>` prompt.
-
-~~~ sql
-INSERT INTO "message" (sender,content,ts) VALUES
-  ('Dave', 'Hello, HAL. Do you read me, HAL?', 982405320);
-INSERT INTO "message" (sender,content,ts) VALUES
-  ('HAL', 'Affirmative, Dave. I read you.', 982405324);
-INSERT INTO "message" (sender,content,ts) VALUES
-  ('Dave', 'Open the pod bay doors, HAL.', 982405326);
-INSERT INTO "message" (sender,content,ts) VALUES
-  ('HAL', 'I''m sorry, Dave. I''m afraid I can''t do that.', 982405328);
-~~~
-
-<!--  select id,sender,content, datetime(ts,"unixepoch") from message; -->
-After inserting the data, if you're familiar with SQL feel free to run a query to the `sqlite>` prompt to check the data is there as you expect it.
+We've picked H2 because there's nothing to install. In other words, we can get on with writing our Scala application immediately.
 
 ### Creating an SBT Project
 
@@ -103,52 +49,36 @@ We'll create a regular Scala SBT project and reference the Slick dependencies.  
 Here's a simple build script, _build.sbt_:
 
 ~~~ scala
-name := "essential-slick"
+name := "essential-slick-chapter-01"
 
 version := "1.0"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.5"
 
-libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
-
-libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.8.7"
-
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
-
-libraryDependencies += "joda-time" % "joda-time" % "2.6"
-
-libraryDependencies += "org.joda" % "joda-convert" % "1.2"
+libraryDependencies ++= Seq(
+  "com.typesafe.slick" %% "slick"           % "2.1.0",
+  "com.h2database"      % "h2"              % "1.4.185",
+  "ch.qos.logback"      % "logback-classic" % "1.1.2",
+  "joda-time"           % "joda-time"       % "2.6",
+  "org.joda"            % "joda-convert"    % "1.2")
 ~~~
 
-It declares the minimum dependencies needed:
+This file declares the minimum dependencies needed:
 
 - Slick itself;
-- the appropriate database driver; and
+- the database driver for H2; and
 - a logging library, which Slick requires for its internal debug logging.
 
 In addition we're using JodaTime, which we think is a great library for working with dates and times on the JVM.
 
-
 We'll run this script later in this chapter.
 
-
 <div class="callout callout-info">
-  **Download the Code for this Chapter**
+  **Download the Code for this Book**
 
-  If you don't want to type in the code for the next few section we have a [GitHub project][link-example] containing the build file, directory structure, Scala source files, and a populated
-  _basics.db_ SQLite database.  _TODO: CHECK THE DATABASE FILE WORKS ACROSS PLATFORMS._
+  If you don't want to type in the code for the next few section we have a [GitHub project][link-example] containing the build file, directory structure, and Scala source files.
 
-  Once you have cloned the project you will find a branch per chapter. Access this chapter with the command `git checkout basics`.
-
-  _TODO: DO WE WANT BRANCHES? WOULD FOLDERS PER CHAPTER BE MUCH MORE CONVENIENT?_
-
-  _TODO: Branches means there is less to distract the reader as they are working through the exercises._
-
-  _TODO: It also means we can ensure they have the correct environment set up - new database name, new data etc_
-
-  _TODO: That said, I need soem time to think about htis._
-
-  _TODO: I'll move some of these hand wavey TODOs into tickets either tomorrow or Friday_
+  You can download a ZIP file with all the code in it, or cloned it as you would any other Git project. Once you have the code downloaded, look in the _chapter-01_ folder.
 </div>
 
 
@@ -160,7 +90,7 @@ The case class below represents a single row of the `message` table, which is co
 four columns: a unique `id`, the `sender` of the message, the `content` of the message, and the time it was sent, `ts`:
 
 ~~~ scala
-final case class Message(id: Long = 0L, sender: String, content: String, ts: Timestamp)
+final case class Message(sender: String, content: String, ts: Timestamp, id: Long = 0L)
 ~~~
 
 We combine this with the representation of a table. We're declaring the class as a `Table[Message]`:
@@ -171,7 +101,7 @@ final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def sender  = column[String]("sender")
   def content = column[String]("content")
   def ts      = column[Timestamp]("ts")
-  def * = (id, sender, content, ts) <> (Message.tupled, Message.unapply)
+  def * = (sender, content, ts, id) <> (Message.tupled, Message.unapply)
 }
 ~~~
 
@@ -199,9 +129,51 @@ If you're a fan of terminology, know that this is the _lifted embedded_ approach
 
 With this in place, we can make a query.
 
-### First Query
+### Creating a Table
 
-The `message` table can be queried as though it is a Scala collection. For instance, the query below will return all messages from the user `HAL`:
+Having modelled the table in Scala, we can ask Slick to create the table in the database:
+
+~~~ scala
+messages.ddl.create
+~~~
+
+DDL stands for _data definition language_ and is standard part of SQL. The DDL applies to the structure of tables, columns and other aspects of the schema, as opposed to the actual data held in those structures.
+
+For H2, Slick will execute the create table statement you might expect:
+
+~~~ sql
+create table "message" (
+  "sender" VARCHAR NOT NULL,
+  "content" VARCHAR NOT NULL,
+  "ts" TIMESTAMP NOT NULL,
+  "id" BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1) NOT NULL PRIMARY KEY
+)
+~~~
+
+Slick DDL supports `create` and `drop`. This is useful working with in memory databases, as we are doing in this chapter, and as we will when we look at testing in chapter **TODO**.  You're unlikely to use Slicks DLL to manage schema migrations, as they relatively simple. We will look at other ways to deal with schema migrations in chapter **TODO**.
+
+
+### Inserting Data
+
+Inserting rows into the table looks just like adding elements to a collection:
+
+~~~ scala
+messages ++= Seq(
+  Message("Dave", "Hello, HAL. Do you read me, HAL?", new Timestamp(start)),
+  Message("HAL",  "Affirmative, Dave. I read you.", new Timestamp(start + 2000)),
+  Message("Dave", "Open the pod bay doors, HAL.", new Timestamp(start + 4000)),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", new Timestamp(start + 6000))
+)
+~~~
+
+This will create four new rows in the database.
+
+Both creating the table and inserting data will require a connection to the database, which we will look at in a moment.  But first, let's see what a query looks like.
+
+
+### Querying
+
+As with inserts, queried look as though we are working with Scala collection. For instance, the query below will return all messages from the user `HAL`:
 
 ~~~ scala
 val halSays = for {
@@ -210,7 +182,7 @@ val halSays = for {
 } yield message
 ~~~
 
-This is _not_ executing a query. This is important, as it allows us to compose queries. The type of `halSays` is `Query[MessageTable, Message, Seq]`, and `Query` defines various `Query => Query`-style methods for this purpose.
+This is _not_ executing a query. This is important, as it allows us to compose queries and pass queries around without holding open a database connection. The type of `halSays` is `Query[MessageTable, Message, Seq]`, and `Query` defines various `Query => Query`-style methods for this purpose.
 
 As for comprehensions are sugar for `map`, `filter`, and related methods, this query can be re-written as:
 
@@ -239,8 +211,6 @@ Now we have a few queries, we should run them.
 
 Queries are executed in the scope of a _session_. You need a session to be able to run a query, but you do not need one to construct a query.
 
-_TODO: Check.... Is this changing in 3.0? There's talk of Actions and Futures in the doc_.
-
 A session is our connection to the database, and we can obtain one from Slick's `Database` object. We can do that from a configuration file, and Java's `DataSource` or JNDI technologies.  For this introduction, we're going to use a JDBC URL:
 
 <div class="callout callout-info">
@@ -257,9 +227,9 @@ A session is our connection to the database, and we can obtain one from Slick's 
 </div>
 
 ~~~ scala
-import scala.slick.driver.SQLiteDriver.simple._
+import scala.slick.driver.H2Driver.simple._
 
-def db = Database.forURL("jdbc:sqlite:basics.db", driver="org.sqlite.JDBC")
+def db = Database.forURL("jdbc:h2:mem:chapter01", driver="org.h2.Driver")
 
 db.withSession {
   implicit session =>
@@ -268,7 +238,7 @@ db.withSession {
 }
 ~~~
 
-Each database product (SQLite, Oracle, PostgresSQL, and so on) has a different take on how queries should be constructed, how data should be represented, and what capabilities are implemented. This is abstracted by the Slick _driver_.  We import the right driver for the database we are using.
+Each database product (H2, Oracle, PostgresSQL, and so on) has a different take on how queries should be constructed, how data should be represented, and what capabilities are implemented. This is abstracted by the Slick _driver_.  We import the right driver for the database we are using.
 
 With that import done we set up our database connection, `db`, by providing `Database` with a JDBC connection string, and the class name of the JDBC driver being used.  Yes, there are two kinds of _driver_ being used: Slick's abstraction is called a driver; and it uses a Java JDBC _driver_ too.
 
@@ -282,23 +252,16 @@ With a session we can execute our query. There are a number of calls you can mak
 
 Our complete Scala project becomes:
 
-_TODO: typing _io.underscore.slick_ is long. Shall we just use no packages for this chapter? It's not like this is a public library people will be importing and using as is._
-
-_TODO: Thoughts
-
- People will judge the code in our books as being the quality we delivery and expect. While I agree with you that it is a lot to type, it will look a bit unprofessional with no package. What about code.foo ?
-_
-
 ~~~ scala
-package io.underscore.slick
+package chapter01
 
-import scala.slick.driver.SQLiteDriver.simple._
+import scala.slick.driver.H2Driver.simple._
 import java.sql.Timestamp
 
-object ExerciseOne extends App {
+object Example extends App {
 
-  // Row representation:
-  final case class Message(id: Long = 0L, sender: String, content: String, ts: Timestamp)
+ // Row representation:
+  final case class Message(sender: String, content: String, ts: Timestamp, id: Long = 0L)
 
   // Schema:
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
@@ -306,24 +269,38 @@ object ExerciseOne extends App {
     def sender  = column[String]("sender")
     def content = column[String]("content")
     def ts      = column[Timestamp]("ts")
-    def * = (id, sender, content, ts) <> (Message.tupled, Message.unapply)
+    def * = (sender, content, ts, id) <> (Message.tupled, Message.unapply)
   }
 
   // Table:
   lazy val messages = TableQuery[MessageTable]
 
-  // Our first query:
-  val halSays = for {
-    message <- messages
-    if message.sender === "HAL"
-  } yield message
-
   // Database connection details:
-  def db = Database.forURL("jdbc:sqlite:basics.db", driver="org.sqlite.JDBC")
+  def db = Database.forURL("jdbc:h2:mem:chapter01", driver="org.h2.Driver")
 
   // Query execution:
   db.withSession {
     implicit session =>
+
+      // Create the table:
+      messages.ddl.create
+
+      // Insert data:
+      val start = 98240532000L
+
+      messages ++= Seq(
+        Message("Dave", "Hello, HAL. Do you read me, HAL?", new Timestamp(start)),
+        Message("HAL",  "Affirmative, Dave. I read you.", new Timestamp(start + 2000)),
+        Message("Dave", "Open the pod bay doors, HAL.", new Timestamp(start + 4000)),
+        Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", new Timestamp(start + 6000))
+      )
+
+      // Our first query:
+      val halSays = for {
+        message <- messages
+        if message.sender === "HAL"
+      } yield message
+
       val results = halSays.run
       println(results)
   }
@@ -333,6 +310,7 @@ object ExerciseOne extends App {
 This is all the code from the chapter so far in a single file. It's a Scala application, so you can run it from your IDE or from SBT:
 
 ~~~ bash
+$ cd chapter-01
 $ sbt run
 ~~~
 
@@ -344,73 +322,20 @@ Vector(Message(2,HAL,Affirmative, Dave. I read you.,2001-02-17 10:22:00),
 ~~~
 
 
-### Running Queries in the REPL
-
-For experimenting with queries it's convenient to use the Scala REPL and create an implicit session to work with.  In the "essential-slick-example" SBT project, run the `console` command to enter the Scala REPL with the Slick dependencies loaded and ready to use:
-
-~~~ scala
-> console
-[info] Compiling 9 Scala sources to /Users/jonoabroad/developer/company/underscore.io/essential-slick-example/target/scala-2.11/classes...
-[warn] there were four deprecation warnings; re-run with -deprecation for details
-[warn] one warning found
-[info] Starting scala interpreter...
-[info]
-
-Session created, but you may want to also import a schema. For example:
-
-    import io.underscore.slick.ExerciseOne._
-
-
-import scala.slick.driver.SQLiteDriver.simple._
-db: slick.driver.SQLiteDriver.backend.DatabaseDef = scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$4@47c412c5
-session: slick.driver.SQLiteDriver.backend.Session = scala.slick.jdbc.JdbcBackend$BaseSession@8e287ca
-Welcome to Scala version 2.11.4 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_25).
-Type in expressions to have them evaluated.
-Type :help for more information.
-
-scala> import io.underscore.slick.ExerciseOne._
-import io.underscore.slick.ExerciseOne._
-
-scala> messages.run
-res1: Seq[io.underscore.slick.ExerciseOne.MessageTable#TableElementType] = Vector(Message(5,Dave,Hello, HAL. Do you read me, HAL?,1970-01-12 18:53:25.32), Message(6,HAL,Affirmative, Dave. I read you.,1970-01-12 18:53:25.324), Message(7,Dave,Open the pod bay doors, HAL.,1970-01-12 18:53:25.326), Message(8,HAL,I'm sorry, Dave. I'm afraid I can't do that.,1970-01-12 18:53:25.328))
-
-scala> messages.firstOption
-res2: Option[io.underscore.slick.ExerciseOne.MessageTable#TableElementType] = Some(Message(5,Dave,Hello, HAL. Do you read me, HAL?,1970-01-12 18:53:25.32))
-
-scala>
-~~~
-
-
-
 
 ### Exercises
 
-We want to make sure you have your environment set up, and can experiment with Slick.  If you've not already done so, try out the above code. Once you've done that, work through these exercises.
+We want to make sure you have your environment set up, and can experiment with Slick.  If you've not already done so, try out the above code.  In the [example project][link-example] the code is in _main.scala_ in the folder _chapter-01_.
 
-<div class="callout callout-info">
-#### Logging What Slick is Doing
+Once you've done that, work through the exercises below.  An easy way to try things out is to use  _triggered execution_ with SBT:
 
-Slick uses a logging framework called SLFJ.  You can configure this to capture information about the queries being run, and the log to different back ends.  The "essential-slick-example" project uses a logging back-end called _Logback_, which is configured in the file _src/main/resources/logback.xml_.  In that file we enable statement logging by turning up the logging to debug level:
-
-~~~ xml
-<logger name="scala.slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
+~~~ bash
+$ cd example-01
+$ sbt
+> ~run
 ~~~
 
-When we next run a query, each statement will be recorded on standard output:
-
-~~~
-18:49:43.557 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: drop table "message"
-18:49:43.564 DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: create table "message" ("id" BIGSERIAL NOT NULL PRIMARY KEY,"from" VARCHAR(254) NOT NULL,"content" VARCHAR(254) NOT NULL,"when" TIMESTAMP NOT NULL)
-
-~~~
-
-You can enable a variety of events to be logged:
-
-* `scala.slick.jdbc.JdbcBackend.statement` - which is for statement logging, as you've seen.
-* `scala.slick.session` - for session information, such as connections being opened.
-* `scala.slick` - for everything!  This is usually too much.
-
-</div>
+That `~run` will monitor the project for changes, and when a change is seen, the _main.scala_ program will be compiled and run. This means you can edit _main.scala_ and then look in your terminal window to see the output.
 
 
 #### Count the Messages
