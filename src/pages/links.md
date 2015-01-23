@@ -9,6 +9,7 @@
 [link-sbt]:                               http://scala-sbt.org
 [link-example]:                           https://github.com/underscore/essential-slick-code
 [link-ref-orm]:                           http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
+[link-ref-dbs]:                           http://slick.typesafe.com/doc/2.1.0/introduction.html#supported-database-systems
 [link-h2-home]:                           http://www.h2database.com
 [link-jodatime]:                          http://www.joda.org/joda-time/
 [link-slf4j]:                             http://www.slf4j.org/
