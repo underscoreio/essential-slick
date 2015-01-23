@@ -23,30 +23,35 @@ If you've not familiar with ORMs, congratulations. You already have one less thi
 </div>
 
 
-## Structure of this Book
+## The Chat Example
 
-The aim of this first chapter is to introduce core concepts, and to get you up and running with Slick.  We'll start that in a moment.
+The aim of this first chapter is to introduce core concepts, and to get you up and running with Slick.
 
-The example we'll be using is of a chat application. Think of it as the database behind a _Slack_, _Flowdock_, or an _IRC_ application. It will have users, messages, and rooms. These will be modeled as tables, relationships between tables, and various kinds of queries to run across the tables.
+We'll be using an example of a chat application here and in the rest of the book. Think of it as the database behind a _Slack_, _Flowdock_, or an _IRC_ application. It will have users, messages, and rooms. These will be modeled as tables, relationships between tables, and various kinds of queries to run across the tables.
 
-For now, we're going to start just with a table for messages.
+The database will end up looking like this:
+
+**TODO: Insert diagram**
+
+However, for now, we're going to start just with a table for messages:
+
+**TODO: Insert table picture, possibly**
 
 
 ## Getting Started
 
-All the examples in this book will be using the [H2][link-h2-home] database. You might prefer to use _MySQL_, or _PostgreSQL_, or some other database. At the end of this chapter we'll point you at the changes you'll need to make to work with other databases.
+All the examples in this book will be using the [H2][link-h2-home] database. We've picked H2 because there's nothing to install. In other words, we can get on with writing our Scala application immediately.
 
-But stick with H2 for at least this first chapter, so you can get confidence using Slick without running into too many complications.
+You might prefer to use _MySQL_, or _PostgreSQL_, or some other database---and you can. At the end of this chapter we'll point you at the changes you'll need to make to work with other databases. But stick with H2 for at least this first chapter, so you can get confidence using Slick without running into database-specific complications.
 
-We've picked H2 because there's nothing to install. In other words, we can get on with writing our Scala application immediately.
 
-### Creating an SBT Project
+### SBT Build File
 
-Now we're going to model this database in Slick, connect to it, query it, and later we'll modify the add to the data. To do this we'll need a Scala project.
+We're going to see how to model this table in Slick, connect to it, insert data, and query it. To do this we'll need a Scala project.
 
 We'll create a regular Scala SBT project and reference the Slick dependencies.  If you don't have SBT installed, follow the instructions at the [scala-sbt site][link-sbt].
 
-Here's a simple build script, _build.sbt_:
+Here's the build script, _build.sbt_, we'll be using:
 
 ~~~ scala
 name := "essential-slick-chapter-01"
@@ -69,7 +74,7 @@ This file declares the minimum dependencies needed:
 - the database driver for H2; and
 - a logging library, which Slick requires for its internal debug logging.
 
-In addition we're using JodaTime, which we think is a great library for working with dates and times on the JVM.
+In addition we're using JodaTime, which we think is a great library for working with dates and times on the Java Virtual Machine.
 
 We'll run this script later in this chapter.
 
@@ -82,7 +87,77 @@ We'll run this script later in this chapter.
 </div>
 
 
-### First Table and Row
+### The Code
+
+The Scala code we will end up with in this chapter is as follows. You're not expected to understand this yet, but you may find you get the gist:
+
+~~~ scala
+package chapter01
+
+import scala.slick.driver.H2Driver.simple._
+import java.sql.Timestamp
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone.UTC
+
+object Example extends App {
+
+  // Custom column mapping:
+  implicit val jodaDateTimeType =
+    MappedColumnType.base[DateTime, Timestamp](
+      dt => new Timestamp(dt.getMillis),
+      ts => new DateTime(ts.getTime, UTC)
+    )
+
+  // Row representation:
+  final case class Message(sender: String, content: String, ts: DateTime, id: Long = 0L)
+
+  // Schema:
+  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+    def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def sender  = column[String]("sender")
+    def content = column[String]("content")
+    def ts      = column[DateTime]("ts")
+    def * = (sender, content, ts, id) <> (Message.tupled, Message.unapply)
+  }
+
+  // Table:
+  lazy val messages = TableQuery[MessageTable]
+
+  // Database connection details:
+  def db = Database.forURL("jdbc:h2:mem:chapter01", driver="org.h2.Driver")
+
+  // Query execution:
+  db.withSession {
+    implicit session =>
+
+      // Create the table:
+      messages.ddl.create
+
+      // Insert the conversation, which took place in Feb, 2001:
+      val start = new DateTime(2001,2,17, 10,22,50)
+
+      messages ++= Seq(
+        Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
+        Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
+        Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
+        Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
+      )
+
+      // Our first query:
+      val halSays = for {
+        message <- messages
+        if message.sender === "HAL"
+      } yield message
+
+      println(halSays.run)
+  }
+}
+~~~
+
+Before we run this code we are going to walk through the parts and outline the concepts.
+
+
+### Representing a Table and Row
 
 Slick models tables with classes, and models rows using a variety of data structures. For now we're going to focus on using case classes to model rows.
 
@@ -90,7 +165,7 @@ The case class below represents a single row of the `message` table, which is co
 four columns: a unique `id`, the `sender` of the message, the `content` of the message, and the time it was sent, `ts`:
 
 ~~~ scala
-final case class Message(sender: String, content: String, ts: Timestamp, id: Long = 0L)
+final case class Message(sender: String, content: String, ts: DateTime, id: Long = 0L)
 ~~~
 
 We combine this with the representation of a table. We're declaring the class as a `Table[Message]`:
@@ -100,7 +175,7 @@ final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def sender  = column[String]("sender")
   def content = column[String]("content")
-  def ts      = column[Timestamp]("ts")
+  def ts      = column[DateTime]("ts")
   def * = (sender, content, ts, id) <> (Message.tupled, Message.unapply)
 }
 ~~~
@@ -127,9 +202,38 @@ There's plenty going on in these three short code snippets. In particular there 
 
 If you're a fan of terminology, know that this is the _lifted embedded_ approach to Slick.  It is the standard, non-experimental, way to work with Slick.
 
-With this in place, we can make a query.
 
-### Creating a Table
+### Custom Column Mappings
+
+We want to work with types have have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of`Message`.
+
+At a level down from that, we can also control how our types are converted into column values.  For example, we're using [JodaTime](link-jodatime)'s `DateTime` class. Support for this is not built-in to Slick, but we want to show it here to illustrate how painless it is to map types to the database.
+
+The mapping for JodaTime `DateTime` is:
+
+~~~ scala
+import java.sql.Timestamp
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone.UTC
+
+implicit val jodaDateTimeType =
+  MappedColumnType.base[DateTime, Timestamp](
+    dt => new Timestamp(dt.getMillis),
+    ts => new DateTime(ts.getTime, UTC)
+  )
+~~~
+
+What we're providing here is two functions:
+
+- one that takes a `DateTime` and turns it into a database-friend value, namely a `java.sql.Timestamp`; and
+- another that does the reverse, taking a database value and turning it into a `DataTime`.
+
+Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime`.
+
+This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
+
+
+### Creating the Table in the Database
 
 Having modelled the table in Scala, we can ask Slick to create the table in the database:
 
@@ -143,10 +247,10 @@ For H2, Slick will execute the create table statement you might expect:
 
 ~~~ sql
 create table "message" (
-  "sender" VARCHAR NOT NULL,
+  "sender"  VARCHAR NOT NULL,
   "content" VARCHAR NOT NULL,
-  "ts" TIMESTAMP NOT NULL,
-  "id" BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1) NOT NULL PRIMARY KEY
+  "ts"      TIMESTAMP NOT NULL,
+  "id"      BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1) NOT NULL PRIMARY KEY
 )
 ~~~
 
@@ -159,10 +263,10 @@ Inserting rows into the table looks just like adding elements to a collection:
 
 ~~~ scala
 messages ++= Seq(
-  Message("Dave", "Hello, HAL. Do you read me, HAL?", new Timestamp(start)),
-  Message("HAL",  "Affirmative, Dave. I read you.", new Timestamp(start + 2000)),
-  Message("Dave", "Open the pod bay doors, HAL.", new Timestamp(start + 4000)),
-  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", new Timestamp(start + 6000))
+  Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
+  Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
+  Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
 )
 ~~~
 
@@ -194,17 +298,22 @@ Which style you use is a matter of your circumstance and team preference.
 
 Note also that we use triple equals `===` and not `==` in the for comprehension. The `===` is Slicks way of inserting the SQL `=` operator in here, rather than the Scala `equals` check. But aside from that, the query looks just the same as the code you'd write to work with any Scala collection.
 
-The `===` is the only special case to notice.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use `<`:
+The `===` is the only special case to notice.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use `<`...
 
 ~~~ scala
-val now = Calendar.getInstance()
-now.add(Calendar.MINUTE, -30)
-val recent: Timestamp = new Timestamp(now.getTimeInMillis())
-
-val recentMessages = halSays.filter(_.ts < recent)
+val now = new DateTime(2001,2,17, 10,22,54)
+val recentMessages = halSays.filter(_.ts < now)
 ~~~
 
-Now we have a few queries, we should run them.
+...and when we `run` that the SQL will be something like:
+
+~~~ sql
+select "sender", "content", "ts", "id" from "message" where
+  ("sender" = 'HAL') and
+  ("ts" < '2001-02-17 10:22:54.0')
+~~~
+
+Now that we have a few queries, we should run them.
 
 
 ### Database Connections and Sessions
@@ -257,18 +366,27 @@ package chapter01
 
 import scala.slick.driver.H2Driver.simple._
 import java.sql.Timestamp
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone.UTC
 
 object Example extends App {
 
- // Row representation:
-  final case class Message(sender: String, content: String, ts: Timestamp, id: Long = 0L)
+  // Custom column mapping:
+  implicit val jodaDateTimeType =
+    MappedColumnType.base[DateTime, Timestamp](
+      dt => new Timestamp(dt.getMillis),
+      ts => new DateTime(ts.getTime, UTC)
+    )
+
+  // Row representation:
+  final case class Message(sender: String, content: String, ts: DateTime, id: Long = 0L)
 
   // Schema:
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
     def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def sender  = column[String]("sender")
     def content = column[String]("content")
-    def ts      = column[Timestamp]("ts")
+    def ts      = column[DateTime]("ts")
     def * = (sender, content, ts, id) <> (Message.tupled, Message.unapply)
   }
 
@@ -285,14 +403,14 @@ object Example extends App {
       // Create the table:
       messages.ddl.create
 
-      // Insert data:
-      val start = 98240532000L
+      // Insert the conversation, which took place in Feb, 2001:
+      val start = new DateTime(2001,2,17, 10,22,50)
 
       messages ++= Seq(
-        Message("Dave", "Hello, HAL. Do you read me, HAL?", new Timestamp(start)),
-        Message("HAL",  "Affirmative, Dave. I read you.", new Timestamp(start + 2000)),
-        Message("Dave", "Open the pod bay doors, HAL.", new Timestamp(start + 4000)),
-        Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", new Timestamp(start + 6000))
+        Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
+        Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
+        Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
+        Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
       )
 
       // Our first query:
@@ -301,8 +419,7 @@ object Example extends App {
         if message.sender === "HAL"
       } yield message
 
-      val results = halSays.run
-      println(results)
+      println(halSays.run)
   }
 }
 ~~~
@@ -314,13 +431,15 @@ $ cd chapter-01
 $ sbt run
 ~~~
 
-The output will be something like this:
+The output will be:
 
 ~~~
-Vector(Message(2,HAL,Affirmative, Dave. I read you.,2001-02-17 10:22:00),
-       Message(4,HAL,I'm sorry, Dave. I'm afraid I can't do that.,2001-02-17 10:22:08))
+Vector(
+  Message(HAL,Affirmative, Dave. I read you.,2001-02-17T10:22:52.000Z,2),
+  Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,2001-02-17T10:22:56.000Z,4) )
 ~~~
 
+You have now built and run a simple Slick application.
 
 
 ### Exercises
@@ -396,7 +515,7 @@ The result will be something like:
 select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where x2."id" = 1
 ~~~
 
-From this we see how`filter` corresponds to a SQL `where` clause.
+From this we see how `filter` corresponds to a SQL `where` clause.
 </div>
 
 
@@ -475,6 +594,8 @@ select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where lower
 There are three results: "_Do_ you read me", "Open the pod bay _do_ors", and "I'm afraid I can't _do_ that".
 </div>
 
+
+
 ## Using Different Database Products
 
 <div class="callout callout-info">
@@ -501,6 +622,26 @@ Slick supports PostgreSQL, MySQL, Derby, H2, SQLite, and Microsoft Access.
 To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
 </div>
 
-## Take home Points
 
-I liked these in Essential Scala, do we want them here? I have no idea what they are for this chapter, possibly "If you couldn't get this working, reconsider your career", but that seems a little harsh.
+
+## Take Home Points
+
+Slick models a database using:
+
+* Scala types, such as case classes, for rows;
+* `Table[T]` classes for the table schema; and
+* `TableQuery[T]` for the table itself.
+
+Slick will map column values to and from the database, and we can teach slick about our own types with custom mappings.
+
+Queries and inserts look much like operations on Scala collections.
+
+Session are:
+
+* Required when running a query, insert, or schema change; but
+* Not required to construct and compose queries.
+
+In the next chapter we will look deleting and updating data, and in more depth on inserting data.
+
+
+

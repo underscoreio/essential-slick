@@ -213,40 +213,9 @@ __TODO__
 
 ##Custom Column Mapping
 
-<!--2.3.3 Creating an SBT Project -->
-We mentioned in the previous chapter our love for the library [JodaTime](link-jodatime) which is a great library for working with dates, times, intervals, durations, and timezones.
-
-Our `ts` column is currently a `Timestamp`, let's look at how we can  represents a JodaTime `DateTime`.
-
-Support for this is not built-in to Slick, but we want to show it here to illustrate how painless it is to map types to the database.  This is something you'll want to do in your applications: work with meaningful types in your code, and let Slick take care of how those types are turned into database values.
-
-The mapping for JodaTime `DateTime` is:
-
-~~~ scala
-import java.sql.Timestamp
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone.UTC
-
-implicit val jodaDateTimeType =
-  MappedColumnType.base[DateTime, Timestamp](
-    dt => new Timestamp(dt.getMillis),
-    ts => new DateTime(ts.getTime, UTC)
-  )
-~~~
-
-What we're providing here is two functions:
-
-- one that takes a `DateTime` and turns it into a database-friend value, namely a `Timestamp`; and
-- another that does the reverse, taking a database value and turning it into a `DataTime`.
-
-Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime` when working with Slick.
-
-With this mapping in place, we can refine our earlier query.
-
-~~~ scala
-val recent: DateTime = DateTime.now minusMinutes 30
-val recentMessages = halSays.filter(_.ts < recent)
-~~~
+- value classes
+- enumerations
+- more examples of this
 
 ##Virtual columns and server-side casts here?
 
