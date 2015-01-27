@@ -100,6 +100,8 @@ All the operations you can perform on a column, such as `like` or `toLowerCase`,
 So `Column[T]` is for values, and deleting based on a value makes no sense in Slick or SQL. Imagine the query `SELECT 42`. You can represent this in Slick as `Query(42)`. You can `run` the query, but you cannot `delete` on it. But deleting on a table, like `MessageTable`, that makes more sense.
 
 
+
+
 ## Inserting a Row
 
 As we saw in chapter 1, adding new rows to a table also looks like a collections operation:
@@ -131,17 +133,16 @@ final case class Message(sender: String, content: String, ts: DateTime, id: Long
 
 Putting the `id` at the end and giving it a default value is a trick that allows us to simply write `Message("HAL", "I'm back", DateTime.now)` and not mention `id`.  The [rules of named and default arguments][link-sip-named-default] would allow us to put `id` first, but then we'd need to name the other field values: `Message(sender="HAL", ...)`.
 
-Note that `0L` for the `id` is _not_ a magic value that Slick uses. What is happening here is that Slick recognizes
+Note that there's nothing special about the `0L` for the `id`. It's _not_ a magic value meaning "this record has no `id`".  Instead, what is happening here is that Slick recognizes
 that the column was defined as auto-incrementing:
 
 ~~~ scala
 def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 ~~~~
 
-Slick excludes `O.AutoInc` columns when inserting rows. This is just one way of dealing with automatically generated primary keys. We will look at other ways, including custom projections (**TODO: Will we?**) and `Option[T]` values, in chapter **TODO**.
+Slick excludes `O.AutoInc` columns when inserting rows, allowing the database to step in an generate the value for us. (If you really do need to insert a value in place of an auto incrementing value, the method `forceInsert` is there for you.)
 
-If you do need to insert a value in place of an auto incrementing value, the method `forceInsert` is there for you.
-
+This is just one way of dealing with automatically generated primary keys. We will look at other ways, including custom projections (**TODO: Will we?**) and `Option[T]` values, in chapter **TODO**.
 </div>
 
 Let's modify the insert to give us back the primary key generated:
@@ -151,33 +152,42 @@ val result =
   (messages returning messages.map(_.id)) += Message("HAL", "I'm back", DateTime.now)
 ~~~
 
-The type of `result` will be `Long`, as that's what we defined `id` as.  We can use that in a query:
-
-~~~ scala
-val msg = messages.filter(_.id === result).first
-~~~
-
-...and we will get the `Message` back.
-
-For some databases you can do this in one step:
+The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense there.  Some databases allow you return values other than just the auto incremented value. For example, we could ask for the whole `Message` back:
 
 ~~~ scala
 val result: Message =
   (messages returning messages) += Message("HAL", "I'm back", DateTime.now)
 ~~~
 
-Unfortunately, H2 isn't one of these databases. If you tried the above you'll be told:
+Unfortunately, H2 isn't one of the databases to support this. If you tried the above you'll be told:
 
 ~~~
 This DBMS allows only a single AutoInc column to be returned from an INSERT
 ~~~
 
-You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  In this case it's the `jdbc.returnInsertOther` capability, and you'll see it is supported by _PostgreSQL_ and _Hypersonic_.
+That's a shame, but getting the primary key is often all that's needed. However, typing `messages returning messages.map(_.id)` isn't exactly convenient. If this is something you need to do often, define a query that does it for you at the same point in the code where `messages` is defined:
+
+~~~ scala
+lazy val messagesInsert = messages returning messages.map(_.id)
+~~~
+
+This allows us to insert and get the primary key in one shorter expression:
+
+~~~ scala
+val id = messagesInsert += Message("HAL", "I'm back", DateTime.now)
+~~~
+
+<div class="callout callout-info">
+**Driver Capabilities**
+
+You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `jdbc.returnInsertOther` capability.
+</div>
 
 
-_TODO_: Describe this weird (messages returning messages) expression.
+## Inserting Multiple Rows
 
-_TODO_: Describe how to simplify if you do this PK return often.
+
+
 
 ## Updating Rows
 
