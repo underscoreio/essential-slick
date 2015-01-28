@@ -174,19 +174,64 @@ lazy val messagesInsert = messages returning messages.map(_.id)
 This allows us to insert and get the primary key in one shorter expression:
 
 ~~~ scala
-val id = messagesInsert += Message("HAL", "I'm back", DateTime.now)
+val id: Long = messagesInsert += Message("HAL", "I'm back", DateTime.now)
 ~~~
 
 <div class="callout callout-info">
 **Driver Capabilities**
 
 You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `jdbc.returnInsertOther` capability.
+
+The Scala Doc for each driver also lists the capabilities the driver _does not_ have. For an example, take a look at the top of the [H2 Driver Scala Doc][link-ref-h2driver] page.
 </div>
 
 
 ## Inserting Multiple Rows
 
+Let's say we have a number of messages we want to insert. You could just `+=` each one in turn, and that would work.  However, each one of those inserts will be sent to the database individually, and the result returned. This can be slow for large numbers of inserts.
 
+As an alternative, Slick supports batch inserts, where all the inserts are sent to the database in one go. We've seen this already in the first chapter:
+
+~~~ scala
+val start = new DateTime(2001,2,17, 10,22,50)
+
+messages ++= Seq(
+  Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
+  Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
+  Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
+)
+~~~
+
+The above code will prepare one statement (the insert) and use that one statement for each row. In comparison, inserting each message individually will produce four statements.  It's a saving in time that's worth having.
+
+You already know that with single inserts you can see the number of rows inserted and get at the auto incremented values, if you want to.  Let's see how that works for batch inserts.
+
+The result of the above `messages ++= ...` code is an `Option[Int]`.  Specifically, it's `Some(4)`. It's optional because the underlying JDBC specifications permits the database to indicate that the number of rows is unknown. In that situation, Slick cannot give a count even though the insert will have succeeded.
+
+The batch version of `messages returning...` also is available. We can say:
+
+~~~ scala
+val ids = messagesInsert ++= Seq(
+  Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
+  Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
+  Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
+)
+~~~
+
+...and the result will be a list of the auto-incremented `id` fields, as a  `List[Long]`. However, this will be executed as four separate statements, rather than one. This is because returning column values from a batch insert is not, on the whole, supported by databases.
+
+
+<div class="callout callout-info">
+**Invokers**
+
+Queries don't directly expose the methods you use to execute a query. The execution methods are instead defined by a trait, called `Invoker`.  There are query invokers, row counting insert invokers, returning insert invokers, update invokers, delete invokers... and others.  This is where you will find methods like `firstOption`, `list` or `delete`.
+
+If you looked at the invoker for `messagesInsert`, which you can via `messagesInsert.insertInvoker`, you would see that it is a `ReturningInsertInvoker`.  It is here, for batch insert, that Slick switches to turning the bulk insert into a useful sequence of individual inserts.
+
+We don't generally talk about invokers as Slick provides them implicitly.
+</div>
 
 
 ## Updating Rows
