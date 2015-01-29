@@ -212,7 +212,7 @@ module.exports = (grunt) ->
       --smart
       #{output}
       #{template}
-      --from=markdown+grid_tables+multiline_tables+fenced_code_blocks+fenced_code_attributes+yaml_metadata_block+implicit_figures
+      --from=markdown+grid_tables+multiline_tables+fenced_code_blocks+fenced_code_attributes+yaml_metadata_block+implicit_figures+header_attributes
       --latex-engine=xelatex
       #{filters}
       --chapters

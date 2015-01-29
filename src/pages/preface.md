@@ -1,8 +1,25 @@
-## Conventions Used in This Book
+# Preface {-}
+
+*Essential Slick* is aimed at beginner-to-intermediate Scala developers who want to get started using the [Slick][link-slick] framework.
+
+Slick is a Scala library for working with databases: querying, inserting data, updating data, and representing a schema.  Queries are written in Scala and type checked by the compiler. Slick aims to make working with a database similar to working with regular Scala collections.
+
+This material is aimed at a Scala developer who has:
+
+* taken the [Essential Scala][link-essential-scala] course or equivalent;
+* a good understanding of relation databases (rows, columns, joins, indexes) and SQL;
+* access to a relational database; and
+* JDK 7 installed, along with an editor or IDE (Scala IDE for Eclipse, or IntelliJ).
+
+The material presented focuses on Slick version 2.1.0, examples use [Postgres][link-postgres] as the relational database.
+
+Many thanks to [Jonathan Ferguson][link-twitter-jono] and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
+
+## Conventions Used in This Book {-}
 
 This book contains a lot of technical information and program code. We use the following typographical conventions to reduce ambiguity and highlight important concepts:
 
-### Typographical Conventions
+### Typographical Conventions {-}
 
 New terms and phrases are introduced in *italics*. After their initial introduction they are written in normal roman font.
 
@@ -10,7 +27,7 @@ Terms from program code, filenames, and file contents, are written in `monospace
 
 References to external resources are written as [hyperlinks][link-underscore]. References to API documentation are written using a combination of hyperlinks and monospace font, for example: [`scala.Option`].
 
-### Source Code
+### Source Code {-}
 
 Source code blocks are written as follows. Syntax is highlighted appropriately where applicable:
 
@@ -33,7 +50,7 @@ should actually be written as follows:
 println("This code should all be written on one line.")
 ~~~
 
-### Callout Boxes
+### Callout Boxes {-}
 
 We use three types of *callout box* to highlight particular content:
 
@@ -48,4 +65,3 @@ Advanced callouts provide additional information on corner cases or underlying m
 <div class="callout callout-danger">
 Warning callouts indicate common pitfalls and gotchas. Make sure you read these to avoid problems, and come back to them if you're having trouble getting your code to run.
 </div>
-

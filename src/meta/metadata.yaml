@@ -7,8 +7,7 @@ filenameStem: "essential-slick"
 # see src/css/book.css for HTML/ePub covers:
 coverColor: "F58B40"
 pages:
-  - src/pages/introduction.md
-  - src/pages/conventions.md
+  - src/pages/preface.md
   - src/pages/basics.md
   - src/pages/modifying_data.md
   - src/pages/data_modeling.md
