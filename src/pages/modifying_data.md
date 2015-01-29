@@ -231,7 +231,7 @@ You already know that with single inserts you can see the number of rows inserte
 
 The result of the above `messages ++= ...` code is an `Option[Int]`.  Specifically, it's `Some(4)`. It's optional because the underlying JDBC specifications permits the database to indicate that the number of rows is unknown for batch inserts. In that situation, Slick cannot give a count even though the insert will have succeeded.
 
-The batch version of `messages returning...` also is available. We can use the `messagesInsert` query and write:
+The batch version of `messages returning...`, including `into`, is also available for batch inserts. We can use the `messagesInsert` query and write:
 
 ~~~ scala
 val ids = messagesInsert ++= Seq(
@@ -260,6 +260,8 @@ We don't generally talk about invokers as Slick provides them implicitly.
 
 
 
+
+
 ## Exercises
 
 - Delete all the messages
@@ -267,5 +269,17 @@ We don't generally talk about invokers as Slick provides them implicitly.
 
 ## Take Home Points
 
+For modifying the rows in the database we have seen that:
+
+* deletes are via a `delete` call to a query;
+* updates are via an `update` call on a query; and
+* inserts are via an `insert` (or `+=`) call on a table.
+
+Auto-incrementing values are not inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
+
+Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
+
+Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is not performance advantage.
 
 
+The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
