@@ -180,10 +180,32 @@ val id: Long = messagesInsert += Message("HAL", "I'm back", DateTime.now)
 <div class="callout callout-info">
 **Driver Capabilities**
 
-You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `jdbc.returnInsertOther` capability.
+You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `` capability.
 
 The Scala Doc for each driver also lists the capabilities the driver _does not_ have. For an example, take a look at the top of the [H2 Driver Scala Doc][link-ref-h2driver] page.
 </div>
+
+If we do want to get a populated `Message` back from an insert for any database, with the auto-generated `id` set, we can write a method to do that.  It would take a message as an argument, insert it returning the `id`, and then give back a copy the message setting the `id`. This would emulate the `jdbc.returnInsertOther` capability.
+
+We don't need to write that method as Slick supports it via `into`:
+
+~~~ scala
+val messagesInsertWithId =
+  messages returning messages.map(_.id) into { (m, i) => m.copy(id=i) }
+
+val result: Message =
+  messagesInsertWithId += Message("HAL", "I'm back", DateTime.now)
+~~~
+
+The `result` will be the message with the auto-generated `id` field correctly set.
+
+This is a general purpose client-side transformation. That is, it runs in your Scala application and not the database.
+
+Any `returning` expression can have an `into`.  The `into` part is a function from the type being inserted and the type returned, to some other type. In the above example the type of the `into` function is:
+
+~~~ scala
+(Message, Long) => Message
+~~~
 
 
 ## Inserting Multiple Rows
@@ -205,11 +227,11 @@ messages ++= Seq(
 
 The above code will prepare one statement (the insert) and use that one statement for each row. In comparison, inserting each message individually will produce four statements.  It's a saving in time that's worth having.
 
-You already know that with single inserts you can see the number of rows inserted and get at the auto incremented values, if you want to.  Let's see how that works for batch inserts.
+You already know that with single inserts you can see the number of rows inserted and get at the auto incremented values, if you want to.  Let's see how that works for batch inserts because there are some differences.
 
-The result of the above `messages ++= ...` code is an `Option[Int]`.  Specifically, it's `Some(4)`. It's optional because the underlying JDBC specifications permits the database to indicate that the number of rows is unknown. In that situation, Slick cannot give a count even though the insert will have succeeded.
+The result of the above `messages ++= ...` code is an `Option[Int]`.  Specifically, it's `Some(4)`. It's optional because the underlying JDBC specifications permits the database to indicate that the number of rows is unknown for batch inserts. In that situation, Slick cannot give a count even though the insert will have succeeded.
 
-The batch version of `messages returning...` also is available. We can say:
+The batch version of `messages returning...` also is available. We can use the `messagesInsert` query and write:
 
 ~~~ scala
 val ids = messagesInsert ++= Seq(
@@ -220,21 +242,22 @@ val ids = messagesInsert ++= Seq(
 )
 ~~~
 
-...and the result will be a list of the auto-incremented `id` fields, as a  `List[Long]`. However, this will be executed as four separate statements, rather than one. This is because returning column values from a batch insert is not, on the whole, supported by databases.
+The result will be a list of the auto-incremented `id` fields, as a `List[Long]`. However, this will be executed as four separate statements, rather than one. This is because returning column values from a batch insert is not, on the whole, supported by databases.
 
 
 <div class="callout callout-info">
 **Invokers**
 
-Queries don't directly expose the methods you use to execute a query. The execution methods are instead defined by a trait, called `Invoker`.  There are query invokers, row counting insert invokers, returning insert invokers, update invokers, delete invokers... and others.  This is where you will find methods like `firstOption`, `list` or `delete`.
+Queries don't directly expose the methods to execute a query. The execution methods are instead defined by a trait called `Invoker`.  There are query invokers, row counting insert invokers, returning insert invokers, update invokers, delete invokers... and others.  This is where you will find methods like `firstOption`, `list` or `delete`.
 
-If you looked at the invoker for `messagesInsert`, which you can via `messagesInsert.insertInvoker`, you would see that it is a `ReturningInsertInvoker`.  It is here, for batch insert, that Slick switches to turning the bulk insert into a useful sequence of individual inserts.
+If you looked at the invoker for `messagesInsert`, which you can via `messagesInsert.insertInvoker`, you would see that it is a `ReturningInsertInvoker`.  It is there that Slick switches to turning the bulk insert into a useful sequence of individual inserts.
 
 We don't generally talk about invokers as Slick provides them implicitly.
 </div>
 
 
 ## Updating Rows
+
 
 
 ## Exercises
