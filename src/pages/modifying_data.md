@@ -258,6 +258,91 @@ We don't generally talk about invokers as Slick provides them implicitly.
 
 ## Updating Rows
 
+In all the rows we've created so far we've referred to "HAL". That's a computer from the film _2001: A Space Odyssey_, but the correct name is "HAL 9000".  Let's fix that:
+
+~~~ scala
+val rowsAffected: Int =
+  messages.filter(_.sender === "HAL").map(_.sender).update("HAL 9000")
+~~~
+
+If we break this down it may be easier to see the same patterns we've seen elsewhere:
+
+~~~ scala
+val queryForHAL  = messages.filter(_.sender === "HAL")
+val selectSender = queryForHal.map(_.sender)
+val rowsAffected: Int = selectSender.update("HAL 9000")
+~~~
+
+We're selecting the messages from HAL, and composing that query to just return the `sender` field. Then we can call `update` and supply a new value for the sender.
+
+This update is equivalent to this SQL:
+
+~~~ sql
+UPDATE "message" SET "sender" = 'HAL 9000' WHERE "sender" = 'HAL'
+~~~
+
+We can also update multiple columns at the same time. We can fix HAL's name and change the timestamp on the message to "now":
+
+~~~ scala
+val rowsAffected =
+  messages.filter(_.sender === "HAL").map(msg => (msg.sender, msg.ts)).update("HAL 9000", DateTime.now)
+~~~
+
+Now we are selecting a _tuple_ of `(sender, ts)`, which means `update` expects us to supply two values.  The SQL will be something like this:
+
+~~~ sql
+UPDATE  "message"
+  SET   "sender" = 'HAL 9000', "ts" = '2015-01-29 15:02'
+  WHERE "sender" = 'HAL'
+~~~
+
+## Updating with a Computed Value
+
+Let's now turn to more interesting updates. How about converting every message to be all capitals. Or adding an exclamation mark to the end of each message.  Both of these examples need us to do something to each row in turn.  In SQL it might be something like:
+
+~~~ sql
+UPDATE "messages" SET "content" = "content" + "!"
+~~~
+
+This is not currently supported by `update` in Slick. But there are ways to achieve the same result.
+
+### Client Side Update
+
+The first way is to perform this action on the client side.  We'll define a Scala function to capture how we want to change each row:
+
+~~~ scala
+def exclaim(msg: Message): Message =
+  msg.copy(content = msg.content + "!")
+~~~
+
+This is a standard _copy constructor_ in Scala which will take a `Message` and return a copy, with only the `content` field modified.  The `id`, `ts`, `sender`, will all be unchanged.
+
+Using this we can update the rows in the database:
+
+~~~ scala
+messages.list.map(exclaim).foreach {
+  m => messages.filter(_.id === m.id).update(m)
+}
+~~~
+
+The steps here are:
+
+1. Select all the messages in the table (`messages.list`)
+2. In Scala, create new `Message`s with the desired change (`map(exclaim)`)
+3. For each row, update the row (`foreach { ... }`)
+
+This results in _N + 1 queries_, where _N_ is the number of rows selected.  That may be excessive, depending on what your needs are.
+
+### Plain SQL
+
+The alternative is to simply use the SQL we original wrote.  Slick supports _plain SQL queries_ as an alternative to the collectons-like style we've seen up to this point:
+
+~~~ scala
+sqlu"""UPDATE messages SET content = content + "!" """
+~~~
+
+
+_TODO_ round this example off.
 
 
 
@@ -266,13 +351,15 @@ We don't generally talk about invokers as Slick provides them implicitly.
 
 - Delete all the messages
 
+- Client/server: What does this do, and why? messages.map(_.content + "!").list
+
 
 ## Take Home Points
 
 For modifying the rows in the database we have seen that:
 
 * deletes are via a `delete` call to a query;
-* updates are via an `update` call on a query; and
+* updates are via an `update` call on a query, but are somewhat limited; and
 * inserts are via an `insert` (or `+=`) call on a table.
 
 Auto-incrementing values are not inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
