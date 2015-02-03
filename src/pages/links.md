@@ -1,6 +1,5 @@
 [link-essential-scala]:                   http://underscore.io/training/courses/essential-scala
 [link-slick]:                             http://slick.typesafe.com/
-[link-h2]:                                http://www.h2database.com/
 [link-postgres]:                          http://www.postgresql.org/
 [link-postgres-download]:                 http://www.postgresql.org/download/
 [link-twitter-jono]:                      http://twitter.com/jonoabroad
