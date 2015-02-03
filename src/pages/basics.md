@@ -601,30 +601,89 @@ There are three results: "_Do_ you read me", "Open the pod bay _do_ors", and "I'
 ## Using Different Database Products
 
 <div class="callout callout-info">
-As mentioned during the introduction PostgresSQL version 9 is used throughout the book for examples. If it is not currently installed, it can be downloaded from the [Postgres][link-postgres-download] website.
+As mentioned during the introduction H2 is used throughout the book for examples. However Slick also supports PostgreSQL, MySQL, Derby, SQLite, and Microsoft Access.
+
+To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
 </div>
 
-Create a database named `essential-slick` with user `essential`. This will be used for all examples and can be created with the following:
+If you want to use another database for the exercises throughout the book you will need to make a few changes.
+Each chapter uses it's own database.
+So the instructions below are applicable for any chapter.
+Ensure that:
+
+ * a database is available with the correct name,
+ * the `build.sbt` file has the correct dependency,
+ * the correct JDBC driver is referenced in the code,
+ * the correct Slick driver is used.
+
+### PostgreSQL
+
+If it is not currently installed, it can be downloaded from the [PostgreSQL][link-postgres-download] website.
+
+#### A database is available
+
+Create a database named `chapter-01` with user `essential`. This will be used for all examples and can be created with the following:
 
 ~~~ sql
-CREATE DATABASE "essential-slick" WITH ENCODING 'UTF8';
+CREATE DATABASE "chapter-01" WITH ENCODING 'UTF8';
 CREATE USER "essential" WITH PASSWORD 'trustno1';
-GRANT ALL ON DATABASE "essential-slick" TO essential;
+GRANT ALL ON DATABASE "chapter-01" TO essential;
 ~~~
 
 Confirm the database has been created and can be accessed:
 
 ~~~ bash
-$ psql -d essential-slick essential
+$ psql -d chapter-01 essential
 ~~~
 
-<div class="callout callout-info">
-Slick supports PostgreSQL, MySQL, Derby, H2, SQLite, and Microsoft Access.
+#### `build.sbt` has the correct dependency
 
-To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
-</div>
+Replace `"com.h2database" % "h2" % "1.4.185"` with `"org.postgresql" % "postgresql" % "9.3-1100-jdbc41"`,
+then reload the project using `reload`. Remebering to regenerate any IDE project files.
 
+####  The correct JDBC driver is referenced in the code
 
+Replace `Database.forURL` parameters with `"jdbc:postgresql:chapter-01", user="essential", password="trustno1", driver="org.postgresql.Driver"`.
+
+####  The correct Slick driver is used
+
+Change the import from `import scala.slick.driver.H2Driver.simple._` to
+`import scala.slick.driver.PostgresDriver.simple._`.
+
+### MySQL
+
+If it is not currently installed, it can be downloaded from the [MySQL][link-mysql-download] website.
+
+#### A database is available
+
+Create a database named `chapter-01` with user `essential`. This will be used for all examples and can be created with the following:
+
+~~~ sql
+CREATE USER 'essential'@'localhost' IDENTIFIED BY 'trustno1';
+CREATE DATABASE `chapter-01` CHARACTER SET utf8 COLLATE utf8_bin;
+GRANT ALL ON `chapter-01`.* TO 'essential'@'localhost';
+flush privileges;
+~~~
+
+Confirm the database has been created and can be accessed:
+
+~~~ bash
+$mysql -u chapter-01 essential -p
+~~~
+
+#### `build.sbt` has the correct dependency
+
+Replace `"com.h2database" % "h2" % "1.4.185"` with `"mysql" % "mysql-connector-java" % "5.1.34"`,
+then reload the project using `reload`. Remebering to regenerate any IDE project files.
+
+####  The correct JDBC driver is referenced in the code
+
+Replace `Database.forURL` parameters with `"jdbc:mysql://localhost:3306/chapter-01&useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true", user="essential", password="trustno1", driver="com.mysql.jdbc.Driver"`.
+
+####  The correct Slick driver is used
+
+Change the import from `import scala.slick.driver.H2Driver.simple._` to
+`import scala.slick.driver.MySQLDriver.simple._`.
 
 ## Take Home Points
 

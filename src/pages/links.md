@@ -2,6 +2,8 @@
 [link-slick]:                             http://slick.typesafe.com/
 [link-postgres]:                          http://www.postgresql.org/
 [link-postgres-download]:                 http://www.postgresql.org/download/
+[link-mysql]:                             http://www.mysql.com/
+[link-mysql-download]:                    http://dev.mysql.com/downloads/mysql/
 [link-twitter-jono]:                      http://twitter.com/jonoabroad
 [link-twitter-noel]:                      http://twitter.com/noelwelsh
 [link-twitter-richard]:                   http://twitter.com/d6y
