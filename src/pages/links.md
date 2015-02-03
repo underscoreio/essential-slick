@@ -8,7 +8,7 @@
 [link-twitter-richard]:                   http://twitter.com/d6y
 [link-underscore]:                        http://underscore.io
 [link-sbt]:                               http://scala-sbt.org
-[link-example]:                           https://github.com/underscore/essential-slick-code
+[link-example]:                           https://github.com/underscoreio/essential-slick-code
 [link-ref-orm]:                           http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
 [link-ref-dbs]:                           http://slick.typesafe.com/doc/2.1.0/introduction.html#supported-database-systems
 [link-ref-h2driver]:                      http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.driver.H2Driver
