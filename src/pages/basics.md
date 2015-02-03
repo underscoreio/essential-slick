@@ -606,9 +606,11 @@ As mentioned during the introduction H2 is used throughout the book for examples
 To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
 </div>
 
-If you want to use another database for the exercises throughout the book you will need to make a few changes.
-Each chapter uses it's own database.
-So the instructions below are applicable for any chapter.
+If you want to use a different database for the exercises in the book,
+you will need to make the following changes.
+Each chapter uses it's own database ---
+so these steps will need to be applied for each chapter.
+
 Ensure that:
 
  * a database is available with the correct name,
@@ -620,7 +622,7 @@ Ensure that:
 
 If it is not currently installed, it can be downloaded from the [PostgreSQL][link-postgres-download] website.
 
-#### A database is available
+#### Create a database
 
 Create a database named `chapter-01` with user `essential`. This will be used for all examples and can be created with the following:
 
@@ -636,16 +638,18 @@ Confirm the database has been created and can be accessed:
 $ psql -d chapter-01 essential
 ~~~
 
-#### `build.sbt` has the correct dependency
+#### Update `build.sbt` dependencies
 
 Replace `"com.h2database" % "h2" % "1.4.185"` with `"org.postgresql" % "postgresql" % "9.3-1100-jdbc41"`,
-then reload the project using `reload`. Remebering to regenerate any IDE project files.
+then reload the project using `reload`.
 
-####  The correct JDBC driver is referenced in the code
+Don't forget to regenerate any IDE project files.
+
+####  Update JDBC references
 
 Replace `Database.forURL` parameters with `"jdbc:postgresql:chapter-01", user="essential", password="trustno1", driver="org.postgresql.Driver"`.
 
-####  The correct Slick driver is used
+####  Update Slick driver
 
 Change the import from `import scala.slick.driver.H2Driver.simple._` to
 `import scala.slick.driver.PostgresDriver.simple._`.
@@ -654,7 +658,7 @@ Change the import from `import scala.slick.driver.H2Driver.simple._` to
 
 If it is not currently installed, it can be downloaded from the [MySQL][link-mysql-download] website.
 
-#### A database is available
+#### Create a database
 
 Create a database named `chapter-01` with user `essential`. This will be used for all examples and can be created with the following:
 
@@ -671,16 +675,18 @@ Confirm the database has been created and can be accessed:
 $mysql -u chapter-01 essential -p
 ~~~
 
-#### `build.sbt` has the correct dependency
+#### Update `build.sbt` dependencies
 
 Replace `"com.h2database" % "h2" % "1.4.185"` with `"mysql" % "mysql-connector-java" % "5.1.34"`,
-then reload the project using `reload`. Remebering to regenerate any IDE project files.
+then reload the project using `reload`.
 
-####  The correct JDBC driver is referenced in the code
+Don't forget to regenerate any IDE project files.
+
+####  Update JDBC driver references
 
 Replace `Database.forURL` parameters with `"jdbc:mysql://localhost:3306/chapter-01&useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true", user="essential", password="trustno1", driver="com.mysql.jdbc.Driver"`.
 
-####  The correct Slick driver is used
+#### Update Slick driver
 
 Change the import from `import scala.slick.driver.H2Driver.simple._` to
 `import scala.slick.driver.MySQLDriver.simple._`.
