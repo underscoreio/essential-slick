@@ -13,7 +13,7 @@ This material is aimed at a Scala developer who has:
 
 The material presented focuses on Slick version 2.1.0, examples use [Postgres][link-postgres] as the relational database.
 
-Many thanks to [Jonathan Ferguson][link-twitter-jono] and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
+Many thanks to the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
 
 ## Conventions Used in This Book {-}
 
