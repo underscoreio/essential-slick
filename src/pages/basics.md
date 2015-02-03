@@ -163,7 +163,7 @@ Before we run this code we are going to walk through the parts and outline the c
 Slick models tables with classes, and models rows using a variety of data structures. For now we're going to focus on using case classes to model rows.
 
 The case class below represents a single row of the `message` table, which is constructed from
-four columns: a unique `id`, the `sender` of the message, the `content` of the message, and the time it was sent, `ts`:
+four columns: the `sender` of the message, the `content` of the message, the time it was sent,`ts` and a unique `id`:
 
 ~~~ scala
 final case class Message(sender: String, content: String, ts: DateTime, id: Long = 0L)
