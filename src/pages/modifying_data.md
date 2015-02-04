@@ -355,9 +355,57 @@ later in chapter/section **TODO**.
 
 ## Exercises
 
-- Delete all the messages
+### Delete all the messages
 
-- Client/server: What does this do, and why? messages.map(_.content + "!").list
+How would you delete all messages?
+
+<div class="solution">
+~~~ scala
+val deleted = messages.delete
+~~~
+</div>
+
+
+### Composing queries
+
+What does this do, and why? `messages.map(_.content + "!").list`
+
+<div class="solution">
+** TODO ** IS THIS WHAT YOU WERE EXPECTING?
+
+While you'd think it would return a list of the message contents with "!" appended.
+It actually returns rubbish.
+ The query Slick generates looks like this:
+
+~~~ sql
+Preparing statement: select '(message Path @1413221682).content!' from "message" s8
+~~~
+
+**TODO* If this is what you wanted, I'll finish up.
+
+</div>
+
+
+### Update using a for comprehension
+
+Rewrite the update statement below to use a for comprehension.
+
+`val rowsAffected = messages.filter(_.sender === "HAL").map(msg => (msg.sender, msg.ts)).update("HAL 9000", DateTime.now)`
+
+<div class="solution">
+~~~ scala
+      val query = for {
+        message <- messages
+        if message.sender === "HAL"
+      } yield (message.sender,message.ts)
+
+      val rowsAffected = query.update("HAL 9000",DateTime.now())
+~~~
+</div>
+
+
+
+
 
 
 ## Take Home Points
