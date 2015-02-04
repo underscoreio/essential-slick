@@ -23,28 +23,18 @@ Preface:
 
     Add links to sections or chapters at TODO
 
-  1.4
-
-    Update to mention H2 and give instructions for Postgres / Mysql;
-
-
-
 
 2. Creating an Modifying Rows
 
 
   2.2
    - Should the reference to chapter 1 be a link ?,
-   - Update TODOS,
-   - messages returning - there is a double space between the two,
+   - Update TODOS.
 
   2.5.2
 
-   - finish example
+   - Update TODO
 
-  2.6
-
-   - expand examples - add solution
 
 
 3. Data Modelling
