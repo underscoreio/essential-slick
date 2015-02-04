@@ -353,6 +353,10 @@ input is santitized.
 We'll look at plain SQL in more depth,
 later in chapter/section **TODO**.
 
+
+**TODO** SHOULD WE ADD A SECTION ABOUT PLAIN SQL HERE?
+
+
 ## Exercises
 
 ### Delete all the messages
