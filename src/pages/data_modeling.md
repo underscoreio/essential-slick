@@ -1,14 +1,26 @@
 # Data modeling
-*Objectives: (a) provide the right way to work with data in slick; (b) introducing more query examples (update and delete)*
 
-Brief overview of chapter objectives.
-- Use exercises and examples to define some more of the Schema.
-  - start with User
+We can now manipulate our data,
+let's look at how we can provider a richer model to work with.
+We'll expand chat application schema to support more than just messages through the chapter.
+
+
+In this chapter we will:
+
+- look at alternatives to modelling rows as case classes,
+- expand on our knowledge of modelling tables; and
+- use custom types & mapping to provide richer.
+
 
 ## Rows
 
 <!-- I'm going to ignore HList for the time being as they seem overly complicated and not essential.-->
-We model rows of a table using either tuples or case classes. In either case, they contain the types of the columns we wish to expose.  Let's look a simple example of both, we'll define a `user` so we don't need to store their name in the `message` table.
+In chapter 1 we introduced rows as being represented by case classes.
+There are in fact 3 representations we can use, tuples, case classes and  an experimental `HList`s.
+We'll look at the first 2 and what differences there are between them.
+
+Let's define a `user` so we no longer have to store their names in the `message` table.
+A user will have an id and a name.
 
 ~~~ scala
   type  TupleUser = (Long,String)
@@ -16,9 +28,20 @@ We model rows of a table using either tuples or case classes. In either case, th
   final case class CaseUser(id:Long,name:String)
 ~~~
 
-Nothing very magical happening here. There is a little more typing involved in defining the case class, but we get a lot more meaning using case classes.  A little more to be defined in the table definition when using case classes, which we will look at in the next section.
+As you can see there is little difference between the two implementations.
+A little more typing in defining the case class,
+but we get a lot of benefit.
+The compiler is able to help us with type checking,
+we have a sensible type to pass around,
+which helps with increased meaning ---
+is a tuple of `(Long,String)` the same as `(String,Long)`?
+We can't tell, one could be a count of messages rather than a
+`user`.
 
-_TODO: Talk about types?_
+### HList
+
+Slicks experimental HList implementation is useful if you need to map a table with more than 22 columns.
+
 
 ##Tables
 
