@@ -301,7 +301,7 @@ UPDATE  "message"
 Let's now turn to more interesting updates. How about converting every message to be all capitals. Or adding an exclamation mark to the end of each message.  Both of these examples need us to do something to each row in turn.  In SQL it might be something like:
 
 ~~~ sql
-UPDATE "messages" SET "content" = "content" + "!"
+UPDATE "message" SET "content" = CONCAT("content", '!')
 ~~~
 
 This is not currently supported by `update` in Slick. But there are ways to achieve the same result.
@@ -338,14 +338,20 @@ This results in _N + 1 queries_, where _N_ is the number of rows selected.  That
 The alternative is to simply use the SQL we original wrote.  Slick supports _plain SQL queries_ as an alternative to the collectons-like style we've seen up to this point:
 
 ~~~ scala
-sqlu"""UPDATE messages SET content = content + "!" """
+sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')""".firstOption
 ~~~
 
+'sqlu' is a String interoplator for SQL updates,
+there is also 'sql' which is used for select statement.
+'firstOption' returns an `Option` containing a count of updated rows.
 
-_TODO_ round this example off.
+As we are using a String interpolation we have access to `$`.
+This gives us two benefits,
+the compiler will point out typos,
+input is santitized.
 
-
-
+We'll look at plain SQL in more depth,
+later in chapter/section **TODO**.
 
 ## Exercises
 
