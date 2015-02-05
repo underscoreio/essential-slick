@@ -20,3 +20,4 @@
 [link-source-extmeth]:                    https://github.com/slick/slick/blob/master/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
 [link-sip-named-default]:                 http://docs.scala-lang.org/sips/completed/named-and-default-arguments.html
 [link-scala-option]:                      http://www.scala-lang.org/api/current/#scala.Option
+[link-slick-hlist]:                       http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList

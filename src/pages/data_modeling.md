@@ -14,7 +14,6 @@ In this chapter we will:
 
 ## Rows
 
-<!-- I'm going to ignore HList for the time being as they seem overly complicated and not essential.-->
 In chapter 1 we introduced rows as being represented by case classes.
 There are in fact 3 representations we can use, tuples, case classes and  an experimental `HList`s.
 We'll look at the first 2 and what differences there are between them.
@@ -38,9 +37,53 @@ is a tuple of `(Long,String)` the same as `(String,Long)`?
 We can't tell, one could be a count of messages rather than a
 `user`.
 
+
+<div class="callout callout-warning">
 ### HList
 
-Slicks experimental HList implementation is useful if you need to map a table with more than 22 columns.
+Slick's **experimental** [`HList`][link-slick-hlist] implementation is useful if you need to support tables with more than 22 columns,
+such as a legacy database.
+
+As an aside,
+here is the `user` table using `HList`.
+
+~~~ scala
+
+  type User  = String :: Long :: HNil
+
+  final class UserTable(tag: Tag) extends Table[User](tag, "user") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("sender")
+    def * = name :: id :: HNil
+  }
+
+  lazy val users = TableQuery[UserTable]
+
+  val dave = "Dave" :: 0L :: HNil
+  val hal = "HAL" :: 0L :: HNil
+
+  users ++= Seq(dave,hal)
+
+  val oDave = users.filter(_.name === "Dave").firstOption
+  val oHAL = users.filter(_.name === "HAL").firstOption
+
+   for {
+        dave <- oDave
+        hal  <- oHAL
+      } {
+      val index = Nat(1)
+      val daveId = dave(index)
+      val halId = hal(index)
+
+      println(s"daveId $daveId")
+      println(s"daveId $halId")
+
+      users.iterator.foreach(println)
+~~~
+
+It is worth noting `Nat` has a dependency on `"org.scala-lang"      % "scala-reflect"   % scalaVersion.value` which it took one of the authors **far** to long to establish.
+
+</div>
 
 
 ##Tables
