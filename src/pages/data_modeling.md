@@ -152,11 +152,11 @@ We'll label the column `to`:
 
 ~~~ scala
 
-  final case class Message(id: Long,
-                           sender: Long,
-                           to: Option[Long],
+  final case class Message(sender: Long,
                            content: String,
-                           ts: Timestamp)
+                           ts: DateTime,
+                           to: Option[Long] = None,
+                           id: Long = 0L)
 
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
@@ -166,7 +166,7 @@ We'll label the column `to`:
     def content  = column[String]("content")
     def ts       = column[Timestamp]("ts")
 
-    def * = (id, senderId, toId, content, ts) <> (Message.tupled, Message.unapply)
+    def * = (senderId, content, ts, toId, id) <> (Message.tupled, Message.unapply)
 
   }
 
@@ -195,16 +195,19 @@ We need to use `isEmpty` if we want to filter on null columns.
 </div>
 
 
-###Primary & Foreign keys
+###Primary keys
 
 There are two methods to declare a column is a primary key.
-In the first we declare a column is a primary key using class `O` which provides column options. We have seen examples of this in `Message` and `User`.
+In the first we declare a column is a primary key using class `O` which provides column options.
+We have seen examples of this in `Message` and `User`.
 
 ~~~ scala
 def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 ~~~
 
-The second method uses a method `primaryKey` which takes two parameters --- a name and a tuple of columns.  This is useful when defining compound primary keys.
+The second method uses a method `primaryKey` which takes two parameters ---
+a name and a tuple of columns.
+This is useful when defining compound primary keys.
 
 <!--  Im aware this has nothing to do with the messaging example, I wanted something separate as I'm working around an issue with sqlite and autoincrement fields.
       As sooon as one defines O.AutoInc on a field slick or the driver is creating SQL marking the field as a PK.
@@ -212,7 +215,6 @@ The second method uses a method `primaryKey` which takes two parameters --- a na
 As an example, let us define a table `ColourShape` which has two columns `colour` and `shape` which has a composite primary key consisting of both columns.
 
 ~~~ scala
-
   final case class ColourShape(colour: Long, shape: String)
 
   final class ColourShapeTable(tag: Tag) extends Table[ColourShape](tag, "colour_shape") {
@@ -226,7 +228,6 @@ As an example, let us define a table `ColourShape` which has two columns `colour
   }
 
   lazy val coluredShapes = TableQuery[ColourShapeTable]
-
 ~~~
 
 This would produce the following table:
@@ -235,58 +236,74 @@ This would produce the following table:
 create table "colour_shape" ("colour" INTEGER NOT NULL,"shape" VARCHAR(254) NOT NULL,constraint "colour_shape_pk" primary key("colour","shape"))
 ~~~
 
-Foreign keys are declared in a similar manner to compound primary keys, with the method --- `foreignKey`. `foreignKey` takes four required parameters:
+###Foreign keys
+
+Foreign keys are declared in a similar manner to compound primary keys,
+with the method --- `foreignKey`.
+`foreignKey` takes four required parameters:
    * a name;
    * the column(s) that make the foreignKey;
    * the `TableQuery`that the foreign key belongs to, and
    * a function on the supplied `TableQuery[T]` taking the supplied column(s) as parameters and returning an instance of `T`.
 
-As an example let's improve our model by replacing the `sender` column in `Message` with a foreign key to the `User` primary key.
+Let's improve our model by using foreign keys for `message`'s' `sender` and `to` fields:
 
 ~~~ scala
+  lazy val messages = TableQuery[MessageTable]
 
-
-  final case class User(id: Long, name: String)
+  final case class User(name: String, id: Long = 0L)
 
   final class UserTable(tag: Tag) extends Table[User](tag, "user") {
-    def id = column[Long]("id",O.PrimaryKey,O.AutoInc)
-    def name = column[String]("name")
-
-    def * = (id, name) <> (User.tupled, User.unapply)
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("sender")
+    def * = (name, id) <> (User.tupled, User.unapply)
   }
 
   lazy val users = TableQuery[UserTable]
 
-  final case class Message(id: Long, from: Long, content: String, when: DateTime)
+  final case class Message(sender: Long,
+                           content: String,
+                           ts: DateTime,
+                           to: Option[Long] = None,
+                           id: Long = 0L)
 
   final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
-    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def senderId = column[Long]("sender")
-    def sender = foreignKey("sender_fk", senderId, users)(_.id)
-    def content = column[String]("content")
-    def when = column[DateTime]("when")
-    def * = (id, senderId, content, when) <> (Message.tupled, Message.unapply)
+    def sender   = foreignKey("sender_fk", senderId, users)(_.id)
+    def toId     = column[Option[Long]]("to")
+    def to       = foreignKey("to_fk", toId, users)(_.id)
+    def content  = column[String]("content")
+    def ts       = column[DateTime]("ts")
+    def *        = (senderId, content, ts, toId, id) <> (Message.tupled, Message.unapply)
   }
 
   lazy val messages = TableQuery[MessageTable]
-
 ~~~
 
-This will produce the following table:
 
+We can see the SQL this produces by running: `dl.createStatements.foreach(println)`.
+Which we have included here:
 <!-- I've formatted this for readability -->
+
 ~~~ sql
-sqlite> .schema message
-CREATE TABLE "message" ("id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-             "sender" INTEGER NOT NULL,
-             "to" INTEGER,"content" VARCHAR(254) NOT NULL,
-             "ts" TIMESTAMP NOT NULL,
-             constraint
-                  "sender_fk" foreign key("sender") references "user"("id")
-                  on update NO ACTION on delete NO ACTION,
-             constraint
-                  "to_fk" foreign key("to") references "user"("id")
-                  on update NO ACTION on delete NO ACTION);
+CREATE TABLE "message" ("sender" BIGINT NOT NULL,
+                        "content" VARCHAR NOT NULL,
+                        "ts" TIMESTAMP NOT NULL,
+                        "to" BIGINT,
+                        "id" BIGINT GENERATED BY DEFAULT
+                        AS IDENTITY(START WITH 1) NOT NULL PRIMARY KEY)
+
+
+ALTER TABLE "message"
+      ADD CONSTRAINT "sender_fk"
+      FOREIGN KEY("sender")
+      REFERENCES "user"("id") ON UPDATE NO ACTION ON DELETE NO ACTION
+alter TABLE "message"
+      ADD constraint "to_fk"
+      FOREIGN KEY("to")
+      REFERENCES "user"("id") ON UPDATE NO ACTION ON DELETE NO ACTION
+
 ~~~
 
 <div class="callout callout-info">
@@ -306,7 +323,74 @@ _TODO use a value class to define message content._
 
 
 
-###Exercises
+## Exercises
+
+### Add a message
+
+What happens if you try adding a message with a user id of `3`?
+For example:
+
+~~~ scala
+messages += Message(3L, "Hello HAl!",  new DateTime(2001, 2, 17, 10, 22, 50))
+~~~
+
+<div class="solution">
+
+We get a runtime exception as we have violated referential integrity.
+There is no row in the `user` table with a primary id of `3`.
+
+~~~ bash
+
+[error] (run-main-12) org.h2.jdbc.JdbcSQLException: Referential integrity constraint violation: "sender_fk: PUBLIC.""message"" FOREIGN KEY(""sender"") REFERENCES PUBLIC.""user""(""id"") (3)"; SQL statement:
+[error] insert into "message" ("sender","content","ts","to")  values (?,?,?,?) [23506-185]
+org.h2.jdbc.JdbcSQLException: Referential integrity constraint violation: "sender_fk: PUBLIC.""message"" FOREIGN KEY(""sender"") REFERENCES PUBLIC.""user""(""id"") (3)"; SQL statement:
+insert into "message" ("sender","content","ts","to")  values (?,?,?,?) [23506-185]
+  at org.h2.message.DbException.getJdbcSQLException(DbException.java:345)
+  at org.h2.message.DbException.get(DbException.java:179)
+  at org.h2.message.DbException.get(DbException.java:155)
+  at org.h2.constraint.ConstraintReferential.checkRowOwnTable(ConstraintReferential.java:372)
+  at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:314)
+  at org.h2.table.Table.fireConstraints(Table.java:920)
+  at org.h2.table.Table.fireAfterRow(Table.java:938)
+  at org.h2.command.dml.Insert.insertRows(Insert.java:161)
+  at org.h2.command.dml.Insert.update(Insert.java:114)
+  at org.h2.command.CommandContainer.update(CommandContainer.java:78)
+  at org.h2.command.Command.executeUpdate(Command.java:254)
+  at org.h2.jdbc.JdbcPreparedStatement.executeUpdateInternal(JdbcPreparedStatement.java:157)
+  at org.h2.jdbc.JdbcPreparedStatement.executeUpdate(JdbcPreparedStatement.java:143)
+  at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker$$anonfun$internalInsert$1.apply(JdbcInsertInvokerComponent.scala:183)
+  at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker$$anonfun$internalInsert$1.apply(JdbcInsertInvokerComponent.scala:180)
+  at scala.slick.jdbc.JdbcBackend$SessionDef$class.withPreparedStatement(JdbcBackend.scala:191)
+  at scala.slick.jdbc.JdbcBackend$BaseSession.withPreparedStatement(JdbcBackend.scala:389)
+  at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.preparedInsert(JdbcInsertInvokerComponent.scala:170)
+  at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.internalInsert(JdbcInsertInvokerComponent.scala:180)
+  at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.insert(JdbcInsertInvokerComponent.scala:175)
+  at scala.slick.driver.JdbcInsertInvokerComponent$InsertInvokerDef$class.$plus$eq(JdbcInsertInvokerComponent.scala:70)
+  at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.$plus$eq(JdbcInsertInvokerComponent.scala:145)
+  at chapter03.Example$$anonfun$5.apply(main.scala:84)
+  at chapter03.Example$$anonfun$5.apply(main.scala:57)
+  at scala.slick.backend.DatabaseComponent$DatabaseDef$class.withSession(DatabaseComponent.scala:34)
+  at scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$4.withSession(JdbcBackend.scala:61)
+  at chapter03.Example$.delayedEndpoint$chapter03$Example$1(main.scala:56)
+  at chapter03.Example$delayedInit$body.apply(main.scala:12)
+  at scala.Function0$class.apply$mcV$sp(Function0.scala:40)
+  at scala.runtime.AbstractFunction0.apply$mcV$sp(AbstractFunction0.scala:12)
+  at scala.App$$anonfun$main$1.apply(App.scala:76)
+  at scala.App$$anonfun$main$1.apply(App.scala:76)
+  at scala.collection.immutable.List.foreach(List.scala:381)
+  at scala.collection.generic.TraversableForwarder$class.foreach(TraversableForwarder.scala:35)
+  at scala.App$class.main(App.scala:76)
+  at chapter03.Example$.main(main.scala:12)
+  at chapter03.Example.main(main.scala)
+  at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+  at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)
+  at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+  at java.lang.reflect.Method.invoke(Method.java:606)
+
+
+
+~~~
+</div>
 
 1. How do we write a query for messages: without a recipient?
 2. How do we write a query for messages with a recipient?
