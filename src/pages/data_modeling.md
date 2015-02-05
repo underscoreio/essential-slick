@@ -81,41 +81,60 @@ here is the `user` table using `HList`.
       users.iterator.foreach(println)
 ~~~
 
-It is worth noting `Nat` has a dependency on `"org.scala-lang"      % "scala-reflect"   % scalaVersion.value` which it took one of the authors **far** to long to establish.
-
+It is worth noting `Nat` has a dependency on `"org.scala-lang" % "scala-reflect" % scalaVersion.value`,
+which took one of the authors **far** to long to establish.
 </div>
-
 
 ##Tables
 
-Now we have a row, we can define the table it comes from.  Let's looks at the definition of the `User` table and walk through what is involved.
+Let's looks at the definition of the `User` table and walk through what is involved.
 
 ~~~ scala
   final class TupleUserTable(tag: Tag) extends Table[TupleUser](tag, "user") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
-    def * = (id, name)
+    def * = (name,id)
   }
-  final class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  final class UserTableA(tag: Tag) extends Table[User](tag, "user") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
     def name = column[String]("name")
-    def * = (id, name) <> (User.tupled,User.unapply)
+    def * = (name,id) <> (User.tupled,User.unapply)
   }
 ~~~
 
-We've defined two versions of the the `User` table, one using a tuple, the other a case class.  As you can there is little difference between the two, the kind the `Table` class and the definition of the `*` method, we'll come back to this.
+We've defined two versions of the the `user` table, one using a tuple,
+the other a case class.
+As you can there is little difference between the two,
+the of kind the `Table` class and the definition of the `*` method,
+we'll come back to this.
 
-First let's look at how this class relates to the database table.  The name of the table is given as a parameter, in this case the `String` "user" --- `Table[User](tag, "user")`. An optional schema name can also be provided, if required by your database.
+First let's look at how this class relates to the database table.
+The name of the table is given as a parameter,
+in this case the `String` `user` --- `Table[User](tag, "user")`.
+An optional schema name can also be provided, if required by your database.
 
-Next we define methods for each of the tables columns. These call the method `column` with it's type, name and zero of more options. This is rather self explainitory --- `name` has the type `String` and is mapped to a column `name`. It has no options, we'll explore column in the rest of this chapter.
+Next we define methods for each of the tables columns.
+These call the method `column` with it's type,
+name and zero of more options.
+This is rather self explainitory --- `name` has the type `String` and is mapped to a column `name`.
+It has no options,
+we'll explore column in the rest of this chapter.
 
-Finally, we come back to `*`. It is the only method we are required to implement. It defines the default projection for the table.  That is the row object we defined earlier. If we are not using tuples we need to define how Slick will map between our row and projection. We do this using the `<>` operator, supplying two methods --- one to wrap a returned tuple into our type and another to unwrap our type into a tuple. In the `User` example `User.tupled` takes a tuple and returns a User, while `User.unapply` takes a user and returns an `Option` of `(Long,String)`.
+Finally,
+we come back to `*`.
+It is the only method we are required to implement.
+It defines the default projection for the table.
+That is the row object we defined earlier.
+If we are not using tuples we need to define how Slick will map between our row and projection.
+We do this using the `<>` operator and supplying two methods,
+one to wrap a returned tuple into our type and another to unwrap our type into a tuple.
+In the `User` example `User.tupled` takes a tuple and returns a User,
+while `User.unapply` takes a user and returns an `Option` of `(Long,String)`.
 
 <div class="callout callout-info">
 **Expose only what you need**
 
 We can hide information by excluding it from our row definition. The default projection controls what is returned and it is driven by our row definition.
-
 </div>
 
 <!--
