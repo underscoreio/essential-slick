@@ -137,14 +137,65 @@ while `User.unapply` takes a user and returns an `Option` of `(Long,String)`.
 We can hide information by excluding it from our row definition. The default projection controls what is returned and it is driven by our row definition.
 </div>
 
-<!--
-I think something like this should go here, but meh.
-From now on, we will use case classes in our examples as they are easier to reason about.
--->
-
+**TODO --- I think this sounds pants**
 For the rest of the chapter we'll look at some more indepth areas of data modelling.
 
-##Primary & Foreign keys
+###Null columns
+
+Thus far we have only looked at non null columns,
+however sometimes we will wish to modal optional data.
+Slick handles this in an idiomatic scala fashion using `Option[T]`.
+
+Let's expand our data model to allow direct messaging,
+by adding the ability to define a recipient on `Message`.
+We'll label the column `to`:
+
+~~~ scala
+
+  final case class Message(id: Long,
+                           sender: Long,
+                           to: Option[Long],
+                           content: String,
+                           ts: Timestamp)
+
+  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+
+    def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def senderId = column[Long]("sender")
+    def toId     = column[Option[Long]]("to")
+    def content  = column[String]("content")
+    def ts       = column[Timestamp]("ts")
+
+    def * = (id, senderId, toId, content, ts) <> (Message.tupled, Message.unapply)
+
+  }
+
+~~~
+
+<div class="callout callout-danger">
+#### Equality
+We can not compare these columns as `Option[T]` in queries.
+
+Consider the snippet below,
+what do you expect the two results to be?
+
+~~~ scala
+
+val :Option[Long] = None
+
+val a = messages.filter(_.to === to).iterator.foreach(println)
+val b = messages.filter(_.to.isEmpty).iterator.foreach(println)
+
+~~~
+
+If you said they would both produce the list of messages,
+you'd be wrong.
+`a` returns an empty list as `None === None` returns `None`.
+We need to use `isEmpty` if we want to filter on null columns.
+</div>
+
+
+###Primary & Foreign keys
 
 There are two methods to declare a column is a primary key.
 In the first we declare a column is a primary key using class `O` which provides column options. We have seen examples of this in `Message` and `User`.
@@ -254,37 +305,6 @@ _TODO: Add a query example_
 _TODO use a value class to define message content._
 
 
-##Null columns
-
-Thus far we have only looked at non null columns, however sometimes we will wish to modal optional data. Slick handles this in an idiomatic scala fashion using `Option[T]`. Let's expand our data model to allow direct messaging by adding the ability to define a recipient on `Message`, which we will label `to`:
-
-~~~ scala
-
-  final case class Message(id: Long, sender: Long, to: Option[Long], content: String, ↩
-                           ts: Timestamp)
-
-  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
-
-    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def senderId = column[Long]("sender")
-    def sender = foreignKey("sender_fk", senderId, users)(_.id)
-    def toId = column[Option[Long]]("to")
-    def to = foreignKey("to_fk", toId, users)(_.id)
-    def content = column[String]("content")
-    def ts = column[Timestamp]("ts")
-
-    def * = (id, senderId, toId, content, ts) <> (Message.tupled, Message.unapply)
-
-  }
-
-~~~
-
-<div class="callout callout-info">
-***Equality***
-
-While nullability is treated in an idiomatic Scala fashion using `Option[T]`. It behaves differently.
-
-</div>
 
 ###Exercises
 
