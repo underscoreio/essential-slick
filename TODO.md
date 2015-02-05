@@ -2,6 +2,10 @@ TODO.md
 
 - Figure out if we add me as an Author - dependent on my input.
 
+
+- Make sure all code examples use fooId and not just foo for primary keys!
+- See if we tell people how to print out the ddl using ddl.createStatements.foreach(println)
+
 Preface:
 
     - Add Daves work on sbt ?
@@ -14,10 +18,14 @@ Preface:
 
     - Add chapter/section where we talk about plain SQL queries.
 
+
   1.2
 
     - Insert database diagram
     - Insert message table diagram
+
+  1.3.3
+    - Update chapter where we talk about * - default projection
 
   1.3.5
 
