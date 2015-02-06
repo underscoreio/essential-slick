@@ -47,6 +47,6 @@ Preface:
 
 3. Data Modelling
 
-    This all needs to be reviewed and revised once chapters two and three are finished.
+  - Row and column control needs to be finished
 
 
