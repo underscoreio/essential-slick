@@ -338,10 +338,78 @@ The following defines a query which will return the users who sent messages cont
 </div>
 
 
-##Value classes
+###Value classes
 
-_TODO use a value class to define message content._
+Something about case classes are better than tuples.
+However,
+we are still assigning `Long`s as primary keys,
+there is nothing to stop us asking for all messages based on a users id:
 
+~~~ scala
+val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id)  }
+~~~
+
+This makes no sense, but the compiler can not help us.
+Let's see how [value classes][link-scala-value-classes] can help us.
+We'll define value classes for `message`, `user` and `room` primary keys.
+
+~~~ scala
+  final case class MessagePK(value: Long) extends AnyVal
+  final case class UserPK(value: Long)    extends AnyVal
+  final case class RoomPK(value: Long)    extends AnyVal
+~~~
+
+For us to be able to use these, we need to define implicits so Slick can convert between the value class and expected type.
+
+~~~ scala
+  implicit val messagePKMapper = MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
+  implicit val userPKMapper = MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
+  implicit val roomPKMapper = MappedColumnType.base[RoomPK, Long](_.value, RoomPK(_))
+~~~
+
+With our value classes and implicits in place,
+we can now use them to give us type checking on our primary and therefore foriegn keys!
+
+~~~ scala
+  final case class Message(sender: UserPK,
+                           content: String,
+                           ts: DateTime,
+                           to: Option[UserPK] = None,
+                           id: MessagePK = MessagePK(0))
+
+  final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+    def id = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
+    def senderId = column[UserPK]("sender")
+    def sender = foreignKey("sender_fk", senderId, users)(_.id)
+    def toId = column[Option[UserPK]]("to")
+    def to = foreignKey("to_fk", toId, users)(_.id)
+    def content = column[String]("content")
+    def ts = column[DateTime]("ts")
+    def * = (senderId, content, ts, toId, id) <> (Message.tupled, Message.unapply)
+  }
+~~~
+
+Now, if we try our query again :
+
+~~~ scala
+[error] /Users/jonoabroad/developer/books/essential-slick-example/chapter-03/src/main/scala/chapter03/main.scala:129: Cannot perform option-mapped operation
+[error]       with type: (chapter03.Example.MessagePK, chapter03.Example.UserPK) => R
+[error]   for base type: (chapter03.Example.MessagePK, chapter03.Example.MessagePK) => Boolean
+[error]     val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id)  }
+[error]                                                                 ^
+[error] /Users/jonoabroad/developer/books/essential-slick-example/chapter-03/src/main/scala/chapter03/main.scala:129: ambiguous implicit values:
+[error]  both value BooleanOptionColumnCanBeQueryCondition in object CanBeQueryCondition of type => scala.slick.lifted.CanBeQueryCondition[scala.slick.lifted.Column[Option[Boolean]]]
+[error]  and value BooleanCanBeQueryCondition in object CanBeQueryCondition of type => scala.slick.lifted.CanBeQueryCondition[Boolean]
+[error]  match expected type scala.slick.lifted.CanBeQueryCondition[Nothing]
+[error]     val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id)  }
+[error]                                                  ^
+[error] two errors found
+[error] (compile:compile) Compilation failed
+[error] Total time: 2 s, completed 06/02/2015 12:12:53 PM
+~~~
+
+The compiler helps,
+by telling us we are attempting to compare a `MessagePK` with a `UserPK`.
 
 
 ## Exercises

@@ -21,3 +21,4 @@
 [link-sip-named-default]:                 http://docs.scala-lang.org/sips/completed/named-and-default-arguments.html
 [link-scala-option]:                      http://www.scala-lang.org/api/current/#scala.Option
 [link-slick-hlist]:                       http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList
+[link-scala-value-classes]:               http://docs.scala-lang.org/overviews/core/value-classes.html
