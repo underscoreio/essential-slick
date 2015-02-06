@@ -470,8 +470,6 @@ create table "user" ("name" VARCHAR DEFAULT '☃' NOT NULL,"id" BIGINT GENERATED
 
 ~~~
 
-
-
 <div class="callout callout-info">
 #### Notes
 
@@ -488,20 +486,35 @@ if you do not provide either a `Length` or `DBType` column option Slick will def
 
 ##Custom Column Mapping
 
-- Have already seen two examples DateTime and Primary Key
+We have already seen two examples `DateTime` and value classes as primary keys.
+Custom mappings require two things,
+definition of the type and an implicit mapping between the type and valid JDBC type.
 
-### Enumeration
+Let's look at how to use a scala enumeration.
+First we define our type :
 
 ~~~ scala
-implicit val roomTypeMapper = MappedColumnType.base[RoomType.Value, Int](_.id, RoomType(_))
-
 object RoomType extends Enumeration {
   type RoomType = Value
   val Private,Public = Value
 }
 
+~~~
+
+Next we define an implict mapping between our new type and a valid JDBC type:
+
+
+~~~ scala
+implicit val roomTypeMapper = MappedColumnType.base[RoomType.Value, Int](_.id, RoomType(_))
+~~~
+
+Finally, we use our type to define a column:
+
+~~~ scala
 def roomType = column[RoomType.Value]("roomType", O.Default(RoomType.Public))
 ~~~
+
+Here is the SQL the DDL will output:
 
 ~~~ sql
 create table "room" ("name" VARCHAR NOT NULL,
@@ -594,6 +607,8 @@ def roomType = column[RoomType.Value]("roomType", O.Default(RoomType.Public))
 ~~~
 
 <div class="solution">
+
+~~~ scala
   sealed trait RoomType { val id:Int }
   case object Private extends RoomType { val id = 0 }
   case object Public extends RoomType { val id = 1 }
@@ -602,14 +617,21 @@ def roomType = column[RoomType.Value]("roomType", O.Default(RoomType.Public))
     def apply(id: Int) = id match {
       case 0 ⇒ Private
       case 1 ⇒ Public
-      case _ ⇒ Public //evil
+      case _ ⇒ Public
     }
   }
+~~~
 </div>
 
-1. How do we write a query for messages: without a recipient?
-2. How do we write a query for messages with a recipient?
-3. How do we write a query for messages with a given recipient?
+### Use foreign keys to find everyone who sent HAL a message
+
+This might be too hard for the moment, as we haven't talked about queries.
+
+<div class="solution">
+
+There isn't one yet.
+
+</div>
 
 
 
