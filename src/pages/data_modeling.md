@@ -411,6 +411,15 @@ Now, if we try our query again :
 The compiler helps,
 by telling us we are attempting to compare a `MessagePK` with a `UserPK`.
 
+###Row and column control (autoinc etc)
+
+##Custom Column Mapping
+
+- value classes
+- enumerations
+- more examples of this
+
+##Virtual columns and server-side casts here?
 
 ## Exercises
 
@@ -482,16 +491,5 @@ insert into "message" ("sender","content","ts","to")  values (?,?,?,?) [23506-18
 2. How do we write a query for messages with a recipient?
 3. How do we write a query for messages with a given recipient?
 
-##Row and column control (autoinc etc)
 
-__TODO__
 
-##Custom Column Mapping
-
-- value classes
-- enumerations
-- more examples of this
-
-##Virtual columns and server-side casts here?
-
-##Exercises
