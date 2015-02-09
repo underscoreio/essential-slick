@@ -99,6 +99,20 @@ All the operations you can perform on a column, such as `like` or `toLowerCase`,
 
 So `Column[T]` is for values, and deleting based on a value makes no sense in Slick or SQL. Imagine the query `SELECT 42`. You can represent this in Slick as `Query(42)`. You can `run` the query, but you cannot `delete` on it. But deleting on a table, like `MessageTable`, that makes more sense.
 
+### Exercises
+
+Experiment with the queries we discuss before trying the exercises in this chapter. The code for this chapter is in the [GitHub repository][link-example] in the _chapter-02_ folder.  As with chapter 1, you can use the `run` command in SBT to execute the code against a H2 database.
+
+#### Delete All The Messages
+
+How would you delete all messages?
+
+<div class="solution">
+~~~ scala
+val deleted = messages.delete
+~~~
+</div>
+
 
 
 
@@ -256,6 +270,33 @@ We don't generally talk about invokers as Slick provides them implicitly.
 </div>
 
 
+### Exercises
+
+
+#### Insert New Messages Only
+
+Messages sent over a network might fail, and might be resent.  Write a method that will insert a message for someone, but only if the message content hasn't already been stored. We want the `id` of the message as a result.
+
+The signature of the method is:
+
+~~~ scala
+def insertOnce(sender: String, message: String): Long = ???
+~~~
+
+<div class="solution">
+~~~ scala
+def insertOnce(sender: String, text: String)(implicit session: Session): Long = {
+  val query =
+    messages.filter(m => m.content === text && m.sender === sender).map(_.id)
+
+  query.firstOption getOrElse {
+    (messages returning messages.map(_.id)) += Message(sender, text, DateTime.now)
+  }
+}
+~~~
+</div>
+
+
 ## Updating Rows
 
 In all the rows we've created so far we've referred to "HAL". That's a computer from the film _2001: A Space Odyssey_, but the correct name is "HAL 9000".  Let's fix that:
@@ -265,7 +306,7 @@ val rowsAffected: Int =
   messages.filter(_.sender === "HAL").map(_.sender).update("HAL 9000")
 ~~~
 
-If we break this down it may be easier to see the same patterns we've seen elsewhere:
+If we break this down it may be easier to see the same patterns we've used elsewhere:
 
 ~~~ scala
 val queryForHAL  = messages.filter(_.sender === "HAL")
@@ -275,7 +316,7 @@ val rowsAffected: Int = selectSender.update("HAL 9000")
 
 We're selecting the messages from HAL, and composing that query to just return the `sender` field. Then we can call `update` and supply a new value for the sender.
 
-This update is equivalent to this SQL:
+This update is equivalent to the SQL:
 
 ~~~ sql
 UPDATE "message" SET "sender" = 'HAL 9000' WHERE "sender" = 'HAL'
@@ -295,6 +336,58 @@ UPDATE  "message"
   SET   "sender" = 'HAL 9000', "ts" = '2015-01-29 15:02'
   WHERE "sender" = 'HAL'
 ~~~
+
+### Exercises
+
+
+#### Update Using a For Comprehension
+
+Rewrite the update statement below to use a for comprehension.
+
+~~~ scala
+val rowsAffected =
+  messages.filter(_.sender === "HAL").map(msg => (msg.sender, msg.ts)).update("HAL 9000", DateTime.now)
+~~~
+
+Which style do you prefer?
+
+<div class="solution">
+~~~ scala
+val query = for {
+  message <- messages
+  if message.sender === "HAL"
+} yield (message.sender, message.ts)
+
+val rowsAffected = query.update("HAL 9000", DateTime.now)
+~~~
+</div>
+
+
+#### Client-Side or Server-Side?
+
+What does this do...
+
+~~~ scala
+messages.map(_.content + "!").list
+~~~
+
+...and why?
+
+<div class="solution">
+The query Slick generates looks something like this:
+
+~~~ sql
+select '(message Path @1413221682).content!' from "message"
+~~~
+
+That is, a select expression for a strange constant string.
+
+The `_.content + "!"` expression converts `content` to a string and appends the exclamation point. What is `content`? It's a `Column[String]`, not a `String` of the content. The end result is that we're seeing something of the internal workings of Slick.
+
+This is an unfortunate effect of Scala allowing automatic conversion to a `String`. If you are interested in disabling this Scala behaviour, tools like [WartRemover][link-wartremover] can help.
+</div>
+
+
 
 ## Updating with a Computed Value
 
@@ -329,88 +422,78 @@ The steps here are:
 
 1. Select all the messages in the table (`messages.list`)
 2. In Scala, create new `Message`s with the desired change (`map(exclaim)`)
-3. For each row, update the row (`foreach { ... }`)
+3. For each row, update the row in the database (`foreach { ... }`)
 
-This results in _N + 1 queries_, where _N_ is the number of rows selected.  That may be excessive, depending on what your needs are.
+This results in _N + 1_ queries, where _N_ is the number of rows selected.  That may be excessive, depending on what your needs are.
 
 ### Plain SQL
 
-The alternative is to simply use the SQL we original wrote.  Slick supports _plain SQL queries_ as an alternative to the collectons-like style we've seen up to this point:
+The alternative is to use the SQL we original wanted via a _plain SQL query_. This is an alternative to the collections-like style we've used up to this point.  Here's how this update looks as a plain query:
 
 ~~~ scala
-sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')""".firstOption
+val query =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')"""
+
+val numRowsModified = query.first
 ~~~
 
-'sqlu' is a String interoplator for SQL updates,
-there is also 'sql' which is used for select statement.
-'firstOption' returns an `Option` containing a count of updated rows.
+`sqlu` is a _[string interoplator][link-scala-interpolation]_ for SQL updates. The `query` we have constructed, just like other queries, is not run until we evaluate it in the context of a session via `first` (or `firstOption`, or `list`, and so on). However, there is a big difference from the other queries we've seen. The type of `query` is `StaticQuery[Unit,Int]`. As the word "static" suggests, these kinds of queries do not compose, other than via a form of string concatenation.
 
-As we are using a String interpolation we have access to `$`.
-This gives us two benefits,
-the compiler will point out typos,
-input is santitized.
+As we are using a string interpolation, we have access to `$` for binding to variables:
 
-We'll look at plain SQL in more depth,
-later in chapter/section **TODO**.
+~~~ scala
+val char = "!"
+val query =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
+~~~
+
+This gives us two benefits: the compiler will point out typos in variables names, but also the input is santitized against SQL injection attacks.
+
+We'll look at plain SQL in more depth in chapter/section **TODO**, including the `sql` interpolator for select statements.
 
 
-**TODO** SHOULD WE ADD A SECTION ABOUT PLAIN SQL HERE?
+### Exercises
 
+#### Interpolated Variables
 
-## Exercises
+Write a method that will take any string, and return a query to append the string to all messages. Use a plain SQL query to do this.
 
-### Delete all the messages
-
-How would you delete all messages?
+What happens if you try to append special SQL characters, such as `'` (single quote), `"` (double quote), or `;` (semicolon)?
 
 <div class="solution">
 ~~~ scala
-val deleted = messages.delete
-~~~
-</div>
-
-
-### Composing queries
-
-What does this do, and why? `messages.map(_.content + "!").list`
-
-<div class="solution">
-** TODO ** IS THIS WHAT YOU WERE EXPECTING?
-
-While you'd think it would return a list of the message contents with "!" appended.
-It actually returns rubbish.
- The query Slick generates looks like this:
-
-~~~ sql
-Preparing statement: select '(message Path @1413221682).content!' from "message" s8
+def append(s: String) =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $s)"""
 ~~~
 
-**TODO* If this is what you wanted, I'll finish up.
-
+The `$s` interpolation is safely escaped, allowing any unsafe text to be used without risk.
 </div>
 
+#### Unsafe Composition
 
-### Update using a for comprehension
+Using, but not modifying, the method from the last exercise, restrict the update to messages from "HAL".
 
-Rewrite the update statement below to use a for comprehension.
-
-`val rowsAffected = messages.filter(_.sender === "HAL").map(msg => (msg.sender, msg.ts)).update("HAL 9000", DateTime.now)`
+Would it be possible to construct invalid SQL?
 
 <div class="solution">
 ~~~ scala
-      val query = for {
-        message <- messages
-        if message.sender === "HAL"
-      } yield (message.sender,message.ts)
+def append(s: String) =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $s)"""
 
-      val rowsAffected = query.update("HAL 9000",DateTime.now())
+val halOnly = append("!") + """ WHERE "sender" = 'HAL' """
 ~~~
+
+It is very easy to get this query wrong and only find out at run-time. Notice, for example, we had to include a space before "WHERE" and use the correct single quoting around "HAL".
+
+A slight improvement on this is to automatically escape values. We can do this by using `+?` to introduce parameters:
+
+~~~ scala
+val halOnly = append("!") + """ WHERE "sender" = """ +? "HAL"
+~~~
+
+The methods `+` and `+?` are the only `StaticQuery` method for composing queries.
+
 </div>
-
-
-
-
-
 
 ## Take Home Points
 
@@ -426,5 +509,7 @@ Databases have different capabilities. The limitations of each driver is listed 
 
 Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is not performance advantage.
 
+Slick supports plain SQL queries as well as the lif􏰄ted embedded style we've used. Plain queries don't compose as nicely as lifted, but enable you to execute essentially arbitrary SQL when you need to.
 
 The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
+
