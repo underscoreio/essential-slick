@@ -533,11 +533,13 @@ println(s"The result is: ${query.run}")
 ~~~
 
 You could have also said:
+
 ~~~ scala
 val query = for { message <- messages } yield message.content
 ~~~
 
 The query will just return the `content` column from the database:
+
 ~~~ SQL
 select x2."content" from "message" x2
 ~~~
@@ -593,7 +595,7 @@ The SQL will turn out as:
 select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where lower(x2."content") like '%do%'
 ~~~
 
-There are three results: "_Do_ you read me", "Open the pod bay _do_ors", and "I'm afraid I can't _do_ that".
+There are three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".
 </div>
 
 
