@@ -47,7 +47,7 @@ You might prefer to use _MySQL_, or _PostgreSQL_, or some other database---and y
 
 ### SBT Build File
 
-We're going to see how to model this table in Slick, connect to it, insert data, and query it. To do this we'll need a Scala project.
+We're going to see how to model a messages table in Slick, connect to it, insert data, and query it. To do this we'll need a Scala project.
 
 We'll create a regular Scala SBT project and reference the Slick dependencies.  If you don't have SBT installed, follow the instructions at the [scala-sbt site][link-sbt].
 
@@ -83,7 +83,7 @@ We'll run this script later in this chapter.
 
   If you don't want to type in the code for the next few section we have a [GitHub project][link-example] containing the build file, directory structure, and Scala source files.
 
-  You can download a ZIP file with all the code in it, or cloned it as you would any other Git project. Once you have the code downloaded, look in the _chapter-01_ folder.
+  You can download a ZIP file with all the code in it, or clone it as you would any other Git project. Once you have the code downloaded, look in the _chapter-01_ folder.
 </div>
 
 
@@ -132,7 +132,6 @@ object Example extends App {
   // Database connection details:
   def db = Database.forURL("jdbc:h2:mem:chapter01", driver="org.h2.Driver")
 
-  // Query execution:
   db.withSession {
     implicit session =>
 
@@ -185,7 +184,7 @@ final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
 The mysterious `*` is the _default projection_, which is what you'll get back from a query on the table by default. In this example we are mapping the data into and out of the `Message` case class using the `<>` operator that Slick provides.
 
-Don't worry to much about what is going on here with methods such as `*`, `tupled`, and `unapply`, as we'll be looking at these in detail at the beginning of the next chapter.
+Don't worry to much about what is going on here with methods such as `*`, `<>`, `tupled`, and `unapply`, as we'll be looking at these in detail in chapter 3.
 
 The `tag` on the table is not something we have to supply when using the table. Slick takes care of that. Its purpose is to allow Slick to manage multiple uses of the table in a single query.
 
@@ -255,7 +254,7 @@ create table "message" (
 )
 ~~~
 
-Slick DDL supports `create` and `drop`. This is useful working with in memory databases, as we are doing in this chapter, and as we will when we look at testing in chapter **TODO**.  You're unlikely to use Slicks DLL to manage schema migrations, as they relatively simple. We will look at other ways to deal with schema migrations in chapter **TODO**.
+Slick DDL supports `create` and `drop`. This is useful working with in memory databases, as we are doing in this chapter, and as we will when we look at testing in chapter **TODO**.  You're unlikely to use Slick's DLL to manage schema migrations, as they are relatively simple. We will look at other ways to deal with schema migrations in chapter **TODO**.
 
 
 ### Inserting Data
@@ -278,7 +277,7 @@ Both creating the table and inserting data will require a connection to the data
 
 ### Querying
 
-As with inserts, queried look as though we are working with Scala collection. For instance, the query below will return all messages from the user `HAL`:
+As with inserts, queries look as though we are working with Scala collection. For instance, the query below will return all messages from the user `HAL`:
 
 ~~~ scala
 val halSays = for {
@@ -287,7 +286,7 @@ val halSays = for {
 } yield message
 ~~~
 
-This is _not_ executing a query. This is important, as it allows us to compose queries and pass queries around without holding open a database connection. The type of `halSays` is `Query[MessageTable, Message, Seq]`, and `Query` defines various `Query => Query`-style methods for this purpose.
+This is _not_ executing a query. This is important, as it allows us to compose queries and pass queries around without holding open a database connection. The type of `halSays` is `Query[MessageTable, Message, Seq]`, and `Query` defines various `Query => Query`-style methods for composing queries.
 
 As for comprehensions are sugar for `map`, `filter`, and related methods, this query can be re-written as:
 
@@ -297,9 +296,9 @@ val halSays = messages.filter(_.sender === "HAL")
 
 Which style you use is a matter of your circumstance and team preference.
 
-Note also that we use triple equals `===` and not `==` in the for comprehension. The `===` is Slicks way of inserting the SQL `=` operator in here, rather than the Scala `equals` check. But aside from that, the query looks just the same as the code you'd write to work with any Scala collection.
+Note also that we use triple equals `===` and not `==` in the query. The `===` is Slicks way of inserting the SQL `=` operator in here, rather than the Scala `equals` check. But aside from that, the query looks just the same as the code you'd write to work with any Scala collection.
 
-The `===` is the only special case to notice.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use `<`...
+The `===` is the only special case to notice.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use less than:
 
 ~~~ scala
 val now = new DateTime(2001,2,17, 10,22,54)
@@ -323,6 +322,18 @@ Queries are executed in the scope of a _session_. You need a session to be able 
 
 A session is our connection to the database, and we can obtain one from Slick's `Database` object. We can do that from a configuration file, and Java's `DataSource` or JNDI technologies.  For this introduction, we're going to use a JDBC URL:
 
+~~~ scala
+import scala.slick.driver.H2Driver.simple._
+
+def db = Database.forURL("jdbc:h2:mem:chapter01", driver="org.h2.Driver")
+
+db.withSession {
+  implicit session =>
+    val result = halSays.run
+  }
+}
+~~~
+
 <div class="callout callout-info">
   **JDBC**
 
@@ -336,26 +347,14 @@ A session is our connection to the database, and we can obtain one from Slick's 
   providing connection details (such as a username and password, perhaps).
 </div>
 
-~~~ scala
-import scala.slick.driver.H2Driver.simple._
-
-def db = Database.forURL("jdbc:h2:mem:chapter01", driver="org.h2.Driver")
-
-db.withSession {
-  implicit session =>
-    val result = halSays.run
-  }
-}
-~~~
-
 Each database product (H2, Oracle, PostgresSQL, and so on) has a different take on how queries should be constructed, how data should be represented, and what capabilities are implemented. This is abstracted by the Slick _driver_.  We import the right driver for the database we are using.
 
-With that import done we set up our database connection, `db`, by providing `Database` with a JDBC connection string, and the class name of the JDBC driver being used.  Yes, there are two kinds of _driver_ being used: Slick's abstraction is called a driver; and it uses a Java JDBC _driver_ too.
+With that import done we set up our database connection, `db`, by providing `Database` with a JDBC connection string, and the class name of the JDBC driver being used.  Yes, there are two kinds of _driver_ being used: Slick's abstraction is called a driver; and it uses a JDBC driver too.
 
-From our database connection we can obtain a session. Sessions are required by Slick methods that need to actually go and communicate with the database.  Typically they are marked as `implicit` parameters, meaning you do not manually supply the parameter if it is marked as `implicit`.  We're doing this
-in the code sample above.
+From our database connection we can obtain a session. Sessions are required by Slick methods that need to actually go and communicate with the database.  Typically the session parameter is marked as `implicit`, meaning you do not have to manually supply the parameter.  We're doing this
+in the code sample above as `run` requires a session, and the session it uses is the one we defined as implicit.
 
-With a session we can execute our query. There are a number of calls you can make on a query: get the `first` result, get an `interator`, `execute` and ignore the results. There are others, and we will look at these in detail later, but for now we're using `run`, which will return the results of the query.
+With a session we can execute our query. There are a number of calls you can make on a query: get the `first` result, get an `iterator`, `execute` and ignore the results. There are others, and we will look at these in detail later, but for now we're using `run`, which will return the results of the query.
 
 
 ### Putting it All Together
@@ -523,7 +522,9 @@ From this we see how `filter` corresponds to a SQL `where` clause.
 
 #### Selecting Columns
 
-So far we have been returning `Message` classes or counts.  Select all the messages in the database, but return just their contents.  Check what SQL would be executed for this query.
+So far we have been returning `Message` classes or counts.  Select all the messages in the database, but return just their contents.  Hint: think of messages as a collection and what you would do to a collection to just get back a single field of a case class.
+
+Check what SQL would be executed for this query.
 
 <div class="solution">
 ~~~ scala
@@ -602,29 +603,25 @@ There are three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'
 
 ## Using Different Database Products
 
-<div class="callout callout-info">
-As mentioned during the introduction H2 is used throughout the book for examples. However Slick also supports PostgreSQL, MySQL, Derby, SQLite, and Microsoft Access.
-
-To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
-</div>
+As mentioned during the introduction H2 is used throughout the book for examples. However Slick also supports PostgreSQL, MySQL, Derby, SQLite, and Microsoft Access. To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
 
 If you want to use a different database for the exercises in the book,
-you will need to make the following changes.
-Each chapter uses it's own database ---
-so these steps will need to be applied for each chapter.
+you will need to make changes detailed below.
 
-Ensure that:
+In summary you will need to ensure that:
 
- * a database is available with the correct name,
- * the `build.sbt` file has the correct dependency,
- * the correct JDBC driver is referenced in the code,
+ * a database is available with the correct name;
+ * the `build.sbt` file has the correct dependency;
+ * the correct JDBC driver is referenced in the code; and
  * the correct Slick driver is used.
+
+Each chapter uses its own database---so these steps will need to be applied for each chapter.
 
 ### PostgreSQL
 
-If it is not currently installed, it can be downloaded from the [PostgreSQL][link-postgres-download] website.
+If it is not currently installed, it can be downloaded from the [PostgreSQL website][link-postgres-download].
 
-#### Create a database
+#### Create a Database
 
 Create a database named `chapter-01` with user `essential`. This will be used for all examples and can be created with the following:
 
@@ -640,27 +637,51 @@ Confirm the database has been created and can be accessed:
 $ psql -d chapter-01 essential
 ~~~
 
-#### Update `build.sbt` dependencies
+#### Update `build.sbt` Dependencies
 
-Replace `"com.h2database" % "h2" % "1.4.185"` with `"org.postgresql" % "postgresql" % "9.3-1100-jdbc41"`,
-then reload the project using `reload`.
+Replace
 
-Don't forget to regenerate any IDE project files.
+~~~ scala
+"com.h2database" % "h2" % "1.4.185"
+~~~
 
-####  Update JDBC references
+with
 
-Replace `Database.forURL` parameters with `"jdbc:postgresql:chapter-01", user="essential", password="trustno1", driver="org.postgresql.Driver"`.
+~~~ scala
+"org.postgresql" % "postgresql" % "9.3-1100-jdbc41"
+~~~
 
-####  Update Slick driver
+If you are already in SBT, type `reload` to load this changed build file.
 
-Change the import from `import scala.slick.driver.H2Driver.simple._` to
-`import scala.slick.driver.PostgresDriver.simple._`.
+If you are using an IDE, don't forget to regenerate any IDE project files.
+
+#### Update JDBC References
+
+Replace `Database.forURL` parameters with:
+
+~~~ scala
+"jdbc:postgresql:chapter-01", user="essential", password="trustno1", driver="org.postgresql.Driver"
+~~~
+
+#### Update Slick Driver
+
+Change the import from:
+
+~~~ scala
+import scala.slick.driver.H2Driver.simple._
+~~~
+
+to
+
+~~~ scala
+import scala.slick.driver.PostgresDriver.simple._
+~~~
 
 ### MySQL
 
-If it is not currently installed, it can be downloaded from the [MySQL][link-mysql-download] website.
+If it is not currently installed, it can be downloaded from the [MySQL website][link-mysql-download].
 
-#### Create a database
+#### Create a Database
 
 Create a database named `chapter-01` with user `essential`. This will be used for all examples and can be created with the following:
 
@@ -668,30 +689,58 @@ Create a database named `chapter-01` with user `essential`. This will be used fo
 CREATE USER 'essential'@'localhost' IDENTIFIED BY 'trustno1';
 CREATE DATABASE `chapter-01` CHARACTER SET utf8 COLLATE utf8_bin;
 GRANT ALL ON `chapter-01`.* TO 'essential'@'localhost';
-flush privileges;
+FLUSH PRIVILEGES;
 ~~~
 
 Confirm the database has been created and can be accessed:
 
 ~~~ bash
-$mysql -u chapter-01 essential -p
+$ mysql -u essential chapter-01 -p
 ~~~
 
-#### Update `build.sbt` dependencies
+#### Update `build.sbt` Dependencies
 
-Replace `"com.h2database" % "h2" % "1.4.185"` with `"mysql" % "mysql-connector-java" % "5.1.34"`,
-then reload the project using `reload`.
+Replace
 
-Don't forget to regenerate any IDE project files.
+~~~ scala
+"com.h2database" % "h2" % "1.4.185"
+~~~
 
-####  Update JDBC driver references
+with
 
-Replace `Database.forURL` parameters with `"jdbc:mysql://localhost:3306/chapter-01&useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true", user="essential", password="trustno1", driver="com.mysql.jdbc.Driver"`.
+~~~ scala
+"mysql" % "mysql-connector-java" % "5.1.34"
+~~~
 
-#### Update Slick driver
+If you are already in SBT, type `reload` to load this changed build file.
 
-Change the import from `import scala.slick.driver.H2Driver.simple._` to
-`import scala.slick.driver.MySQLDriver.simple._`.
+If you are using an IDE, don't forget to regenerate any IDE project files.
+
+#### Update JDBC References
+
+Replace `Database.forURL` parameters with:
+
+~~~ scala
+"jdbc:mysql://localhost:3306/chapter-01&useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true",
+user="essential", password="trustno1", driver="com.mysql.jdbc.Driver"
+~~~
+
+#### Update Slick Driver
+
+Change the import from
+
+~~~ scala
+import scala.slick.driver.H2Driver.simple._
+~~~
+
+to
+
+~~~ scala
+import scala.slick.driver.MySQLDriver.simple._
+~~~
+
+
+
 
 ## Take Home Points
 
