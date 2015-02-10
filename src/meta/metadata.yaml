@@ -10,7 +10,7 @@ pages:
   - src/pages/preface.md
   - src/pages/basics.md
   - src/pages/modifying_data.md
-  - src/pages/data_modeling.md
+  - src/pages/data_modelling.md
   - src/pages/joins.md
   - src/pages/query_composition.md
   - src/pages/testing.md

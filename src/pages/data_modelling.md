@@ -1,4 +1,4 @@
-# Data modeling
+# Data Modelling
 
 We can now manipulate our data,
 let's look at how we can provider a richer model to work with.
