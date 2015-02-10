@@ -385,8 +385,22 @@ That is, a select expression for a strange constant string.
 The `_.content + "!"` expression converts `content` to a string and appends the exclamation point. What is `content`? It's a `Column[String]`, not a `String` of the content. The end result is that we're seeing something of the internal workings of Slick.
 
 This is an unfortunate effect of Scala allowing automatic conversion to a `String`. If you are interested in disabling this Scala behaviour, tools like [WartRemover][link-wartremover] can help.
-</div>
 
+It is possible to do this mapping in the database with Slick.  We just need to remember to
+work in terms of `Column[T]` classes:
+
+~~~ scala
+messages.map(m => m.content ++ LiteralColumn("!")).run
+~~~
+
+Here `LiteralColumn[T]` is type of `Column[T]` for holding a constant value to be inserted into the SQL.  The `++` method is one of the extension methods defined for any `Column[String]`.
+
+This will produce the desired result:
+
+~~~ sql
+select "content"||'!' from "message"
+~~~
+</div>
 
 
 ## Updating with a Computed Value
