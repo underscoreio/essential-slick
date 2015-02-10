@@ -354,8 +354,28 @@ With that import done we set up our database connection, `db`, by providing `Dat
 From our database connection we can obtain a session. Sessions are required by Slick methods that need to actually go and communicate with the database.  Typically the session parameter is marked as `implicit`, meaning you do not have to manually supply the parameter.  We're doing this
 in the code sample above as `run` requires a session, and the session it uses is the one we defined as implicit.
 
-With a session we can execute our query. There are a number of calls you can make on a query: get the `first` result, get an `iterator`, `execute` and ignore the results. There are others, and we will look at these in detail later, but for now we're using `run`, which will return the results of the query.
+With a session we can execute our query. There are a number of calls you can make on a query, as listed in the table below.
 
+------------------------------------------------------------------
+Method          Executes the query and will:
+-----------     --------------------------------------------------
+ `execute`      Ignore the result.
+
+ `first`        Return the first result, or throw an exception if there is no result.
+
+ `firstOption`  Return `Some[T]` for the first result; `None` if there is no result.
+
+ `list`         Return a fully populated `List[T]` of the results.
+
+ `iterator`     Provides an iterator over the results.
+
+ `run`          Acts like `first` for queries for a value, but something like `list` for a collection
+                of values.
+-----------     --------------------------------------------------
+
+: A Selection of Statement Invokers
+
+For now we're using `run`, which will return the results of the query as a collection.
 
 ### Putting it All Together
 
