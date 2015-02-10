@@ -13,9 +13,79 @@ We'll expand chat application schema to support more than just messages through 
 
 ## Application Structure
 
-Our examples so far have been a single monolithic application. That's now how you'd work with Slick for a more substantial project.
+Our examples so far have been a single monolithic application. That's now how you'd work with Slick for a more substantial project.  We'll explain how to split up an application in this section.
 
-**TODO**
+We've also been importing the H2 driver.  We need a driver of course, but it's useful to delay picking the driver until the code needs to be run. This will allow us to switch driver, which can be useful for testing. For example, you might use H2 for unit testing, but PostgresSQL for production purposes.
+
+### Pattern Outline
+
+The basic pattern we'll use is as follows:
+
+* Isolate our schema into a trait (or a few traits) in which the Slick _profile_ is abstract.  We will often refer to this trait as "the tables".
+
+* Create an instance of our tables using a specific profile.
+
+* Finally, configure a `Database` to obtain a `Session` to work with the table instance.
+
+_Profile_ is a new term for us. When we have previously written...
+
+~~~ scala
+import scala.slick.driver.H2Driver.simple._
+~~~
+
+...that is giving us H2-specific JDBC driver, which is a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
+
+
+### Example
+
+Re-working the example from Chapter 1, we have the schema in a trait:
+
+~~~ scala
+trait Profile {
+  // Place holder for a specific profile
+  val profile: scala.slick.driver.JdbcProfile
+}
+
+trait Tables {
+  // Self-type indicating that our tables must be mixed in with a Profile
+  this: Profile =>
+
+  // Whatever that Profile is, we import it as normal:
+  import profile.simple._
+
+  // Row and table definitions here as normal
+}
+~~~
+
+We currently have a small schema and can get away with putting all the table defintions into a single trait.  However, there's nothing to stop us from splitting the schema into, say `UserTables` and `MessageTables`, and so on.  They can all be brought together with `extends` and `with`:
+
+~~~ scala
+// Bring all the components together:
+class Schema(val profile: JdbcProfile) extends Tables with Profile
+
+object Main extends App {
+
+  // A specific schema with a particular driver:
+  val schema = new Schema(scala.slick.driver.H2Driver)
+
+  // Use the schema:
+  import schema._, profile.simple._
+
+  def db = Database.forURL("jdbc:h2:mem:chapter03", driver="org.h2.Driver")
+
+  db.withSession {
+    // Work with the database as normal here
+  }
+}
+~~~
+
+To work with a different database, create a different `Schema` instance and supply a different driver. The rest of the code does not need to change.
+
+### Additional Considerations
+
+There is a potential down-side of packaging everything into a single `Schema` and performing `import schema._`.  All your case classes, and table queries, custom methods, implicits, and other values are imported into your current namespace.
+
+If you recognise this as a problem, it's time to split your code more finely and take care over importing just what you need.
 
 
 ## Representations for Rows
