@@ -1,51 +1,145 @@
 # Data Modelling
 
-We can now manipulate our data,
-let's look at how we can provider a richer model to work with.
-We'll expand chat application schema to support more than just messages through the chapter.
-
+Now that we can do the basics of connecting to a database, running queries, and changing data, we turn to richer models of data.
 
 In this chapter we will:
 
-- look at alternatives to modelling rows as case classes,
-- expand on our knowledge of modelling tables; and
-- use custom types & mapping to provide richer.
+- understand how to structure an application;
+- look at alternatives to modelling rows as case classes;
+- expand on our knowledge of modelling tables to introduce optional values and foreign keys; and
+- use more custom types to avoid working with just low-level database values.
+
+We'll expand chat application schema to support more than just messages through this chapter.
+
+## Application Structure
+
+Our examples so far have been a single monolithic application. That's now how you'd work with Slick for a more substantial project.
+
+**TODO**
 
 
 ## Rows
 
-In chapter 1 we introduced rows as being represented by case classes.
-There are in fact 3 representations we can use, tuples, case classes and  an experimental `HList`s.
-We'll look at the first 2 and what differences there are between them.
+In Chapter 1 we introduced rows as being represented by case classes.
+There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
 
-Let's define a `user` so we no longer have to store their names in the `message` table.
-A user will have an id and a name.
+### Case Classes and `<>`
+
+To explore these different representations we'll start with comparing tuples and case classes.
+For a little bit of variety, let's define a `user` table so we no longer have to store names in the `message` table.
+
+A user will have an ID and a name. The row representation will be:
 
 ~~~ scala
-  type  TupleUser = (Long,String)
-
-  final case class CaseUser(id:Long,name:String)
+final case class User(name: String, id: Long = 0L)
 ~~~
 
-As you can see there is little difference between the two implementations.
-A little more typing in defining the case class,
-but we get a lot of benefit.
-The compiler is able to help us with type checking,
-we have a sensible type to pass around,
-which helps with increased meaning ---
-is a tuple of `(Long,String)` the same as `(String,Long)`?
-We can't tell, one could be a count of messages rather than a
-`user`.
+The schema is:
+
+~~~ scala
+final class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def *    = (name, id) <> (User.tupled, User.unapply)
+}
+~~~
+
+None of this should be a surprise, as it is essentially what we have seen in the first chapter. What we'll do now is look a little bit deeper into how rows are mapped into case classes.
+
+`Table[T]` class requires the `*` method to be defined. This _projection_ is of type `ProvenShape[T]`. A "shape" is a description of how the data in the row is to be structured. Is it to be a case class? A tuple? A combination of these? Something else?  Slick provides implicit conversions from various data types into a "shape", allowing it to be sure at compile time that what you have asked for in the projection matches the schema defined.
+
+To explain this, let's work through an example.
+
+If we had simply tried to define the projection as a tuple...
+
+~~~ scala
+def * = (name, id)
+~~~
+
+...the compiler would tell us:
+
+~~~
+Type mismatch
+  found   : (scala.slick.lifted.Column[String], scala.slick.lifted.Column[Long])
+  required: scala.slick.lifted.ProvenShape[chapter03.User]
+~~~
+
+This is good. We've defined the table as a `Table[User]` so we want `User` values, and the compiler has spotted that we've not defined a default projection to supply `User`s.
+
+How do we resolve this? The answer here is to give Slick the rules it needs to prove it can convert from the `Column` values into the shape we want, which is a case class.  This is the role of the mapping function, `<>`.
+
+The two arguments to `<>` are:
+
+* a function from `U => R`, which converts from our unpacked row-level encoding into our preferred representation; and
+* a function from `R => Option[U]`, which is going the other way.
+
+We can supply these functions by hand if we want:
+
+~~~ scala
+def intoUser(pair: (String, Long)): User = User(pair._1, pair._2)
+
+def fromUser(user: User): Option[(String, Long)] = Some((user.name, user.id))
+~~~
+
+...and write:
+
+~~~ scala
+def * = (name, id) <> (intoUser, fromUser)
+~~~
+
+Case classes already supply these functions via `User.tupled` and `User.unapply`, so there's no point doing this.
+However it is useful to know, and comes in handy for more elaborate packaging and unpackaging of rows.
+We will see an example of this in **TODO: something about long rows**.
 
 
-<div class="callout callout-warning">
-### HList
+### Tuples
+
+You've seen how Slick is able to map between a tuple of columns into case classes.
+However you can use tuples directly if you want, because Slick already knows how to convert from a `Column[T]` into a `T` for a variety of `T`s.
+
+Let's return to the compile error we had above:
+
+~~~
+Type mismatch
+  found   : (scala.slick.lifted.Column[String], scala.slick.lifted.Column[Long])
+  required: scala.slick.lifted.ProvenShape[chapter03.User]
+~~~
+
+We fixed this by supplying a mapping to our case class. We could have fixed this error by redefining the table in terms of a tuple:
+
+~~~ scala
+type TupleUser = (String, Long)
+
+final class UserTable(tag: Tag) extends Table[TupleUser](tag, "user") {
+  def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def *    = (name, id)
+}
+~~~
+
+As you can see there is little difference between the case class and the tuple implementations.
+
+Unless you have a special reason for using tuples, or perhaps just a table with a single value, you'll probably use case classes:
+
+* we have a simple type to pass around (`User` vs. `(String, Long)`); and
+* the fields have names, which improves readability.
+
+
+<div class="callout callout-info">
+**Expose Only What You Need**
+
+We can hide information by excluding it from our row definition. The default projection controls what is returned, in what order, and it is driven by our row definition.  You don't need to project all the rows, for example, when working with a table with legacy columns that aren't being used.
+</div>
+
+
+
+### Heterogeneous Lists
+
 
 Slick's **experimental** [`HList`][link-slick-hlist] implementation is useful if you need to support tables with more than 22 columns,
 such as a legacy database.
 
-As an aside,
-here is the `user` table using `HList`.
+Here is the `user` table using `HList`:
 
 ~~~ scala
 
@@ -83,64 +177,32 @@ here is the `user` table using `HList`.
 
 It is worth noting `Nat` has a dependency on `"org.scala-lang" % "scala-reflect" % scalaVersion.value`,
 which took one of the authors **far** to long to establish.
-</div>
 
-##Tables
 
-Let's looks at the definition of the `User` table and walk through what is involved.
 
-~~~ scala
-  final class TupleUserTable(tag: Tag) extends Table[TupleUser](tag, "user") {
-    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("name")
-    def * = (name,id)
-  }
-  final class UserTableA(tag: Tag) extends Table[User](tag, "user") {
-    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("name")
-    def * = (name,id) <> (User.tupled,User.unapply)
-  }
-~~~
 
-We've defined two versions of the the `user` table, one using a tuple,
-the other a case class.
-As you can there is little difference between the two,
-the of kind the `Table` class and the definition of the `*` method,
-we'll come back to this.
+
+### Exercises
+
+**TODO**
+
+
+
+
+## Tables
+
 
 First let's look at how this class relates to the database table.
 The name of the table is given as a parameter,
 in this case the `String` `user` --- `Table[User](tag, "user")`.
 An optional schema name can also be provided, if required by your database.
 
-Next we define methods for each of the tables columns.
-These call the method `column` with it's type,
-name and zero of more options.
-This is rather self explainitory --- `name` has the type `String` and is mapped to a column `name`.
-It has no options,
-we'll explore column in the rest of this chapter.
 
-Finally,
-we come back to `*`.
-It is the only method we are required to implement.
-It defines the default projection for the table.
-That is the row object we defined earlier.
-If we are not using tuples we need to define how Slick will map between our row and projection.
-We do this using the `<>` operator and supplying two methods,
-one to wrap a returned tuple into our type and another to unwrap our type into a tuple.
-In the `User` example `User.tupled` takes a tuple and returns a User,
-while `User.unapply` takes a user and returns an `Option` of `(Long,String)`.
 
-<div class="callout callout-info">
-**Expose only what you need**
 
-We can hide information by excluding it from our row definition. The default projection controls what is returned and it is driven by our row definition.
-</div>
-
-**TODO --- I think this sounds pants**
 For the rest of the chapter we'll look at some more indepth areas of data modelling.
 
-###Null columns
+## Null columns
 
 Thus far we have only looked at non null columns,
 however sometimes we will wish to modal optional data.
