@@ -1,3 +1,6 @@
+[link-hibernate]:                         http://hibernate.org
+[link-active-record]:                     http://guides.rubyonrails.org/active_record_basics.html
+[link-joda-time]:                         http://www.joda.org/joda-time/
 [link-example]:                           https://github.com/underscoreio/essential-slick-code
 [link-underscore]:                        http://underscore.io
 [link-essential-scala]:                   http://underscore.io/training/courses/essential-scala
