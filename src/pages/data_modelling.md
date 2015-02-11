@@ -324,7 +324,7 @@ This took one of the authors **far** to long to establish.
 
 ### Exercises
 
-#### Turning Wide Rows into Case Classes
+#### Turning Many Rows into Case Classes
 
 Our `HList` example mapped a table with many columns.
 It's not the only way to deal with lots of columns.
@@ -397,129 +397,106 @@ However, notice that if you used `users.ddl.create`, only the columns defined in
 
 ## Table Representation
 
-
-First let's look at how this class relates to the database table.
-The name of the table is given as a parameter,
-in this case the `String` `user` --- `Table[User](tag, "user")`.
-An optional schema name can also be provided, if required by your database.
-
-
-For the rest of the chapter we'll look at some more in depth areas of data modelling.
+Now we know how rows can be represented and mapped, we will look in more detail at the representation of the table.
+In particular we'll explore nullable columns,
+foreign keys, more about primary keys, composite keys,
+and options to apply to table columns.
 
 ### Nullable Columns
 
-Thus far we have only looked at non null columns,
-however sometimes we will wish to modal optional data.
-Slick handles this in an idiomatic scala fashion using `Option[T]`.
+Columns defined in SQL are nullable by default. That is, they can contain `NULL` as a value.
+Slick makes columns not nullable by default, and
+if you want a nullable column you model it naturally in Scala as an `Option[T]`.
 
-Let's expand our data model to allow direct messaging,
-by adding the ability to define a recipient on `Message`.
-We'll label the column `to`:
+Let's modify `User` to have an optional email address:
 
 ~~~ scala
+case class User(name: String, email: Option[String] = None, id: Long = 0L)
 
- final case class Message(sender: Long,
- content: String,
- ts: DateTime,
- to: Option[Long] = None,
- id: Long = 0L)
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name  = column[String]("name")
+  def email = column[Option[String]]("email")
 
- final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  def * = (name, email, id) <> (User.tupled, User.unapply)
+}
 
- def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
- def senderId = column[Long]("sender")
- def toId = column[Option[Long]]("to")
- def content = column[String]("content")
- def ts = column[Timestamp]("ts")
-
- def * = (senderId, content, ts, toId, id) <> (Message.tupled, Message.unapply)
-
- }
-
+lazy val users = TableQuery[UserTable]
+lazy val insertUser = users returning users.map(_.id)
 ~~~
 
-<div class="callout callout-danger">
-**Equality**
-We can not compare these columns as `Option[T]` in queries.
-
-Consider the snippet below,
-what do you expect the two results to be?
+We can insert users with or without an email address:
 
 ~~~ scala
-
-val:Option[Long] = None
-
-val a = messages.filter(_.to === to).iterator.foreach(println)
-val b = messages.filter(_.to.isEmpty).iterator.foreach(println)
-
+val daveId: Long = insertUser += User("Dave", Some("dave@example.org"))
+val halId:  Long = insertUser += User("HAL")
 ~~~
 
-If you said they would both produce the list of messages,
-you'd be wrong.
-`a` returns an empty list as `None === None` returns `None`.
-We need to use `isEmpty` if we want to filter on null columns.
-</div>
-
-
-**TODO: Understand what ? on a column does and how to use it**
-
-### Primary Keys
-
-There are two methods to declare a column is a primary key.
-In the first we declare a column is a primary key using class `O` which provides column options.
-We have seen examples of this in `Message` and `User`.
+Selecting those rows out produces:
 
 ~~~ scala
-def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+List(User(Dave,Some(dave@example.org),1), User(HAL,None,2))
 ~~~
 
-The second method uses a method `primaryKey` which takes two parameters ---
-a name and a tuple of columns.
-This is useful when defining compound primary keys.
-
-By way of a not at all contrived example,
-let us add the ability for people to chat in rooms.
-I've excluded the room definition,
-it is the same as user.
+So far, so ordinary.
+What might be a surprise is how you go about selecting all rows that have no email address:
 
 ~~~ scala
- final case class Room(name: String, id: Long = 0L)
-
- final class RoomTable(tag: Tag) extends Table[User](tag, "room") {
- def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
- def name = column[String]("name")
- def * = (name, id) <> (User.tupled, User.unapply)
- }
-
- lazy val rooms = TableQuery[RoomTable]
-
- final case class Occupant(roomId:Long,userId:Long)
-
- final class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
- def roomId = column[Long]("room")
- def userId = column[Long]("user")
- def pk = primaryKey("room_user_pk", (roomId,userId))
- def * = (roomId,userId) <> (Occupant.tupled, Occupant.unapply)
- }
-
- lazy val occupants = TableQuery[UserTable]
+// Don't do this
+val none: Option[String] = None
+users.filter(_.email === none).list
 ~~~
-<div class="callout callout-info">
-####TODO Give this a Label
-Now we have `room` and `user` the benefit of case classes over tuples becomes apparent.
-They both have the same tuple signature `(String,Long)`.
-It would get error prone passing around tuples like this.
-</div>
 
-
-The SQL generated for the `occupant` table is:
+We have one row in the database without an email address, but the query will produce no results.
+If you're familiar with SQL, you'll maybe see the problem.
+This query is equivalent to:
 
 ~~~ sql
-create table "occupant" ("room" BIGINT NOT NULL,"user" BIGINT NOT NULL)
-alter table "occupant" add constraint "room_user_pk" primary key("room","user")
+SELECT * FROM "user" WHERE "email" = NULL
 ~~~
 
+You might want that to match NULL email addresses, but that's not the behaviour of SQL.
+What you need instead is:
+
+~~~ sql
+SELECT * FROM "user" WHERE "email" IS NULL
+~~~
+
+In Slick that is:
+
+~~~ scala
+users.filter(_.email.isEmpty).list
+// results in: List(User(HAL,None,2))
+~~~
+
+There's also `isDefined` for `IS NOT NULL`.
+
+Another possible surprise is that matching on a specific non-null value works with a `String` or an `Option[String]`:
+
+~~~ scala
+val oe: Option[String] = Some("dave@example.org")
+val e:  String         = "dave@example.org"
+
+// True:
+users.filter(_.email === oe).list == users.filter(_.email === e).list
+~~~
+
+To understand what's going on here, we need to review the types involved in the query:
+
+![Column Types in the Query](src/img/query-types.png)
+
+Although the values being tested for are `String` and `Option[String]`,
+Slick implicitly lifts these values into `Column[T]` types for comparison.
+From there, Slick will compare the `Column[Option[String]]` we defined in the table
+with either the `Column[String]` or `Column[Option[String]]` in the query.
+This is not specific to `String` types---it is a pattern for all the optional columns.
+
+That rounds off what you need to know to model nullable columns with Slick.
+However, we will meet the subject again when looking at a variation of primary keys later in this chapter, and dealing with joins in the next chapter.
+
+
 ### Foreign Keys
+
 
 Foreign keys are declared in a similar manner to compound primary keys,
 with the method --- `foreignKey`.
@@ -606,7 +583,156 @@ The following defines a query which will return the users who sent messages cont
 </div>
 
 
-### Value Classes
+
+
+
+First let's look at how this class relates to the database table.
+The name of the table is given as a parameter,
+in this case the `String` `user` --- `Table[User](tag, "user")`.
+An optional schema name can also be provided, if required by your database.
+
+
+For the rest of the chapter we'll look at some more in depth areas of data modelling.
+
+
+
+### Primary Keys
+
+There are two methods to declare a column is a primary key.
+In the first we declare a column is a primary key using class `O` which provides column options.
+We have seen examples of this in `Message` and `User`.
+
+~~~ scala
+def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+~~~
+
+The second method uses a method `primaryKey` which takes two parameters ---
+a name and a tuple of columns.
+This is useful when defining compound primary keys.
+
+By way of a not at all contrived example,
+let us add the ability for people to chat in rooms.
+I've excluded the room definition,
+it is the same as user.
+
+~~~ scala
+ final case class Room(name: String, id: Long = 0L)
+
+ final class RoomTable(tag: Tag) extends Table[User](tag, "room") {
+ def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+ def name = column[String]("name")
+ def * = (name, id) <> (User.tupled, User.unapply)
+ }
+
+ lazy val rooms = TableQuery[RoomTable]
+
+ final case class Occupant(roomId:Long,userId:Long)
+
+ final class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
+ def roomId = column[Long]("room")
+ def userId = column[Long]("user")
+ def pk = primaryKey("room_user_pk", (roomId,userId))
+ def * = (roomId,userId) <> (Occupant.tupled, Occupant.unapply)
+ }
+
+ lazy val occupants = TableQuery[UserTable]
+~~~
+<div class="callout callout-info">
+####TODO Give this a Label
+Now we have `room` and `user` the benefit of case classes over tuples becomes apparent.
+They both have the same tuple signature `(String,Long)`.
+It would get error prone passing around tuples like this.
+</div>
+
+
+The SQL generated for the `occupant` table is:
+
+~~~ sql
+create table "occupant" ("room" BIGINT NOT NULL,"user" BIGINT NOT NULL)
+alter table "occupant" add constraint "room_user_pk" primary key("room","user")
+~~~
+
+
+
+
+
+
+### Exercises
+
+#### Filtering Optional Columns
+
+Sometimes you want to look at all the users in the database.
+Sometimes you want to only see rows matching a particular value.
+
+Working with the optional email address for a user,
+write a method that will take an optional value,
+and list rows matching that value.
+
+The method signature is:
+
+~~~ scala
+def filterByEmail(email: Option[String]) = ???
+~~~
+
+We want `filterByEmail(Some("dave@example.org")).run` to produce one row,
+and `filterByEmail(None).run` to produce two rows.
+
+<div class="solution">
+We can decide on the query to run in the two cases from inside our application:
+
+~~~ scala
+def filterByEmail(email: Option[String]) =
+  if (email.isEmpty) users
+  else users.filter(_.email === email)
+~~~
+</div>
+
+
+#### Inside the Option
+
+Build on the last exercise to match rows that start with the supplied optional value.
+Recall that `Column[String]` defines `startsWith`.
+
+So this time even `filterByEmail(Some("dave@")).run` will produce one row.
+
+<div class="solution">
+As the `email` value is optional we can't simply pass it to `startsWith`.
+
+~~~ scala
+def filterByEmail(email: Option[String]) =
+  email.map(e =>
+    users.filter(_.email startsWith e)
+  ) getOrElse users
+~~~
+</div>
+
+
+#### Matching or Undecided
+
+Not everyone has an email address, so perhaps when filtering it would be safer to only exclude rows that don't match our filter criteria.
+
+Add Elena to the database...
+
+~~~ scala
+insert += User("Elena", Some("elena@example.org"))
+~~~
+
+...and modify `filterByEmail` so when we search for `Some("elena@example.org")` we only
+exclude Dave, as he definitely doesn't match that address.
+
+<div class="solution">
+This problem we can represent in SQL, so we can do it with one query:
+
+~~~ scala
+def filterByEmail(email: Option[String]) =
+  users.filter(u => u.email.isEmpty || u.email === email)
+~~~
+</div>
+
+
+
+
+## Enhanced Type Safety with Value Classes
 
 Something about case classes are better than tuples.
 However,
@@ -665,9 +791,7 @@ Now, if we try our query again:
 [error] for base type: (chapter03.Example.MessagePK, chapter03.Example.MessagePK) => Boolean
 [error] val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id) }
 [error]   ^
-[error] /Users/jonoabroad/developer/books/essential-slick-example/chapter-03/src/main/scala/chapter03/main.scala:129: ambiguous implicit values:
-[error] both value BooleanOptionColumnCanBeQueryCondition in object CanBeQueryCondition of type => scala.slick.lifted.CanBeQueryCondition[scala.slick.lifted.Column[Option[Boolean]]]
-[error] and value BooleanCanBeQueryCondition in object CanBeQueryCondition of type => scala.slick.lifted.CanBeQueryCondition[Boolean]
+[error] /Users/jonoabroad/developer/books/essential-slick-example/chapter-03/src/main/scala/chapter03/main.scala:129:
 [error] match expected type scala.slick.lifted.CanBeQueryCondition[Nothing]
 [error] val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id) }
 [error]  ^
