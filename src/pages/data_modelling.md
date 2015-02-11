@@ -395,12 +395,12 @@ However, notice that if you used `users.ddl.create`, only the columns defined in
 
 
 
-## Table Representation
+## Table and Column Representation
 
-Now we know how rows can be represented and mapped, we will look in more detail at the representation of the table.
+Now we know how rows can be represented and mapped, we will look in more detail at the representation of the table and the columns that make up a table.
 In particular we'll explore nullable columns,
 foreign keys, more about primary keys, composite keys,
-and options to apply to table columns.
+and options you can apply a table.
 
 ### Nullable Columns
 
@@ -491,11 +491,163 @@ From there, Slick will compare the `Column[Option[String]]` we defined in the ta
 with either the `Column[String]` or `Column[Option[String]]` in the query.
 This is not specific to `String` types---it is a pattern for all the optional columns.
 
-That rounds off what you need to know to model nullable columns with Slick.
-However, we will meet the subject again when looking at a variation of primary keys later in this chapter, and dealing with joins in the next chapter.
+That rounds off what you need to know to model optional columns with Slick.
+However, we will meet the subject again when
+dealing with joins in the next chapter, and in a moment when looking at a variation of primary keys.
+
+
+### Primary Keys
+
+We've defined primary keys by using the class `O` which provides column options:
+
+~~~ scala
+def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+~~~
+
+We combine this with a class class that has a default ID,
+knowing that Slick won't insert this value because the field is marked as auto incrementing:
+
+~~~ scala
+case class User(name: String, email: Option[String] = None, id: Long = 0L)
+~~~
+
+That's the style that suits us in this book, but you should be aware of alternatives.
+You may find our `id: Long = 0L` default a bit arbitrary.
+Perhaps you'd prefer to model the primary key as an `Option[Long]`.
+It will be `None` until it is assigned, and then `Some[Long]`.
+
+We can do that, but we need to know how to convert our non-null primary key into an optional value.
+This is handled by the `?` method on the column:
+
+~~~ scala
+case class User(id: Option[Long], name: String, email: Option[String] = None)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name  = column[String]("name")
+  def email = column[Option[String]]("email")
+
+  def * = (id.?, name, email) <> (User.tupled, User.unapply)
+}
+~~~
+
+The change is small:
+
+* the row class, `User`, defines `id` as `Option[Long]`; and
+* the projection has to convert the database non-null `id` into an `Option`, via `?`.
+
+To see why we need this, imagine what would happen if we omitted the call to `id.?`.
+The projection from (`Long`, `String`, `Option[String]`)
+would not match the `Table[User]` definition, which requires `Option[Long]` in
+the first position.  In fact, Slick would report:
+
+~~~
+No matching Shape found. Slick does not know how to map the given types.
+~~~
+
+Given what we know about Slick so far, this is a pretty helpful message.
+
+
+### Compound Primary Keys
+
+There is a second way to declare a column as a primary key:
+
+~~~ scala
+def id = column[Long]("id", O.AutoInc)
+def pk = primaryKey("pk_id", id)
+~~~
+
+This separate step doesn't make much of a difference in this case.
+It separates the column definition from the key constraint,
+meaning the DDL will emit:
+
+~~~ sql
+ALTER TABLE "user" ADD CONSTRAINT "pk_id" PRIMARY KEY("id")
+~~~
+
+(As it happens, this specific example [doesn't currently work with H2 and Slick](https://github.com/slick/slick/issues/763).
+The `O.AutoInc` marks the column as an H2 "IDENTIY"
+column which is, implicitly, a primary key as far as H2 is concerned.)
+
+Where `primaryKey` is more useful is when you have a compound key.
+This is a key which is based on the value of two columns.
+
+By way of a not at all contrived example,
+let us add the ability for people to chat in rooms.
+
+The room definition is straight forward:
+
+~~~ scala
+// Regular table definition for a chat room:
+case class Room(title: String, id: Long = 0L)
+
+class RoomTable(tag: Tag) extends Table[Room](tag, "room") {
+ def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
+ def title = column[String]("title")
+ def * = (title, id) <> (Room.tupled, Room.unapply)
+}
+
+lazy val rooms = TableQuery[RoomTable]
+lazy val insertRoom = rooms returning rooms.map(_.id)
+~~~
+
+<div class="callout callout-info">
+**Benefit of Case Classes**
+
+Now we have `room` and `user` the benefit of case classes over tuples becomes apparent.
+As tuples, both would have the same type signature: `(String,Long)`.
+It would get error prone passing around tuples like that.
+</div>
+
+
+To say who is in which room, we will add a table called `occupant`.
+And rather than have a sane auto-generated primary key for `occupant`, we'll
+make it a compound of the user and the room:
+
+~~~ scala
+case class Occupant(roomId: Long, userId: Long)
+
+class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
+  def roomId = column[Long]("room")
+  def userId = column[Long]("user")
+
+  def pk = primaryKey("room_user_pk", (roomId, userId))
+
+  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
+}
+
+lazy val occupants = TableQuery[OccupantTable]
+~~~
+
+The SQL generated for the `occupant` table is:
+
+~~~ sql
+CREATE TABLE "occupant" (
+  "room" BIGINT NOT NULL,
+  "user" BIGINT NOT NULL
+)
+
+ALTER TABLE "occupant" ADD CONSTRAINT "room_user_pk" PRIMARY KEY("room", "user")
+~~~
+
+Using the `occupant` table is no different from any other table:
+
+~~~ scala
+val daveId: Long = insertUser += User(None, "Dave", Some("dave@example.org"))
+val airLockId: Long = insertRoom += Room("Air Lock")
+
+// Put Dave in the Room:
+occupants += Occupant(daveId, airLockId)
+~~~
+
+Of course, if you try to put Dave in the Air Lock twice, the database
+will complain that the key has been violated.
+
 
 
 ### Foreign Keys
+
+
 
 
 Foreign keys are declared in a similar manner to compound primary keys,
@@ -586,72 +738,22 @@ The following defines a query which will return the users who sent messages cont
 
 
 
-First let's look at how this class relates to the database table.
+
+
+### Table and Column Modifiers
+
+
+#### Table Name and Schema
+
 The name of the table is given as a parameter,
 in this case the `String` `user` --- `Table[User](tag, "user")`.
 An optional schema name can also be provided, if required by your database.
 
 
-For the rest of the chapter we'll look at some more in depth areas of data modelling.
+#### Column Modifiers
 
 
-
-### Primary Keys
-
-There are two methods to declare a column is a primary key.
-In the first we declare a column is a primary key using class `O` which provides column options.
-We have seen examples of this in `Message` and `User`.
-
-~~~ scala
-def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-~~~
-
-The second method uses a method `primaryKey` which takes two parameters ---
-a name and a tuple of columns.
-This is useful when defining compound primary keys.
-
-By way of a not at all contrived example,
-let us add the ability for people to chat in rooms.
-I've excluded the room definition,
-it is the same as user.
-
-~~~ scala
- final case class Room(name: String, id: Long = 0L)
-
- final class RoomTable(tag: Tag) extends Table[User](tag, "room") {
- def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
- def name = column[String]("name")
- def * = (name, id) <> (User.tupled, User.unapply)
- }
-
- lazy val rooms = TableQuery[RoomTable]
-
- final case class Occupant(roomId:Long,userId:Long)
-
- final class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
- def roomId = column[Long]("room")
- def userId = column[Long]("user")
- def pk = primaryKey("room_user_pk", (roomId,userId))
- def * = (roomId,userId) <> (Occupant.tupled, Occupant.unapply)
- }
-
- lazy val occupants = TableQuery[UserTable]
-~~~
-<div class="callout callout-info">
-####TODO Give this a Label
-Now we have `room` and `user` the benefit of case classes over tuples becomes apparent.
-They both have the same tuple signature `(String,Long)`.
-It would get error prone passing around tuples like this.
-</div>
-
-
-The SQL generated for the `occupant` table is:
-
-~~~ sql
-create table "occupant" ("room" BIGINT NOT NULL,"user" BIGINT NOT NULL)
-alter table "occupant" add constraint "room_user_pk" primary key("room","user")
-~~~
-
+#### Indexes and Constraints
 
 
 
