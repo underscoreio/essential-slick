@@ -7,13 +7,64 @@ Slick is a Scala library for working with databases: querying, inserting data, u
 This material is aimed at a Scala developer who has:
 
 * taken the [Essential Scala][link-essential-scala] course or equivalent;
-* a good understanding of relation databases (rows, columns, joins, indexes) and SQL;
-* access to a relational database; and
-* JDK 7 installed, along with an editor or IDE (Scala IDE for Eclipse, or IntelliJ).
+* experience with relational databases (rows, columns, joins, indexes, SQL); and
+* JDK 7 installed, along with an editor or an IDE (Scala IDE for Eclipse, or IntelliJ).
 
 The material presented focuses on Slick version 2.1.0, examples use [H2][link-h2-home] as the relational database.
 
 Many thanks to the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
+
+
+## Roadmap {-}
+
+
+Chapter 1
+:   We want you to get to your keyboard and start writing code.
+
+    This first chapters gives you a working environment where
+    you can explore Slick by creating a table, inserting data,
+    and running queries.  You'll get to see concepts such
+    as representing rows as case classes, the `Table[T]` schema,
+    and `Query` composition. Don't skip on the exercises.
+
+Chapter 2
+:   Extends the basics through practice at deleting, inserting, and updating rows.
+
+    Here we look in more depth at auto-generated keys.
+
+Chapter 3
+:   Gets serious about data modelling.
+
+    We want you to make the best use of Scala when working with Slick.  That means
+    getting to grips with how to structure you application, various ways to
+    represent rows, and how columns are mapped between the database and your code.
+
+    We will encourage you to use value classes, algebraic data types, and other
+    non-primitive types with Slick.
+
+Chapter 4
+:   Addresses joins and other kinds of queries.
+
+    Joins can be vexing. We'll work through scenarios to give you a good
+    understanding of how to work them in Slick. While we're on the
+    subject of queries, we'll investigate aggregates.
+
+Chapter 5
+:   Exploring query composition.
+
+    The way Slick's queries compose leads to some neat tricks. We will look
+    at pagination, sorting, and ad hoc extensions to queries.
+
+Chapter 6
+:   Testing
+
+    ARGH
+
+Chapter 7
+:    Looking at Slick's code generation facilities.
+
+    ARGH
+
 
 ## Conventions Used in This Book {-}
 
