@@ -687,7 +687,60 @@ ALTER TABLE "message" ADD CONSTRAINT "sender_fk"
   ON DELETE NO ACTION
 ~~~
 
-We'll see how to control the `ON UPDATE` and `ON DELETE` actions later in this section.
+<div class="callout callout-info">
+**On Update and On Delete**
+
+A foreign key makes certain guarantees about the data.
+In the case we've looked at there must be a `sender` in the `user` table
+to successfully insert a new `message`.
+
+So what happens if something changes with the `user` row?
+There are a number of [_referential actions_](http://en.wikipedia.org/wiki/Foreign_key#Referential_actions) that could be triggered.
+The default is for nothing to happen, but you can change that.
+
+Let's look at an example.
+Suppose we delete a user,
+and we want all the messages associated with that user to be removed.
+We could do that in our application, but it's something the database can provide for us:
+
+~~~ scala
+def sender =
+  foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+~~~
+
+Providing Slicks DDL command has been run for the table,
+or the SQL `ON DELETE CASCADE` action has been manually applied to the database,
+the following will remove HAL from the `users` table,
+and all of the messages that HAL sent:
+
+~~~ scala
+users.filter(_.name === "HAL").delete
+~~~
+
+Slick supports `onUpdate` and `onDelete` for the five actions:
+
+------------------------------------------------------------------
+Action          Description
+-----------     --------------------------------------------------
+`NoAction`      The default.
+
+`Cascade`       A change in the referenced table triggers a change in the referencing table.
+                In our example, deleting a user will cause their messages to be deleted.
+
+`Restrict`      Changes are restricted, triggered a constraint violation exception.
+                In our example, you would not be allowed to delete a user who had
+                posted a message.
+
+`SetNull`       The column referencing the updated value will be set to NULL.
+
+`SetDefault`    The default value for the referencing column will be used.
+                Default values are discussion in [Table and Column Modifiers](#schema-modifiers),
+                later in this chapter.
+-----------     --------------------------------------------------
+
+: Referential Actions
+</div>
+
 
 The second thing we get is a query which we can use in a join.
 We've dedicated the [next chapter](#joins) to looking at joins in detail, but
@@ -724,16 +777,13 @@ case class Message(senderId: Long, content: String, ts: DateTime, id: Long = 0L)
 ~~~
 
 That's the design approach to take with Slick.
-The row model should reflect the row, not the row and a bunch of other rows from different tables.
+The row model should reflect the row, not the row plus a bunch of other data from different tables.
+To pull data from across tables, use a query.
 
 
-#### Foreign Key Cascades, and Other Actions
+### Table and Column Modifiers {#schema-modifiers}
 
-
-
-
-
-### Table and Column Modifiers
+To round off this section looking at tables and columns....
 
 
 #### Table Name and Schema
