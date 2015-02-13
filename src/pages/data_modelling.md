@@ -931,7 +931,13 @@ Make sure it is impossible for a user to be deleted while they have a bill to pa
 
 Go ahead and model this.
 
-Also provide queries to give the full details of users:
+Hint: Remember to include your new table when creating the schema:
+
+~~~ scala
+(messages.ddl ++ users.ddl ++ bills.dll).create
+~~~
+
+Additionally, provide queries to give the full details of users:
 
 - who do have an outstanding bill; and
 - who have no outstanding bills.
@@ -985,121 +991,187 @@ val hasNot = for {
 
 
 
-## Enhanced Type Safety with Value Classes
+## Value Classes
 
-Something about case classes are better than tuples.
-However,
-we are still assigning `Long`s as primary keys,
-there is nothing to stop us asking for all messages based on a users id:
-
-~~~ scala
-val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id) }
-~~~
-
-This makes no sense, but the compiler can not help us.
-Let's see how [value classes][link-scala-value-classes] can help us.
-We'll define value classes for `message`, `user` and `room` primary keys.
+In modelling rows we are using `Long`s as primary keys.
+Although that's a good choice for the database, it's not a great choice
+in our application.
+The problem with it is that we can make some silly mistakes:
 
 ~~~ scala
- final case class MessagePK(value: Long) extends AnyVal
- final case class UserPK(value: Long) extends AnyVal
- final case class RoomPK(value: Long) extends AnyVal
+// Users:
+val halId:  Long = insertUser += User("HAL")
+val daveId: Long = insertUser += User("Dave")
+
+// Buggy lookup of a sender
+val id = messages.filter(_.senderId === halId).map(_.id).first
+
+val rubbish = messages.filter(_.senderId === id)
 ~~~
 
-For us to be able to use these, we need to define implicits so Slick can convert between the value class and expected type.
+Do you see the problem here? We've looked up a message `id`,
+and then going and using it to search for senders with that `id`.
+It compiles, it runs, but we can prevent these kinds of problems using Scala's type system.
+
+Before showing how, here's another downside of using `Long` as a primary key:
 
 ~~~ scala
- implicit val messagePKMapper = MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
- implicit val userPKMapper = MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
- implicit val roomPKMapper = MappedColumnType.base[RoomPK, Long](_.value, RoomPK(_))
+def lookupByUserId(id: Long) = users.filter(_.id === id)
 ~~~
+
+It would be much clearer to use the types of the method, and write:
+
+~~~ scala
+def lookup(id: UserPK) = users.filter(_.id === id)
+~~~
+
+We can do that, and have the compiler help us matching up primary keys, by using [value classes][link-scala-value-classes].
+A value class is a compile-time wrapper around a value. At run time, the wrapper goes away,
+leaving no allocation or performance overhead in our running code.
+
+We define value classes like this:
+
+~~~ scala
+object PKs {
+  case class MessagePK(value: Long) extends AnyVal
+  case class UserPK(value: Long) extends AnyVal
+}
+~~~
+
+To be able to use them in our tables, we need to provide Slick with the conversion rules.
+This is just the same as we've previously added for JodaTime:
+
+~~~ scala
+import PKs._
+implicit val messagePKMapper = MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
+implicit val userPKMapper    = MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
+~~~
+
+Recall that `MappedColumnType.base` is how we define the functions to convert between our classes (`MessagePK`, `UserPK`)
+and the database values (`Long`).
 
 With our value classes and implicits in place,
-we can now use them to give us type checking on our primary and therefore foriegn keys!
+we can now use them to give us type checking on our primary and therefore foreign keys:
 
 ~~~ scala
- final case class Message(sender: UserPK,
- content: String,
- ts: DateTime,
- to: Option[UserPK] = None,
- id: MessagePK = MessagePK(0))
+case class User(name: String, id: UserPK = UserPK(0L))
 
- final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
- def id = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
- def senderId = column[UserPK]("sender")
- def sender = foreignKey("sender_fk", senderId, users)(_.id)
- def toId = column[Option[UserPK]]("to")
- def to = foreignKey("to_fk", toId, users)(_.id)
- def content = column[String]("content")
- def ts = column[DateTime]("ts")
- def * = (senderId, content, ts, toId, id) <> (Message.tupled, Message.unapply)
- }
-~~~
-
-Now, if we try our query again:
-
-~~~ scala
-[error] /Users/jonoabroad/developer/books/essential-slick-example/chapter-03/src/main/scala/chapter03/main.scala:129: Cannot perform option-mapped operation
-[error] with type: (chapter03.Example.MessagePK, chapter03.Example.UserPK) => R
-[error] for base type: (chapter03.Example.MessagePK, chapter03.Example.MessagePK) => Boolean
-[error] val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id) }
-[error]   ^
-[error] /Users/jonoabroad/developer/books/essential-slick-example/chapter-03/src/main/scala/chapter03/main.scala:129:
-[error] match expected type scala.slick.lifted.CanBeQueryCondition[Nothing]
-[error] val rubbish = oHAL.map{hal => messages.filter(msg => msg.id === hal.id) }
-[error]  ^
-[error] two errors found
-[error] (compile:compile) Compilation failed
-[error] Total time: 2 s, completed 06/02/2015 12:12:53 PM
-~~~
-
-The compiler helps,
-by telling us we are attempting to compare a `MessagePK` with a `UserPK`.
-
-
-
-##Custom Column Mapping
-
-We have already seen two examples `DateTime` and value classes as primary keys.
-Custom mappings require two things,
-definition of the type and an implicit mapping between the type and valid JDBC type.
-
-Let's look at how to use a scala enumeration.
-First we define our type:
-
-~~~ scala
-object RoomType extends Enumeration {
- type RoomType = Value
- val Private,Public = Value
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def * = (name, id) <> (User.tupled, User.unapply)
 }
 
+case class Message(senderId: UserPK, content: String,ts: DateTime, id: MessagePK = MessagePK(0L))
+
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  def id       = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
+  def senderId = column[UserPK]("sender")
+  def content  = column[String]("content")
+  def ts       = column[DateTime]("ts")
+  def * = (senderId, content, ts, id) <> (Message.tupled, Message.unapply)
+  def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+}
 ~~~
 
-Next we define an implict mapping between our new type and a valid JDBC type:
+Notice how we're able to be explicit: the user `id` is a `UserPK` and the message sender is also a `UserPK`.
 
+Now, if we try our buggy query again, the compiler catches the problem:
 
 ~~~ scala
-implicit val roomTypeMapper = MappedColumnType.base[RoomType.Value, Int](_.id, RoomType(_))
+Cannot perform option-mapped operation
+     with type: (PKs.UserPK, PKs.MessagePK) => R
+ for base type: (PKs.UserPK, PKs.UserPK) => Boolean
+[error] val rubbish = messages.filter(_.senderId === id)
+                                                 ^
 ~~~
 
-Finally, we use our type to define a column:
+The compiler is telling us it wanted to compare `UserPK` to another `UserPK`,
+but found a `UserPK` and a `MessagePK`.
 
-~~~ scala
-def roomType = column[RoomType.Value]("roomType", O.Default(RoomType.Public))
-~~~
+Values classes are a reasonable way to make your code safer and more legible.
+The amount of code you need to write is small,
+however for a large database it can become dull writing many such methods.
+In that case, consider generating the source code rather than writing it.
 
-Here is the SQL the DDL will output:
-
-~~~ sql
-create table "room" ("name" VARCHAR NOT NULL,
- "roomType" INTEGER DEFAULT 1 NOT NULL,
- "id" BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1)
- NOT NULL PRIMARY KEY)
-~~~
 
 ### Exercises
 
-#### ADT
+#### Mapping Enumerations
+
+We can use the same trick that we've seen for `DateTime` and value classes to map enumerations.
+
+Here's a Scala Enumeration for a user's role:
+
+~~~ scala
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+~~~
+
+Modify the `user` table to include a `UserRole`.
+In the database store the role as a single character.
+
+<div class="solution">
+The first step is to supply an implicit to and from the database values:
+
+~~~ scala
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner = Value("O")
+  val Regular = Value("R")
+}
+
+import UserRole._
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
+~~~
+
+Then we can use the `UserRole` in the table definition:
+
+~~~ scala
+case class User(name: String, userRole: UserRole = Regular, id: UserPK = UserPK(0L))
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def role = column[UserRole]("role", O.Length(1,false))
+
+  def * = (name, role, id) <> (User.tupled, User.unapply)
+}
+~~~
+</div>
+
+
+### Alternative Enumerations
+
+Modify your solution to the previous exercise to store the value in the database as an integer.
+
+Oh, and by the way, this is a legacy system. If we see an unrecognized user role value, just
+default it to a `UserRole.Regular`.
+
+<div class="solution">
+The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
+
+~~~ scala
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, Int](
+  _.id,
+  v => UserRole.values.find(_.id == v) getOrElse Regular)
+~~~
+</div>
+
+
+## Algebraic Data Types
+
+
+**TODO**
+
+### Exercises
+
+#### ADT the User Role
 
 Rewrite our enumeration example of a custom type using an [Algebraic Data Type][link-adt-wikipedia].
 
@@ -1130,11 +1202,6 @@ def roomType = column[RoomType.Value]("roomType", O.Default(RoomType.Public))
  }
 ~~~
 </div>
-
-
-## Virtual columns and server-side casts here?
-
-
 
 
 
