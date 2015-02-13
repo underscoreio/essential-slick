@@ -55,15 +55,6 @@ Chapter 5
     The way Slick's queries compose leads to some neat tricks. We will look
     at pagination, sorting, and ad hoc extensions to queries.
 
-Chapter 6
-:   Testing
-
-    ARGH
-
-Chapter 7
-:    Looking at Slick's code generation facilities.
-
-    ARGH
 
 
 ## Conventions Used in This Book {-}

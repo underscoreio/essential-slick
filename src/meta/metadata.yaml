@@ -13,8 +13,6 @@ pages:
   - src/pages/data_modelling.md
   - src/pages/joins.md
   - src/pages/query_composition.md
-  - src/pages/testing.md
-  - src/pages/schema_management.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md
   - src/pages/databases.md
