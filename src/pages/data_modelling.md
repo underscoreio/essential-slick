@@ -905,6 +905,84 @@ def filterByEmail(email: Option[String]) =
 </div>
 
 
+#### Enforcement
+
+What happens if you try adding a message with a user id of `3`?
+
+For example:
+
+~~~ scala
+messages += Message(3L, "Hello HAl!", DateTime.now)
+~~~
+
+<div class="solution">
+We get a runtime exception as we have violated referential integrity.
+There is no row in the `user` table with a primary id of `3`.
+</div>
+
+
+#### Model This
+
+We're now charging for our chat service.
+Outstanding payments will be stored in a table called `bill`.
+The default change is $12.00, and bills are recorded against a user.
+A user should only have one or zero entries in this table.
+Make sure it is impossible for a user to be deleted while they have a bill to pay.
+
+Go ahead and model this.
+
+Also provide queries to give the full details of users:
+
+- who do have an outstanding bill; and
+- who have no outstanding bills.
+
+Hint: Slick provides `in` for SQL's `WHERE x IN (SELECT ...)` expressions.
+
+
+<div class="solution">
+There are a few ways to model this table regarding constraints and defaults.
+Here's one way, where the default is on the database,
+and he unique primary key is simply the user's `id`:
+
+~~~ scala
+case class Bill(userId: Long, amount: BigDecimal)
+
+class BillTable(tag: Tag) extends Table[Bill](tag, "bill") {
+  def userId = column[Long]("user", O.PrimaryKey)
+  def amount = column[BigDecimal]("dollars", O.Default(12.00))
+  def * = (userId, amount) <> (Bill.tupled, Bill.unapply)
+  def user = foreignKey("fk_bill_user", userId, users)(_.id, onDelete=ForeignKeyAction.Restrict)
+}
+
+lazy val bills = TableQuery[BillTable]
+~~~
+
+Exercise the code as follows:
+
+~~~ scala
+bills += Bill(daveId, 12.00)
+println(bills.list)
+
+// Unique index or primary key violation:
+//bills += Bill(daveId, 24.00)
+
+// Referential integrity constraint violation: "fk_bill_user:
+//users.filter(_.name === "Dave").delete
+
+// Who has a bill?
+val has = for {
+  b <- bills
+  u <- b.user
+} yield u
+
+// Who doesn't have a bill?
+val hasNot = for {
+  u <- users
+  if !(u.id in bills.map(_.userId))
+} yield u
+~~~
+</div>
+
 
 
 ## Enhanced Type Safety with Value Classes
@@ -1019,75 +1097,9 @@ create table "room" ("name" VARCHAR NOT NULL,
  NOT NULL PRIMARY KEY)
 ~~~
 
-##Virtual columns and server-side casts here?
+### Exercises
 
-## Exercises
-
-### Add a message
-
-What happens if you try adding a message with a user id of `3`?
-For example:
-
-~~~ scala
-messages += Message(3L, "Hello HAl!", new DateTime(2001, 2, 17, 10, 22, 50))
-~~~
-
-<div class="solution">
-
-We get a runtime exception as we have violated referential integrity.
-There is no row in the `user` table with a primary id of `3`.
-
-~~~ bash
-
-[error] (run-main-12) org.h2.jdbc.JdbcSQLException: Referential integrity constraint violation: "sender_fk: PUBLIC.""message"" FOREIGN KEY(""sender"") REFERENCES PUBLIC.""user""(""id"") (3)"; SQL statement:
-[error] insert into "message" ("sender","content","ts","to") values (?,?,?,?) [23506-185]
-org.h2.jdbc.JdbcSQLException: Referential integrity constraint violation: "sender_fk: PUBLIC.""message"" FOREIGN KEY(""sender"") REFERENCES PUBLIC.""user""(""id"") (3)"; SQL statement:
-insert into "message" ("sender","content","ts","to") values (?,?,?,?) [23506-185]
- at org.h2.message.DbException.getJdbcSQLException(DbException.java:345)
- at org.h2.message.DbException.get(DbException.java:179)
- at org.h2.message.DbException.get(DbException.java:155)
- at org.h2.constraint.ConstraintReferential.checkRowOwnTable(ConstraintReferential.java:372)
- at org.h2.constraint.ConstraintReferential.checkRow(ConstraintReferential.java:314)
- at org.h2.table.Table.fireConstraints(Table.java:920)
- at org.h2.table.Table.fireAfterRow(Table.java:938)
- at org.h2.command.dml.Insert.insertRows(Insert.java:161)
- at org.h2.command.dml.Insert.update(Insert.java:114)
- at org.h2.command.CommandContainer.update(CommandContainer.java:78)
- at org.h2.command.Command.executeUpdate(Command.java:254)
- at org.h2.jdbc.JdbcPreparedStatement.executeUpdateInternal(JdbcPreparedStatement.java:157)
- at org.h2.jdbc.JdbcPreparedStatement.executeUpdate(JdbcPreparedStatement.java:143)
- at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker$$anonfun$internalInsert$1.apply(JdbcInsertInvokerComponent.scala:183)
- at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker$$anonfun$internalInsert$1.apply(JdbcInsertInvokerComponent.scala:180)
- at scala.slick.jdbc.JdbcBackend$SessionDef$class.withPreparedStatement(JdbcBackend.scala:191)
- at scala.slick.jdbc.JdbcBackend$BaseSession.withPreparedStatement(JdbcBackend.scala:389)
- at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.preparedInsert(JdbcInsertInvokerComponent.scala:170)
- at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.internalInsert(JdbcInsertInvokerComponent.scala:180)
- at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.insert(JdbcInsertInvokerComponent.scala:175)
- at scala.slick.driver.JdbcInsertInvokerComponent$InsertInvokerDef$class.$plus$eq(JdbcInsertInvokerComponent.scala:70)
- at scala.slick.driver.JdbcInsertInvokerComponent$BaseInsertInvoker.$plus$eq(JdbcInsertInvokerComponent.scala:145)
- at chapter03.Example$$anonfun$5.apply(main.scala:84)
- at chapter03.Example$$anonfun$5.apply(main.scala:57)
- at scala.slick.backend.DatabaseComponent$DatabaseDef$class.withSession(DatabaseComponent.scala:34)
- at scala.slick.jdbc.JdbcBackend$DatabaseFactoryDef$$anon$4.withSession(JdbcBackend.scala:61)
- at chapter03.Example$.delayedEndpoint$chapter03$Example$1(main.scala:56)
- at chapter03.Example$delayedInit$body.apply(main.scala:12)
- at scala.Function0$class.apply$mcV$sp(Function0.scala:40)
- at scala.runtime.AbstractFunction0.apply$mcV$sp(AbstractFunction0.scala:12)
- at scala.App$$anonfun$main$1.apply(App.scala:76)
- at scala.App$$anonfun$main$1.apply(App.scala:76)
- at scala.collection.immutable.List.foreach(List.scala:381)
- at scala.collection.generic.TraversableForwarder$class.foreach(TraversableForwarder.scala:35)
- at scala.App$class.main(App.scala:76)
- at chapter03.Example$.main(main.scala:12)
- at chapter03.Example.main(main.scala)
- at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
- at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:57)
- at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
- at java.lang.reflect.Method.invoke(Method.java:606)
-~~~
-</div>
-
-### ADT
+#### ADT
 
 Rewrite our enumeration example of a custom type using an [Algebraic Data Type][link-adt-wikipedia].
 
@@ -1119,15 +1131,11 @@ def roomType = column[RoomType.Value]("roomType", O.Default(RoomType.Public))
 ~~~
 </div>
 
-### Use foreign keys to find everyone who sent HAL a message
 
-This might be too hard for the moment, as we haven't talked about queries.
+## Virtual columns and server-side casts here?
 
-<div class="solution">
 
-There isn't one yet.
 
-</div>
 
 
 ## Take Home Points
