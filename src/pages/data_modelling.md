@@ -1051,7 +1051,8 @@ Recall that `MappedColumnType.base` is how we define the functions to convert be
 and the database values (`Long`).
 
 We _can_ do that, but for such a mechanical piece of code,
-Slick provides a macro for this simple case. We only need to write...
+Slick provides a macro to take care of this for us.
+We only need to write...
 
 ~~~ scala
 object PKs {
@@ -1178,41 +1179,109 @@ implicit val userRoleMapper =
 </div>
 
 
-## Algebraic Data Types
+## Sum Types
+
+We've used case classes extensively for modelling data.
+These are known as _product types_, which form one half of _algebraic data types_ (ADTs).
+The other half is known as _sum types_, which we will look at now.
+
+As an example we will add a flag to messages.
+Perhaps a administrator of the chat will be able to mark messages as important, offensive, or spam.
+In the database we'll store these as characters: `!`, `X`, and `$`.
+We don't want to use those symbols in source code, so instead we will establish a sealed trait
+and a set of case objects:
+
+~~~ scala
+sealed trait Flag
+case object Important extends Flag
+case object Offensive extends Flag
+case object Spam extends Flag
+~~~
+
+As with other custom types, we define a mapping to the database values:
+
+~~~ scala
+implicit val flagType =
+  MappedColumnType.base[Flag, Char](
+    flag => flag match {
+      case Important => '!'
+      case Offensive => 'X'
+      case Spam      => '$'
+    },
+    ch => ch match {
+      case '!' => Important
+      case 'X' => Offensive
+      case '$' => Spam
+    })
+~~~
+
+This is similar to the enumeration pattern from the last set of exercises.
+There is a difference, though, in that sealed traits can be checked by the compiler to
+ensure we have covered all the cases.  That is, is we add a new flag (`OffTopic`),
+but forget to add it to our `Flag => Char` function,
+the compiler will warn us that we have missed a case.
+(By enabling the Scala compiler's `-Xfatal-warnings` option,
+these warnings will become errors, preventing your program from compiling).
+
+Using `Flag` is the same as any other custom type:
+
+~~~ scala
+case class Message(
+  senderId: UserPK,
+  content:  String,
+  ts:       DateTime,
+  flag:     Option[Flag] = None,
+  id:       MessagePK = MessagePK(0L))
+
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  def id       = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
+  def senderId = column[UserPK]("sender")
+  def content  = column[String]("content")
+  def flag     = column[Option[Flag]]("flag")
+  def ts       = column[DateTime]("ts")
+
+  def * = (senderId, content, ts, flag, id) <> (Message.tupled, Message.unapply)
+
+  def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+}
+
+lazy val messages = TableQuery[MessageTable]
+~~~
+
+And we can add a message with a flag set:
+
+~~~ scala
+messages +=
+  Message(halId,  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6, Some(Important))
+~~~
+
+When we execute a query, we can express ourselves in terms of our meaningful type.
+However, we need to give the compiler a little help:
+
+~~~ scala
+messages.filter(_.flag === (Important : Flag)).run
+~~~
+
+Notice the _type annotation_ added to the `Important` value.
+If you find yourself writing that kind of query often, hold on until Chapter 5:
+there we look at ways you can write `messages.isImportant` instead.
 
 
 
 ### Exercises
 
-#### ADT the User Role
+#### Custom Boolean
 
-Rewrite our enumeration example of a custom type using an [Algebraic Data Type][link-adt-wikipedia].
+Messages can be high priority or low priority.
+The database value for high priority messages will be: `y`, `Y`, `+`, or `high`.
+For low priority messages the value will be: `n`, `N`, `-`, `lo`, or `low`.
 
-~~~ scala
-implicit val roomTypeMapper = MappedColumnType.base[RoomType.Value, Int](_.id, RoomType(_))
-
-object RoomType extends Enumeration {
- type RoomType = Value
- val Private,Public = Value
-}
-
-def roomType = column[RoomType.Value]("roomType", O.Default(RoomType.Public))
-~~~
+Go ahead and model this with a sum type.
 
 <div class="solution">
 
+**TODO**
 ~~~ scala
- sealed trait RoomType { val id:Int }
- case object Private extends RoomType { val id = 0 }
- case object Public extends RoomType { val id = 1 }
-
- object RoomType {
- def apply(id: Int) = id match {
- case 0 ⇒ Private
- case 1 ⇒ Public
- case _ ⇒ Public
- }
- }
 ~~~
 </div>
 
