@@ -278,7 +278,7 @@ that in chatper **TODO**.  We expect you'd be needing `HList`s for legacy databa
 code generate is the way to go.
 
 - Second, you can improve the readability of `User` by _value clases_ to replace `String` with a more meaningful type.
-We'll see this in section **TODO A BIT LATER IN THIS CHAPTER**.
+We'll see this in the section on [value classes](#value-classes), later in this chapter.
 
 
 Once you have an `HList`-based schema, you work with it in much the same way as you would other data representations.
@@ -991,7 +991,7 @@ val hasNot = for {
 
 
 
-## Value Classes
+## Value Classes {#value-classes}
 
 In modelling rows we are using `Long`s as primary keys.
 Although that's a good choice for the database, it's not a great choice
@@ -1049,6 +1049,20 @@ implicit val userPKMapper    = MappedColumnType.base[UserPK, Long](_.value, User
 
 Recall that `MappedColumnType.base` is how we define the functions to convert between our classes (`MessagePK`, `UserPK`)
 and the database values (`Long`).
+
+We _can_ do that, but for such a mechanical piece of code,
+Slick provides a macro for this simple case. We only need to write...
+
+~~~ scala
+object PKs {
+  import scala.slick.lifted.MappedTo
+  case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
+  case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
+}
+~~~
+
+...and the `MappedTo` macro takes care of creating the `MappedColumnType.base` implicits for us.
+
 
 With our value classes and implicits in place,
 we can now use them to give us type checking on our primary and therefore foreign keys:
@@ -1120,7 +1134,7 @@ The first step is to supply an implicit to and from the database values:
 ~~~ scala
 object UserRole extends Enumeration {
   type UserRole = Value
-  val Owner = Value("O")
+  val Owner   = Value("O")
   val Regular = Value("R")
 }
 
@@ -1167,7 +1181,6 @@ implicit val userRoleMapper =
 ## Algebraic Data Types
 
 
-**TODO**
 
 ### Exercises
 
