@@ -1279,10 +1279,28 @@ For low priority messages the value will be: `n`, `N`, `-`, `lo`, or `low`.
 Go ahead and model this with a sum type.
 
 <div class="solution">
+<!-- I don't like contains as it takes `Any`, but maybe I'm being to pedantic. -->
+This is similar to the `Flag` example above,
+except we need to handle multiple values from the database.
 
-**TODO**
+
 ~~~ scala
+sealed trait Priority
+case object HighPriority extends Priority
+case object LowPriority  extends Priority
+
+implicit val priorityType =
+  MappedColumnType.base[Priority, String](
+    flag => flag match {
+      case HighPriority => "y"
+      case LowPriority  => "n"
+    },
+    str => str match {
+      case in if List("Y","y","+","high").contains(in)      => HighPriority
+      case in if List("N","n","-","lo","low").contains(in)  => LowPriority
+  })
 ~~~
+
 </div>
 
 
