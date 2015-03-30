@@ -1296,8 +1296,8 @@ implicit val priorityType =
       case LowPriority  => "n"
     },
     str => str match {
-      case in if List("Y","y","+","high").contains(in)      => HighPriority
-      case in if List("N","n","-","lo","low").contains(in)  => LowPriority
+      case "Y" | "y" | "+" | "high"         => HighPriority
+      case "N" | "n" | "-" | "lo"   | "low" => LowPriority
   })
 ~~~
 
