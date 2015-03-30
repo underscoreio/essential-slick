@@ -4,7 +4,15 @@ Into, what you're going to learn.
 
 ## Implicit Joins
 
-Which we saw in the last chapter.
+We have seen an example of implicit joins in the last chapter.
+
+~~~ scala
+val q = for {
+  msg <- messages
+  usr <- msg.sender
+} yield (usr.name, msg.content)
+~~~
+
 Build up example, introduce `rooms`.
 Example join with three tables to give the idea.
 
