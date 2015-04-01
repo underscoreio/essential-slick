@@ -13,8 +13,42 @@ val q = for {
 } yield (usr.name, msg.content)
 ~~~
 
-Build up example, introduce `rooms`.
-Example join with three tables to give the idea.
+As the name suggests an implicit join is one where we don't need
+to specify the type of joins to use.
+
+Let's look at more complex query,
+after reviewing our schema:
+
+[insert schema diagram here or possibly code sample ?]
+
+We can retrieve all messages by Dave for a given room using implicit joins:
+
+~~~ scala
+val daveId:UserPK = ???
+val roomId:RoomPK = ???
+
+val davesMessages = for {
+  message <- messages
+  user    <- message.sender
+  room    <- message.room
+  if user.id === daveId &&
+     room.id === airLockId &&
+     message.roomId === room.id
+} yield message
+~~~
+
+or without referring to `message`s foreign keys `sender` and `room`.
+
+~~~ scala
+val daveId:UserPK = ???
+val roomId:RoomPK = ???
+
+val altDavesMessages = for {
+  message <- messages
+  if message.senderId === daveId &&
+     message.roomId   === airLockId
+} yield message
+~~~
 
 ## Explicit Joins
 
