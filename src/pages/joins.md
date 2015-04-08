@@ -53,6 +53,8 @@ val altDavesMessages = for {
 ## Explicit Joins
 
 Which are the kind we use, more explicit.
+
+
 Slick offers the following methods to join two or more tables:
 
   * `leftJoin`
@@ -60,26 +62,27 @@ Slick offers the following methods to join two or more tables:
   * `innerJoin`
   * `outerJoin`
 
-There is also `join` which by default is an `innnerJoin`, but one can supply a `JoinType`.
-The above methods are niceties to join with an explicit `JoinType` parameter.
+The above methods are convenience to `join` with an explicit `JoinType` parameter.
+If `join` isn't supplied `JoinType` it defaults to `innnerJoin`.
 
 An explanation of SQL joins can be found on [Wikipedia][link-wikipedia-joins].
 
 Let's rework the implicit examples from above using explicit methods:
 
-
 ``` scala
-
-      lazy val x = for {
-        ((msgs, usrs), rms) ← messages leftJoin users on (_.senderId === _.id) leftJoin rooms on (_._1.roomId === _.id)
-        if usrs.id === daveId && rms.id === airLockId && rms.id.? === msgs.roomId
-      } yield msgs
+      lazy val z = messages.
+                      leftJoin(users).
+                        leftJoin(rooms).
+                          on{ case ((m,u),r) =>  m.senderId === u.id && m.roomId === r.id } .
+                            filter{case ((m,u),r) => u.id === daveId && r.id === airLockId} .
+                              map {case ((m,u),r) => m}
 
       lazy val y = for {
         (m1, u) ← messages leftJoin users on ( _.senderId === _.id)
         (m2, r) ← messages leftJoin rooms on ( _.roomId   === _.id)
         if m1.id === m2.id && u.id === daveId && r.id === airLockId && r.id.? === m1.roomId
       } yield m1
+
 
       lazy val z = messages.
                       leftJoin(users).
@@ -89,6 +92,14 @@ Let's rework the implicit examples from above using explicit methods:
                               map {case ((m,u),r) => m}
 
 ```
+
+TODO: Explain two versions of query above.
+tableA join tableB join tableC Vs tableA join tableB on (...) tableA join tableC on (...)
+
+
+
+
+
 
 <div class="callout callout-danger">
 **Slick limitation**
@@ -122,8 +133,12 @@ Examples
 
 ## Aggregation
 
+
+
 Simple ones: min, max, sum, avg
+
 Group By
+
 Monster example of a join and aggregate?
 
 ## Take Home Points
