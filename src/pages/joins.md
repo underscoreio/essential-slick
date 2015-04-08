@@ -53,8 +53,53 @@ val altDavesMessages = for {
 ## Explicit Joins
 
 Which are the kind we use, more explicit.
-List out the methods.
-Re-work implicit examples using explicit.
+Slick offers the following methods to join two or more tables:
+
+  * `leftJoin`
+  * `rightJoin`
+  * `innerJoin`
+  * `outerJoin`
+
+There is also `join` which by default is an `innnerJoin`, but one can supply a `JoinType`.
+The above methods are niceties to join with an explicit `JoinType` parameter.
+
+An explanation of SQL joins can be found on [Wikipedia][link-wikipedia-joins].
+
+Let's rework the implicit examples from above using explicit methods:
+
+
+``` scala
+
+      lazy val x = for {
+        ((msgs, usrs), rms) ← messages leftJoin users on (_.senderId === _.id) leftJoin rooms on (_._1.roomId === _.id)
+        if usrs.id === daveId && rms.id === airLockId && rms.id.? === msgs.roomId
+      } yield msgs
+
+      lazy val y = for {
+        (m1, u) ← messages leftJoin users on ( _.senderId === _.id)
+        (m2, r) ← messages leftJoin rooms on ( _.roomId   === _.id)
+        if m1.id === m2.id && u.id === daveId && r.id === airLockId && r.id.? === m1.roomId
+      } yield m1
+
+      lazy val z = messages.
+                      leftJoin(users).
+                        leftJoin(rooms).
+                          on{ case ((m,u),r) =>  m.senderId === u.id && m.roomId === r.id } .
+                            filter{case ((m,u),r) => u.id === daveId && r.id === airLockId} .
+                              map {case ((m,u),r) => m}
+
+```
+
+<div class="callout callout-danger">
+**Slick limitation**
+
+Due to Slick's current implementation it does not know that SQLs outer joins can contain nullable values,
+even for non nullable columns.
+If you attempt to reference a column in an join column that is null Slick with throw a `SlickException`.
+To get around this Slick currently generates a `?` method on columns so you can inform Slick with columns may be null.
+
+</div>
+
 
 ## Slick is not a DSL for SQL
 

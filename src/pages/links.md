@@ -25,3 +25,4 @@
 [link-scala-option]:                      http://www.scala-lang.org/api/current/#scala.Option
 [link-scala-value-classes]:               http://docs.scala-lang.org/overviews/core/value-classes.html
 [link-scala-interpolation]:               http://docs.scala-lang.org/overviews/core/string-interpolation.html
+[link-wikipedia-joins]:                   http://en.wikipedia.org/wiki/Join_(SQL)
