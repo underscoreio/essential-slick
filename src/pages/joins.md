@@ -1,6 +1,6 @@
 # Joins and Aggregates {#joins}
 
-Into, what you're going to learn.
+TODO: Intro, what you're going to learn.
 
 ## Implicit Joins
 
@@ -93,6 +93,8 @@ Let's rework the implicit examples from above using explicit methods:
 
 
 ```
+TODO:Brief explanation of above queries
+
 
 <div class="callout callout-info">
 **No Full outer Join**
@@ -190,10 +192,7 @@ select max(x2."id"), min(x2."id") from "message" x2 where x2."sender" = 1
 
 ## Group By
 
-Monster example of a join and aggregate?
-
-
-
+TODO: Monster example of a join and aggregate?
 
 
 ### Exercises
