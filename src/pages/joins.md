@@ -256,7 +256,7 @@ TODO: Monster example of a join and aggregate?
 #### User rooms
 
 Return a list of users names and the rooms they belong to using an explicit join.
-Make sure there are no `null` columns!
+Make sure there are no `null` columns in the result set!
 
 <div class="solution">
 Simple right?
@@ -264,7 +264,7 @@ Just replace the `leftJoin` with a rightJoin from the query above!
 
 ~~~ scala
 lazy val usersRooms = for {
-  (usrs,occ) ← users rightJoin occupants on (_.id === _.userId)
+  (usrs,occ) <- users rightJoin occupants on (_.id === _.userId)
 } yield usrs.name -> occ.roomId
 
 ~~~
