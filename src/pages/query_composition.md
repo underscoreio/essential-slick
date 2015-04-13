@@ -1,11 +1,22 @@
 # Query Composition
 
-Intro, what you are going to learn.
+TODO: Intro, what you are going to learn.
 
 
 ## Sorting
 
-- and other things we've not dsicsused that convert query => query.
+To order a query use either of the methods `sorted` or `sortWith`.
+Both methods take one or more columns
+
+val msgs =  messages.sorted( m => (m.ts,m.id))
+select x2."sender", x2."content", x2."ts", x2."id", x2."to", x2."room", x2."readBy" from "message" x2 order by x2."ts", x2."id"
+
+
+
+val msgs =  messages.sorted( m => (m.roomId.desc,m.ts.asc))
+
+
+- and other things we've not discussed that convert query => query.
 
 ## Query Extensions
 
