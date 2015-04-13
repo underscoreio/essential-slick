@@ -1,6 +1,9 @@
 # Joins and Aggregates {#joins}
 
-TODO: Intro, what you're going to learn.
+In this chapter we'll learn about the different styles of join available to you,
+including implicit, explicit,inner,outer and zip.
+We'll round the chapter off with a quick look at aggregate functions and grouping.
+
 
 ## Implicit Joins
 
@@ -27,6 +30,22 @@ We can retrieve all messages by Dave for a given room using implicit joins:
 val daveId:UserPK = ???
 val roomId:RoomPK = ???
 
+val altDavesMessages = for {
+  message <- messages
+  user    <- users
+  if message.senderId === user.id &&
+     message.roomId   === airLockId &&
+     user.id          === daveId
+} yield message
+~~~
+
+We can also use foreign keys defined on our tables when composing a query.
+Here we have reworked the same example to use `messages`  foreign keys.
+
+~~~ scala
+val daveId:UserPK = ???
+val roomId:RoomPK = ???
+
 val davesMessages = for {
   message <- messages
   user    <- message.sender
@@ -37,32 +56,19 @@ val davesMessages = for {
 } yield message
 ~~~
 
-or without referring to `message`s foreign keys `sender` and `room`.
-
-~~~ scala
-val daveId:UserPK = ???
-val roomId:RoomPK = ???
-
-val altDavesMessages = for {
-  message <- messages
-  if message.senderId === daveId &&
-     message.roomId   === airLockId
-} yield message
-~~~
-
 ## Explicit Joins
 
-Which are the kind we use, more explicit.
-
+An explicit join is where the join type is unsurprisingly explicitly defined.
+They should be the prefered type of join as the intention of the query is clear.
 
 Slick offers the following methods to join two or more tables:
 
+  * `innerJoin` - an inner join
   * `leftJoin`  - a left outer join
   * `rightJoin` - a right outer join
-  * `innerJoin` - an inner join
   * `outerJoin` - a full outer join.
 
-The above methods are convenience to `join` with an explicit `JoinType` parameter.
+The above are convenience methods to `join` with an explicit `JoinType` parameter.
 If `join` isn't supplied `JoinType` it defaults to `innnerJoin`.
 
 An explanation of SQL joins can be found on [Wikipedia][link-wikipedia-joins].
@@ -70,50 +76,81 @@ An explanation of SQL joins can be found on [Wikipedia][link-wikipedia-joins].
 Let's rework the implicit examples from above using explicit methods:
 
 ``` scala
-      //Left outer join
-      lazy val left = messages.
-        leftJoin(users).
-        leftJoin(rooms).
-        on { case ((m, u), r)     => m.senderId === u.id && m.roomId === r.id }.
-        filter { case ((m, u), r) => u.id       === daveId && r.id === airLockId }.
-        map { case ((m, u), r) => m }
+//Left outer join
+lazy val left = messages.
+  leftJoin(users).on(_.senderId === _.id).
+  leftJoin(rooms).on{ case ((m,u),r) => m.roomId === r.id}.
+  filter { case ((m, u), r) => u.id === daveId && r.id === airLockId }.
+  map { case ((m, u), r) => m }
 
-      //Right outer join
-      lazy val right = for {
-        ((msgs, usrs), rms) <- messages rightJoin users on (_.senderId === _.id) rightJoin rooms on (_._1.roomId === _.id)
-        if usrs.id === daveId && rms.id === airLockId && rms.id === msgs.roomId
-      } yield msgs
+//Right outer join
+lazy val right = for {
+  ((msgs, usrs), rms) <- messages rightJoin users on (_.senderId === _.id)
+                                  rightJoin rooms on (_._1.roomId === _.id)
+  if usrs.id === daveId &&
+     rms.id === airLockId &&
+     rms.id === msgs.roomId
+} yield msgs
 
-      //Inner join
-      lazy val inner = for {
-        ((msgs, usrs), rms) <- messages innerJoin users on (_.senderId === _.id) leftJoin rooms on (_._1.roomId === _.id)
-        if usrs.id === daveId && rms.id === airLockId && rms.id.? === msgs.roomId
-      } yield msgs
-
-
-
+//Inner join
+lazy val inner = for {
+  ((msgs, usrs), rms) <- messages innerJoin users on (_.senderId === _.id)
+                                  innerJoin rooms on (_._1.roomId === _.id)
+  if usrs.id === daveId && rms.id === airLockId && rms.id.? === msgs.roomId
+} yield msgs
 ```
-TODO:Brief explanation of above queries
-
 
 <div class="callout callout-info">
 **No Full outer Join**
 
-At the time of writing H2 does not support full outer joins.
+At the time of writing H2 does not support full outer joins,
+so has not been included above.
 
-~~~ scala
+A simple example of a full out join would be:
+
+``` scala
+
+//Full outer join
 lazy val outer = for {
   (msg, usr) ← messages outerJoin users on (_.senderId.? === _.id.?)
 } yield msg -> usr
-~~~
+```
+
 </div>
+
+Above we can see an example of each of the explicit joins.
+It is worth noting we can mix join types,
+we don't need to use the same type of join throughout a query.
+
+We can also see different ways to construct the arguments to our `on` methods,
+either deconstructing the tuple using a case statement or by referencing the tuple position with an underscore method,
+e.g. `_1`.
+
+We would recommend using a case statement as it easier to read than walking the tuple.
+
+The three examples above show a join and it's conditional grouped.
+We can however construct a query but adding all joins and then having one conditional.
+Let's look at an example of the left join using this method:
+
+~~~ scala
+lazy val left = messages.
+  leftJoin(users).
+  leftJoin(rooms).
+  on { case ((m, u), r) => m.senderId === u.id && m.roomId === r.id }.
+  filter { case ((m, u), r) => u.id === daveId && r.id === airLockId }.
+  map { case ((m, u), r) => m }
+~~~
+
+We will see how this is incredibley useful in the next chapter when looking at composing queries.
+
+Finally, we have shown examples of building queries using either for comprehension or maps and filters.
 
 ## Slick is not a DSL for SQL
 
 - Using Slick you are expressing what you want
 - Find out an "Algebra" is and describe it, if relevant.
 - SQL generated depends on database
-- Specific database, version, optimizer turns it into what gers run
+- Specific database, version, optimizer turns it into what gets run
 - MySQL particularly bad at this
 - use plain SQL.
 - give examples.
@@ -130,7 +167,26 @@ A simple, but nonsensical example would be to join users and rooms:
 ``` scala
 val zipped = for {
        (u,r) <-  users zip rooms
-     } yield u. -> r.title
+     } yield u.name -> r.title
+```
+
+From this slick generates:
+
+``` sql
+x2.x3, x4.x5
+from (select x6."name" as x3, rownum as x7 from "user" x6) x2 inner join
+     (select x8."title" as x5, rownum as x9 from "room" x8) x4 on x2.x7 = x4.x9`
+```
+
+and we get back the following:
+
+``` pre
+/------+----------\
+| X3   | X5       |
++------+----------+
+| Dave | Air Lock |
+| HAL  | Pod      |
+\------+----------/
 ```
 
 
