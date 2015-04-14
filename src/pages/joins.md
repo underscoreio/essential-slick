@@ -18,7 +18,25 @@ val q = for {
 
 As the name suggests an implicit join is one where we don't specify the kind of join to use,
 rather we inform Slick how we want tables to be joined.
-TODO: Explain if / how we can replicate the explicit joins using implicit joins.
+
+In the above query the join is declared using Slick's foreign key method.
+
+``` scala
+def sender   = foreignKey("msg_sender_fk", senderId, users)(_.id)
+```
+
+We can rewrite the query
+
+~~~ scala
+val q1 = for {
+  msg <- messages
+  usr <- users
+  if usr.id === msg.senderId
+} yield (usr.name, msg.content)
+~~~
+
+select x2."name", x3."content" from "message" x3, "user" x2 where x2."id" = x3."sender"
+select x2."name", x3."content" from "message" x3, "user" x2 where x2."id" = x3."sender"
 
 Let's look at more complex query,
 after reviewing our schema:
@@ -56,6 +74,8 @@ val davesMessages = for {
      message.roomId === room.id
 } yield message
 ~~~
+
+TODO: Explain if / how we can replicate the explicit joins using implicit joins.
 
 ## Explicit Joins
 
