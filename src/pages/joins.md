@@ -16,8 +16,9 @@ val q = for {
 } yield (usr.name, msg.content)
 ~~~
 
-As the name suggests an implicit join is one where we don't need
-to specify the type of joins to use.
+As the name suggests an implicit join is one where we don't specify the kind of join to use,
+rather we inform Slick how we want tables to be joined.
+TODO: Explain if / how we can replicate the explicit joins using implicit joins.
 
 Let's look at more complex query,
 after reviewing our schema:
