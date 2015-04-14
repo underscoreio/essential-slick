@@ -27,8 +27,8 @@ after reviewing our schema:
 We can retrieve all messages by Dave for a given room using implicit joins:
 
 ~~~ scala
-val daveId:UserPK = ???
-val roomId:RoomPK = ???
+val daveId:Id[UserTable] = ???
+val roomId:Id[RoomTable] = ???
 
 val altDavesMessages = for {
   message <- messages
@@ -43,8 +43,8 @@ We can also use foreign keys defined on our tables when composing a query.
 Here we have reworked the same example to use `messages`  foreign keys.
 
 ~~~ scala
-val daveId:UserPK = ???
-val roomId:RoomPK = ???
+val daveId:Id[UserTable] = ???
+val roomId:Id[RoomTable] = ???
 
 val davesMessages = for {
   message <- messages
