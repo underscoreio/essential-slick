@@ -24,8 +24,13 @@ In the above query the join is declared using Slick's foreign key method.
 ``` scala
 def sender   = foreignKey("msg_sender_fk", senderId, users)(_.id)
 ```
+Slick generates the following SQL:
 
-We can rewrite the query
+``` sql
+select x2."name", x3."content" from "message" x3, "user" x2 where x2."id" = x3."sender"
+```
+
+We can rewrite the query to declare the join ourselves:
 
 ~~~ scala
 val q1 = for {
@@ -35,31 +40,39 @@ val q1 = for {
 } yield (usr.name, msg.content)
 ~~~
 
+and see the SQL generated is the same:
+
+``` sql
 select x2."name", x3."content" from "message" x3, "user" x2 where x2."id" = x3."sender"
-select x2."name", x3."content" from "message" x3, "user" x2 where x2."id" = x3."sender"
+```
 
 Let's look at more complex query,
 after reviewing our schema:
 
-[insert schema diagram here or possibly code sample ?]
+<!--  This probably needs to be prettier -->
+![Database schema](src/img/Schema.png)
 
+
+<!--  Shouldwe be querying on room title and user name, otherwise you really only need the message table. -->
 We can retrieve all messages by Dave for a given room using implicit joins:
 
 ~~~ scala
 val daveId:Id[UserTable] = ???
 val roomId:Id[RoomTable] = ???
 
-val altDavesMessages = for {
+val davesMessages = for {
   message <- messages
   user    <- users
+  room    <- rooms
   if message.senderId === user.id &&
-     message.roomId   === airLockId &&
-     user.id          === daveId
+     message.roomId   === room.id &&
+     user.id          === daveId  &&
+     room.id          === airLockId
 } yield message
 ~~~
 
 We can also use foreign keys defined on our tables when composing a query.
-Here we have reworked the same example to use `messages`  foreign keys.
+Here we have reworked the same example to use `messages` foreign keys.
 
 ~~~ scala
 val daveId:Id[UserTable] = ???
@@ -69,13 +82,34 @@ val davesMessages = for {
   message <- messages
   user    <- message.sender
   room    <- message.room
-  if user.id === daveId &&
-     room.id === airLockId &&
+  if user.id        === daveId &&
+     room.id        === airLockId &&
      message.roomId === room.id
 } yield message
 ~~~
 
-TODO: Explain if / how we can replicate the explicit joins using implicit joins.
+Let's compare the SQL the two versions of the query generate:
+
+Manually joining:
+
+~~~ sql
+select x2."sender", x2."content", x2."ts", x2."id", x2."to", x2."room", x2."readBy"
+from "message" x2, "user" x3, "room" x4
+where (((x2."sender" = x3."id") and (x2."room" = x4."id")) and (x3."id" = 1)) and
+      (x4."id" = 1)
+~~~
+
+Using Slicks foreign key methods:
+
+~~~ sql
+select x2."sender", x2."content", x2."ts", x2."id", x2."to", x2."room", x2."readBy"
+from "message" x2, "user" x3, "room" x4
+where ((x3."id" = x2."sender") and (x4."id" = x2."room")) and
+      (((x3."id" = 1) and (x4."id" = 1)) and (x2."room" = x4."id"))
+~~~
+
+Apart from some bracketitis, the queries are not far from the handwritten version.
+
 
 ## Explicit Joins
 
@@ -136,7 +170,6 @@ lazy val outer = for {
   (msg, usr) ← messages outerJoin users on (_.senderId.? === _.id.?)
 } yield msg -> usr
 ```
-
 </div>
 
 Above we can see an example of each of the explicit joins.
@@ -166,14 +199,70 @@ We will see how this is incredibley useful in the next chapter when looking at c
 
 Finally, we have shown examples of building queries using either for comprehension or maps and filters.
 
+Now, let's have a look at the SQL Slick generates for each of these queries:
+
+``` sql
+-- left
+select x2.x3, x2.x4, x2.x5, x2.x6, x2.x7, x2.x8, x2.x9
+from
+    (select x10.x11 as x4, x10.x12 as x9, x10.x13 as x6, x10.x14 as x8, x10.x15 as x7, x10.x16 as x5, x10.x17 as x3, x18.x19 as x20, x18.x21 as x22, x18.x23 as x24 from (select x25."content" as x11, x25."readBy" as x12, x25."id" as x13, x25."room" as x14, x25."to" as x15, x25."ts" as x16, x25."sender" as x17 from "message" x25) x10 left outer join (select x26."id" as x19, x26."name" as x21, x26."email" as x23 from "user" x26) x18 on x10.x17 = x18.x19) x2 left outer join (select x27."title" as x28, x27."id" as x29 from "room" x27) x30 on x2.x8 = x30.x29
+where (x2.x20 = 1) and (x30.x29 = 1)
+
+-- right
+
+select x2.x3, x2.x4, x2.x5, x2.x6, x2.x7, x2.x8, x2.x9
+from
+  (select x10.x11 as x4, x10.x12 as x9, x10.x13 as x6, x10.x14 as x8, x10.x15 as x7, x10.x16 as x5, x10.x17 as x3, x18.x19 as x20, x18.x21 as x22, x18.x23 as x24 from (select x25."content" as x11, x25."readBy" as x12, x25."id" as x13, x25."room" as x14, x25."to" as x15, x25."ts" as x16, x25."sender" as x17 from "message" x25) x10 right outer join (select x26."id" as x19, x26."name" as x21, x26."email" as x23 from "user" x26) x18 on x10.x17 = x18.x19) x2 right outer join (select x27."title" as x28, x27."id" as x29 from "room" x27) x30 on x2.x8 = x30.x29
+where ((x2.x20 = 1) and (x30.x29 = 1)) and (x30.x29 = x2.x8)
+
+-- inner
+
+select x2.x3, x2.x4, x2.x5, x2.x6, x2.x7, x2.x8, x2.x9
+from
+  (select x10.x11 as x4, x10.x12 as x9, x10.x13 as x6, x10.x14 as x8, x10.x15 as x7, x10.x16 as x5, x10.x17 as x3, x18.x19 as x20, x18.x21 as x22, x18.x23 as x24 from (select x25."content" as x11, x25."readBy" as x12, x25."id" as x13, x25."room" as x14, x25."to" as x15, x25."ts" as x16, x25."sender" as x17 from "message" x25) x10 inner join (select x26."id" as x19, x26."name" as x21, x26."email" as x23 from "user" x26) x18 on x10.x17 = x18.x19) x2 inner join (select x27."title" as x28, x27."id" as x29 from "room" x27) x30 on x2.x8 = x30.x29
+where ((x2.x20 = 1) and (x30.x29 = 1)) and (x30.x29 = x2.x8)
+```
+This is suffering from more than just bracketitis, a handwritten query is going to be much nicer than this.
+In the next section we will look how and when we need to worry about this and how Slick mitigates against this.
+
 ## Slick is not a DSL for SQL
 
-- Using Slick you are expressing what you want
-- Find out an "Algebra" is and describe it, if relevant.
-- SQL generated depends on database
-- Specific database, version, optimizer turns it into what gets run
-- MySQL particularly bad at this
-- use plain SQL.
+These generated queries are a bit worrying,
+hand writing the query is far tighter:
+
+~~~ sql
+select *
+from "message" left outer join "user" on "message"."sender" = "user"."id"
+               left outer join "room" on "message"."room"   = "room"."id"
+where
+        "user"."id" = 1 and
+        "room"."id" = 1
+~~~
+
+If slick generates such verbose queries surely they aren't going to be performant?
+
+<!-- help help, I hate this - yes I am aware I've just mangled something you wrote. It has gone from lovley bullet points to bleh -->
+First, using Slick you are expressing what you want,
+discover an "Algebra" for your problem and describe it.
+
+The SQL generated depends on the database being targeted.
+The database saves the day by optimizing the Slick supplied SQL.
+
+<div class="callout callout-warn">
+**Mysql**
+MySQL particularly bad at this, so it doesn't so much save the day as look sheepish while trying to run the query while not making eye contact.
+</div>
+
+
+<!-- See DifferentDatabases.scala  in chapter 4 and see if it makes sense to include examples. -->
+
+### What to do for queries the database can't optimise ?
+
+If the database query optimizer can not help then it's time to look at plain SQL.
+
+TODO: LOOK HERE http://slick.typesafe.com/doc/2.1.0/sql.html
+
+
 - give examples.
 
 ## Zip Joins
