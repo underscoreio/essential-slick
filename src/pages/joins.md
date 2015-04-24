@@ -263,7 +263,12 @@ If the database query optimizer can not help then it's time to look at plain SQL
 TODO: LOOK HERE http://slick.typesafe.com/doc/2.1.0/sql.html
 
 
+  - different imports, no slick driver
+
+
 - give examples.
+
+- exercise rewrite inner and right as plain sql
 
 ## Zip Joins
 
