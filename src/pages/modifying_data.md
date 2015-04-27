@@ -463,7 +463,7 @@ val query =
 
 This gives us two benefits: the compiler will point out typos in variables names, but also the input is santitized against SQL injection attacks.
 
-We'll look at plain SQL in more depth in chapter/section **TODO**, including the `sql` interpolator for select statements.
+We'll look at plain SQL in more depth in chapter 4, including the `sql` interpolator for select statements.
 
 
 ### Exercises
