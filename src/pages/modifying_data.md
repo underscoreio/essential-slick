@@ -521,7 +521,7 @@ Auto-incrementing values are not inserted by Slick, unless forced. The auto-incr
 
 Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
-Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is not performance advantage.
+Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is no advantage.
 
 Slick supports plain SQL queries as well as the lif􏰄ted embedded style we've used. Plain queries don't compose as nicely as lifted, but enable you to execute essentially arbitrary SQL when you need to.
 
