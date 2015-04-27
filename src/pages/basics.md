@@ -636,7 +636,7 @@ Slick models a database using:
 * `Table[T]` classes for the table schema; and
 * `TableQuery[T]` for the table itself.
 
-Slick will map column values to and from the database, and we can teach slick about our own types with custom mappings.
+Slick will map column values to and from the database, and we can teach Slick about our own types with custom mappings.
 
 Queries and inserts look much like operations on Scala collections.
 
