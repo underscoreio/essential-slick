@@ -201,7 +201,7 @@ The Scala Doc for each driver also lists the capabilities the driver _does not_ 
 
 If we do want to get a populated `Message` back from an insert for any database, with the auto-generated `id` set, we can write a method to do that.  It would take a message as an argument, insert it returning the `id`, and then give back a copy the message setting the `id`. This would emulate the `jdbc.returnInsertOther` capability.
 
-We don't need to write that method as Slick supports it via `into`:
+However, we don't need to write that method as Slick's `into` does the job:
 
 ~~~ scala
 val messagesInsertWithId =
@@ -213,9 +213,7 @@ val result: Message =
 
 The `result` will be the message with the auto-generated `id` field correctly set.
 
-This is a general purpose client-side transformation. That is, it runs in your Scala application and not the database.
-
-Any `returning` expression can have an `into`.  The `into` part is a function from the type being inserted and the type returned, to some other type. In the above example the type of the `into` function is:
+That's one example, but `into` is a general purpose client-side transformation. That is, it runs in your Scala application and not the database. Any `returning` expression can have an `into`.  The `into` part is a function from the type being inserted and the type returned, to some other type. In the above example the type of the `into` function is:
 
 ~~~ scala
 (Message, Long) => Message
