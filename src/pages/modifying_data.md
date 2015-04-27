@@ -194,7 +194,7 @@ val id: Long = messagesInsert += Message("HAL", "I'm back", DateTime.now)
 <div class="callout callout-info">
 **Driver Capabilities**
 
-You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `` capability.
+You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `jdbc.returnInsertOther` capability.
 
 The Scala Doc for each driver also lists the capabilities the driver _does not_ have. For an example, take a look at the top of the [H2 Driver Scala Doc][link-ref-h2driver] page.
 </div>
