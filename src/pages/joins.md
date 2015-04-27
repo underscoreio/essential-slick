@@ -80,33 +80,25 @@ val davesMessages = for {
   user    <- message.sender
   room    <- message.room
   if user.id        === daveId &&
-     room.id        === airLockId &&
-     message.roomId === room.id
+     room.id        === airLockId
 } yield message
 ~~~
 
-Let's compare the SQL the two versions of the query generate:
-
-Manually joining:
+Both cases will produce SQL something like this:
 
 ~~~ sql
-select x2."sender", x2."content", x2."ts", x2."id", x2."to", x2."room", x2."readBy"
-from "message" x2, "user" x3, "room" x4
-where (((x2."sender" = x3."id") and (x2."room" = x4."id")) and (x3."id" = 1)) and
-      (x4."id" = 1)
+select
+  m."sender", m."content", m."ts", m."room", m."to", m."id"
+from
+  "message" m, "user" u, "room" r
+where (
+  (u."id" = m."sender") and
+  (r."id" = m."room")
+) and (
+  (u."id" = 1) and
+  (r."id" = 1)
+)
 ~~~
-
-Using Slicks foreign key methods:
-
-~~~ sql
-select x2."sender", x2."content", x2."ts", x2."id", x2."to", x2."room", x2."readBy"
-from "message" x2, "user" x3, "room" x4
-where ((x3."id" = x2."sender") and (x4."id" = x2."room")) and
-      (((x3."id" = 1) and (x4."id" = 1)) and (x2."room" = x4."id"))
-~~~
-
-Apart from some bracketitis, the queries are not far from the handwritten version.
-
 
 ## Explicit Joins
 
