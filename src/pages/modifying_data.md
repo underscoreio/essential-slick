@@ -55,10 +55,10 @@ DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement:
 
 You can enable a variety of events to be logged:
 
-* `scala.slick.jdbc.JdbcBackend.statement` - which is for statement logging, as you've seen.
-* `scala.slick.jdbc.StatementInvoker.result` - which logs the results of a query.
-* `scala.slick.session` - for session information, such as connections being opened.
-* `scala.slick` - for everything!  This is usually too much.
+* `scala.slick.jdbc.JdbcBackend.statement` --- which is for statement logging, as you've seen.
+* `scala.slick.jdbc.StatementInvoker.result` --- which logs the results of a query.
+* `scala.slick.session` --- for session information, such as connections being opened.
+* `scala.slick` --- for everything!  This is usually too much.
 
 
 The `StatementInvoker.result` logger is pretty cute:
