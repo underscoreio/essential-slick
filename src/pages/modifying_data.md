@@ -40,7 +40,7 @@ delete from "message" where "message"."sender" = 'HAL'
 
 In the previous chapter we noted you can see the SQL Slick would use by calling `selectStatement` on a query. There's also `deleteStatement` and `updateStatement`.  These are useful to see the SQL that would be produced by a query, but sometimes you want to see all the queries _when Slick executes them_.  You can do that by configuring logging.
 
-Slick uses a logging framework called [SLFJ][link-slf4j].  You can configure this to capture information about the queries being run.  The "essential-slick-example" project uses a logging back-end called [_Logback_][link-logback], which is configured in the file _src/main/resources/logback.xml_.  In that file we enable statement logging by turning up the logging to debug level. For example:
+Slick uses a logging framework called [SLFJ][link-slf4j].  You can configure this to capture information about the queries being run.  The example GitHub project uses a logging back-end called [_Logback_][link-logback], which is configured in the file _src/main/resources/logback.xml_.  In that file we enable statement logging by turning up the logging to debug level. For example:
 
 ~~~ xml
 <logger name="scala.slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
