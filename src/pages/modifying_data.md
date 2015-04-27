@@ -99,6 +99,7 @@ All the operations you can perform on a column, such as `like` or `toLowerCase`,
 
 So `Column[T]` is for values, and deleting based on a value makes no sense in Slick or SQL. Imagine the query `SELECT 42`. You can represent this in Slick as `Query(42)`. You can `run` the query, but you cannot `delete` on it. But deleting on a table, like `MessageTable`, that makes more sense.
 
+
 ### Exercises
 
 Experiment with the queries we discuss before trying the exercises in this chapter. The code for this chapter is in the [GitHub repository][link-example] in the _chapter-02_ folder.  As with chapter 1, you can use the `run` command in SBT to execute the code against a H2 database.
@@ -268,6 +269,24 @@ We don't generally talk about invokers as Slick provides them implicitly.
 </div>
 
 
+### Transactions
+
+So far all the database interactions we've seen have run independently.
+That is, each query, delete, or update succeeds or fails and is automatically committed to the database.
+
+A transaction allows you to rollback changes to the database if later ones fail, or if you detect a situation where you want to manually rollback.  The scope of the transaction starts with a call to `session.withTransaction` and ends when the `withTransaction` block ends:
+
+~~~ scala
+session.withTransaction {
+  // ...quries, updates, deletes ...
+}
+~~~
+
+At the end of the transaction, providing there were no exceptions or calls to `session.rollback`, the changes are committed to the database.
+
+You might always want a transaction. In that case, you can get a session with `db.withTransaction` in place of calls to `db.withSession`.
+
+
 ### Exercises
 
 
@@ -292,6 +311,30 @@ def insertOnce(sender: String, text: String)(implicit session: Session): Long = 
   }
 }
 ~~~
+</div>
+
+
+#### Rollback
+
+Assuming you already have an `implicit session`, what is the state of the database after this code is run?
+
+~~~ scala
+session.withTransaction {
+  messages.delete
+  session.rollback()
+  messages.delete
+  println("Surprised?")
+}
+~~~
+
+Is "Surprised?" printed?
+
+<div class="solution">
+The call to `rollback` only impacts Slick calls.
+
+This means the two calls to `delete` will have no effect: the database will have the same message records it had before this block of code was run.  
+
+It also means the message "Surprised?" will be printed.  
 </div>
 
 
