@@ -28,8 +28,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@bitbucket.org:underscoreio/core-slick.git"
+    "url": "git@github.org:underscoreio/essential-slick.git"
   },
-  "author": "Dave Gurnell",
+  "author": "Richard Dallway and Jonathan Ferguson",
   "license": "Closed source"
 }
