@@ -262,7 +262,7 @@ create table "message" (
 )
 ~~~
 
-Slick DDL supports `create` and `drop`. This is useful working with in memory databases, as we are doing in this chapter. You're unlikely to use Slick's DLL to manage schema migrations, as they are relatively simple. 
+Slick DDL supports `create` and `drop`. This is useful working with in memory databases, as we are doing in this chapter. You're unlikely to use Slick's DLL to manage schema migrations, as they are relatively simple.
 
 ### Inserting Data
 
@@ -305,7 +305,7 @@ Which style you use is a matter of your circumstance and team preference.
 
 Note also that we use triple equals `===` and not `==` in the query. The `===` is Slicks way of inserting the SQL `=` operator in here, rather than the Scala `equals` check. But aside from that, the query looks just the same as the code you'd write to work with any Scala collection.
 
-The `===` is the only special case to notice.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use less than:
+The `===`and corresponding `=!=` are the only special cases.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use less than:
 
 ~~~ scala
 val now = new DateTime(2001,2,17, 10,22,54)
