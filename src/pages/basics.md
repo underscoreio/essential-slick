@@ -26,13 +26,7 @@ The aim of this first chapter is to introduce core concepts and get you up and r
 
 We'll be using an example of a chat application here and in the rest of the book. Think of it as the database behind a _Slack_, _Flowdock_, or _IRC_ application. It will have users, messages, and rooms. These will be modeled as tables, relationships between tables, and various kinds of queries to run across the tables.
 
-The final database will end up looking like this:
-
-**TODO: Insert diagram**
-
-For now, though, we're going to start with a single table for messages:
-
-**TODO: Insert table picture, possibly**
+For now, though, we're going to start with a single table for storing messages.
 
 
 ## Getting Started
