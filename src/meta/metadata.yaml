@@ -1,7 +1,7 @@
 ---
 title: Essential Slick
-author: Richard Dallaway
-date: "Pre-Release, February 2015"
+author: Richard Dallaway and Jonathan Ferguson
+date: "Pre-Release, May  2015"
 filenameStem: "essential-slick"
 # Used by Pandoc to generate the PDF cover...
 # see src/css/book.css for HTML/ePub covers:
