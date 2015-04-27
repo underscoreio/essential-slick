@@ -1107,7 +1107,37 @@ but found a `UserPK` and a `MessagePK`.
 Values classes are a reasonable way to make your code safer and more legible.
 The amount of code you need to write is small,
 however for a large database it can become dull writing many such methods.
-In that case, consider generating the source code rather than writing it.
+In that case, consider either generating the source code rather than writing it or by generalising our definition of a primary key, so we only need to define it once.
+
+Rather than providing a definition for each table
+
+~~~ scala
+final case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
+~~~
+
+we can supply the table as a type parameter
+
+~~~ scala
+final case class Id[A](value: Long) extends AnyVal with MappedTo[Long]
+~~~
+
+allowing us to now define our row and tables.
+
+~~~ scala
+case class User(id: Option[Id[UserTable]], name: String, email: Option[String] = None)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id = column[Id[UserTable]]("id", O.AutoInc, O.PrimaryKey)
+  def name = column[String]("name")
+  def email = column[Option[String]]("email")
+
+  def * = (id.?, name, email) <> (User.tupled, User.unapply)
+}
+
+lazy val users = TableQuery[UserTable]
+~~~
+
+We now get type safety without having to define the boiler plate of individual Id classes per table.
 
 
 ### Exercises
@@ -1176,6 +1206,45 @@ implicit val userRoleMapper =
   _.id,
   v => UserRole.values.find(_.id == v) getOrElse Regular)
 ~~~
+</div>
+
+### Boilerplate free primary keys
+
+Modify the definition of to use type parameter definition of table primary keys, assume `User` and `Room` are already implement this way.
+
+~~~ scala
+case class Occupant(roomId: Long, userId: Long)
+
+class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
+  def roomId = column[Long]("room")
+  def userId = column[Long]("user")
+
+  def pk = primaryKey("room_user_pk", (roomId, userId))
+
+  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
+}
+
+lazy val occupants = TableQuery[OccupantTable]
+~~~
+
+<div class="solution">
+All we need to do is update the existing definition of `roomId` and `userId` from `Long` to `Id[TableName]`:
+
+~~~ scala
+case class Occupant(roomId: Id[RoomTable], userId:Id[UserTable])
+
+class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
+  def roomId = column[Id[RoomTable]]("room")
+  def userId = column[Id[UserTable]]("user")
+
+  def pk = primaryKey("room_user_pk", (roomId, userId))
+
+  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
+}
+
+lazy val occupants = TableQuery[OccupantTable]
+~~~
+
 </div>
 
 
