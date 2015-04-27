@@ -16,6 +16,7 @@
 [link-slick]:                             http://slick.typesafe.com/
 [link-ref-orm]:                           http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
 [link-ref-dbs]:                           http://slick.typesafe.com/doc/2.1.0/introduction.html#supported-database-systems
+[link-ref-gen]:                           http://slick.typesafe.com/doc/2.1.0/code-generation.html
 [link-ref-h2driver]:                      http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.driver.H2Driver
 [link-slick-hlist]:                       http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList
 [link-slick-column-options]:              http://slick.typesafe.com/doc/2.1.0/api/index.html#scala.slick.ast.ColumnOption

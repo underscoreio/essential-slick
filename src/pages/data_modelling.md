@@ -272,12 +272,25 @@ type User =
 
 Typing this in by hand is error prone and likely to drive you crazy. There are two ways to improve on this:
 
-- The first is to know that Slick can generate this code for you from an existing database. We'll look at
-that in chatper **TODO**.  We expect you'd be needing `HList`s for legacy database structures, and in that case
+- The first is to know that Slick can generate this code for you from an existing database.  We expect you'd be needing `HList`s for legacy database structures, and in that case
 code generate is the way to go.
 
 - Second, you can improve the readability of `User` by _value clases_ to replace `String` with a more meaningful type.
 We'll see this in the section on [value classes](#value-classes), later in this chapter.
+
+
+<div class="callout callout-info">
+**Code Generation**
+
+Sometimes your code is the definitive description of the schema; other times it's the database itself.
+The latter is the case when working with legacy databases,
+or database where the schema is managed independently of your Slick application.
+
+When the database is the truth, the [Slick code generator][link-ref-gen] is an important tool.
+It allows you to connect to a database, generate the table definitions, and customize the code produced.
+
+Prefer it to manually reverse engineering a schema by hand.
+</div>
 
 
 Once you have an `HList`-based schema, you work with it in much the same way as you would other data representations.
@@ -303,9 +316,9 @@ val name: String = dave.head
 val age: Int = dave.apply(1)
 ~~~
 
-Accessing the `HList` by index is dangerous. If you run off the end of the list with `dave(99)`, you'll get a run-time exception.
+However, accessing the `HList` by index is dangerous. If you run off the end of the list with `dave(99)`, you'll get a run-time exception.
 
-We not recommending you use a `HList` representation, but you need to know it's there for you when dealing with nasty schemas.
+The `HList` representation probably won't be the one you choose to use; but you need to know it's there for you when dealing with nasty schemas.
 
 <div class="callout callout-danger">
 **Extra Dependencies**
@@ -316,7 +329,7 @@ Some parts of `HList` depend on Scala reflection. Modify your _build.sbt_ to inc
 "org.scala-lang" % "scala-reflect" % scalaVersion.value
 ~~~
 
-This took one of the authors **far** to long to establish.
+This took one of the authors far too long to establish.
 </div>
 
 
@@ -327,7 +340,7 @@ This took one of the authors **far** to long to establish.
 Our `HList` example mapped a table with many columns.
 It's not the only way to deal with lots of columns.
 
-Use custom functions with `<>` and map that table into a tree of case classes.
+Use custom functions with `<>` and map `UserTable` into a tree of case classes.
 To do this you will need to define the schema, define a `User`, insert data, and query the data.
 
 To make this easier, we're just going to map six of the columns.
@@ -366,7 +379,7 @@ We can insert and query as normal:
 users += User(
   EmailContact("Dr. Dave Bowman", "dave@example.org"),
   Address("123 Some Street", "Any Town", "USA")
-)
+ )
 ~~~
 
 Executing `users.run` will produce:
