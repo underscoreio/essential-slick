@@ -1210,7 +1210,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 </div>
 
 
-### Alternative Enumerations
+#### Alternative Enumerations
 
 Modify your solution to the previous exercise to store the value in the database as an integer.
 
@@ -1228,7 +1228,7 @@ implicit val userRoleMapper =
 ~~~
 </div>
 
-### Boilerplate Free Primary Keys
+#### Boilerplate Free Primary Keys
 
 Modify the definition of `Occupant` to use type parameter definition of table primary keys, assume `User` and `Room` are already implement this way.
 
