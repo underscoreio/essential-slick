@@ -1023,9 +1023,9 @@ val id = messages.filter(_.senderId === halId).map(_.id).first
 val rubbish = messages.filter(_.senderId === id)
 ~~~
 
-Do you see the problem here? We've looked up a message `id`,
-and then going and using it to search for senders with that `id`.
-It compiles, it runs, but we can prevent these kinds of problems using Scala's type system.
+Do you see the problem here? We've looked up a _message_ `id`,
+and then used it to search for a _user_ (senders) with that `id`.
+It compiles, it runs, and produces nonsense. We can prevent these kinds of problems using Scala's type system.
 
 Before showing how, here's another downside of using `Long` as a primary key:
 
@@ -1121,28 +1121,33 @@ but found a `UserPK` and a `MessagePK`.
 Values classes are a reasonable way to make your code safer and more legible.
 The amount of code you need to write is small,
 however for a large database it can become dull writing many such methods.
-In that case, consider either generating the source code rather than writing it or by generalising our definition of a primary key, so we only need to define it once.
+In that case, consider either generating the source code rather than writing it
+or by generalising our definition of a primary key, so we only need to define it once.
 
-Rather than providing a definition for each table
+
+<div class="callout callout-info">
+**An `Id[T]` class**
+
+Rather than providing a value class definition for each table...
 
 ~~~ scala
 final case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
 ~~~
 
-we can supply the table as a type parameter
+...we can supply the table as a type parameter:
 
 ~~~ scala
-final case class Id[A](value: Long) extends AnyVal with MappedTo[Long]
+final case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
 ~~~
 
-allowing us to now define our row and tables.
+We can then define primary keys in terms of `PK[Table]`:
 
 ~~~ scala
-case class User(id: Option[Id[UserTable]], name: String, email: Option[String] = None)
+case class User(id: Option[PK[UserTable]], name: String, email: Option[String] = None)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
-  def id = column[Id[UserTable]]("id", O.AutoInc, O.PrimaryKey)
-  def name = column[String]("name")
+  def id    = column[PK[UserTable]]("id", O.AutoInc, O.PrimaryKey)
+  def name  = column[String]("name")
   def email = column[Option[String]]("email")
 
   def * = (id.?, name, email) <> (User.tupled, User.unapply)
@@ -1151,7 +1156,8 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 lazy val users = TableQuery[UserTable]
 ~~~
 
-We now get type safety without having to define the boiler plate of individual Id classes per table.
+We now get type safety without having to define the boiler plate of individual primary key case classes per table.
+</div>
 
 
 ### Exercises
@@ -1222,9 +1228,9 @@ implicit val userRoleMapper =
 ~~~
 </div>
 
-### Boilerplate free primary keys
+### Boilerplate Free Primary Keys
 
-Modify the definition of to use type parameter definition of table primary keys, assume `User` and `Room` are already implement this way.
+Modify the definition of `Occupant` to use type parameter definition of table primary keys, assume `User` and `Room` are already implement this way.
 
 ~~~ scala
 case class Occupant(roomId: Long, userId: Long)
@@ -1242,14 +1248,14 @@ lazy val occupants = TableQuery[OccupantTable]
 ~~~
 
 <div class="solution">
-All we need to do is update the existing definition of `roomId` and `userId` from `Long` to `Id[TableName]`:
+We need to update the existing definition of `roomId` and `userId` from `Long` to `PK[TableName]`:
 
 ~~~ scala
-case class Occupant(roomId: Id[RoomTable], userId:Id[UserTable])
+case class Occupant(roomId: PK[RoomTable], userId: PK[UserTable])
 
 class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
-  def roomId = column[Id[RoomTable]]("room")
-  def userId = column[Id[UserTable]]("user")
+  def roomId = column[PK[RoomTable]]("room")
+  def userId = column[PK[UserTable]]("user")
 
   def pk = primaryKey("room_user_pk", (roomId, userId))
 
@@ -1269,7 +1275,7 @@ These are known as _product types_, which form one half of _algebraic data types
 The other half is known as _sum types_, which we will look at now.
 
 As an example we will add a flag to messages.
-Perhaps a administrator of the chat will be able to mark messages as important, offensive, or spam.
+Perhaps an administrator of the chat will be able to mark messages as important, offensive, or spam.
 In the database we'll store these as characters: `!`, `X`, and `$`.
 We don't want to use those symbols in source code, so instead we will establish a sealed trait
 and a set of case objects:
@@ -1346,9 +1352,7 @@ messages.filter(_.flag === (Important : Flag)).run
 ~~~
 
 Notice the _type annotation_ added to the `Important` value.
-If you find yourself writing that kind of query often, hold on until Chapter 5:
-there we look at ways you can write `messages.isImportant` instead.
-
+If you find yourself writing that kind of query often, be aware that extension methods allow you to package code like this into `messages.isImportant`  or similar.
 
 
 ### Exercises
