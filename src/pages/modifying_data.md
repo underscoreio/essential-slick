@@ -156,7 +156,7 @@ def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 
 Slick excludes `O.AutoInc` columns when inserting rows, allowing the database to step in an generate the value for us. (If you really do need to insert a value in place of an auto incrementing value, the method `forceInsert` is there for you.)
 
-This is just one way of dealing with automatically generated primary keys. We will look at other ways, including custom projections (**TODO: Will we?**) and `Option[T]` values, in chapter **TODO**.
+This is just one way of dealing with automatically generated primary keys. We will look at working with `Option[T]` values in chapter 3.
 </div>
 
 Let's modify the insert to give us back the primary key generated:
