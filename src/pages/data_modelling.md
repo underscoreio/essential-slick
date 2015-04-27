@@ -648,7 +648,7 @@ val daveId: Long = insertUser += User(None, "Dave", Some("dave@example.org"))
 val airLockId: Long = insertRoom += Room("Air Lock")
 
 // Put Dave in the Room:
-occupants += Occupant(daveId, airLockId)
+occupants += Occupant(airLockId, daveId)
 ~~~
 
 Of course, if you try to put Dave in the Air Lock twice, the database
