@@ -1,6 +1,6 @@
 # Data Modelling
 
-Now that we can do the basics of connecting to a database, running queries, and changing data, we turn to richer models of data.
+We can do the basics of connecting to a database, running queries, and changing data. We turn now to richer models of data and how our application hangs together.
 
 In this chapter we will:
 
@@ -9,13 +9,13 @@ In this chapter we will:
 - expand on our knowledge of modelling tables to introduce optional values and foreign keys; and
 - use more custom types to avoid working with just low-level database values.
 
-We'll expand chat application schema to support more than just messages through this chapter.
+To do this, we'll expand chat application schema to support more than just messages.
 
 ## Application Structure
 
-Our examples so far have been a single monolithic application. That's now how you'd work with Slick for a more substantial project.  We'll explain how to split up an application in this section.
+Our examples so far have been stand-alone application. That's not how you'd work with Slick for a more substantial project.  We'll explain how to split up an application in this section.
 
-We've also been importing the H2 driver.  We need a driver of course, but it's useful to delay picking the driver until the code needs to be run. This will allow us to switch driver, which can be useful for testing. For example, you might use H2 for unit testing, but PostgresSQL for production purposes.
+We've also been importing the H2 driver.  We need a driver of course, but it's useful to delay picking the driver until the code needs to be run. This will allow us to switch driver, which can be useful for testing. For example, you might use H2 for unit testing, but PostgresSQL for production.
 
 ### Pattern Outline
 
@@ -33,12 +33,11 @@ _Profile_ is a new term for us. When we have previously written...
 import scala.slick.driver.H2Driver.simple._
 ~~~
 
-...that is giving us H2-specific JDBC driver, which is a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
-
+...that gave us an H2-specific JDBC driver. That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
 
 ### Example
 
-Re-working the example from Chapter 1, we have the schema in a trait:
+Re-working the example from chapter 1, we have the schema in a trait:
 
 ~~~ scala
 trait Profile {
@@ -57,7 +56,7 @@ trait Tables {
 }
 ~~~
 
-We currently have a small schema and can get away with putting all the table defintions into a single trait.  However, there's nothing to stop us from splitting the schema into, say `UserTables` and `MessageTables`, and so on.  They can all be brought together with `extends` and `with`:
+We currently have a small schema and can get away with putting all the table definitions into a single trait.  However, there's nothing to stop us from splitting the schema into, say `UserTables` and `MessageTables`, and so on.  They can all be brought together with `extends` and `with`:
 
 ~~~ scala
 // Bring all the components together:
@@ -90,7 +89,7 @@ If you recognise this as a problem, it's time to split your code more finely and
 
 ## Representations for Rows
 
-In Chapter 1 we introduced rows as being represented by case classes.
+In chapter 1 we introduced rows as being represented by case classes.
 There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
 
 ### Case Classes and `<>`
@@ -108,7 +107,7 @@ The schema is:
 
 ~~~ scala
 final class UserTable(tag: Tag) extends Table[User](tag, "user") {
- def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+ def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
  def name = column[String]("name")
  def * = (name, id) <> (User.tupled, User.unapply)
 }
