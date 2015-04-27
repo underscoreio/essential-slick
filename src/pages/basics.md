@@ -262,8 +262,7 @@ create table "message" (
 )
 ~~~
 
-Slick DDL supports `create` and `drop`. This is useful working with in memory databases, as we are doing in this chapter, and as we will when we look at testing in chapter **TODO**.  You're unlikely to use Slick's DLL to manage schema migrations, as they are relatively simple. We will look at other ways to deal with schema migrations in chapter **TODO**.
-
+Slick DDL supports `create` and `drop`. This is useful working with in memory databases, as we are doing in this chapter. You're unlikely to use Slick's DLL to manage schema migrations, as they are relatively simple. 
 
 ### Inserting Data
 
