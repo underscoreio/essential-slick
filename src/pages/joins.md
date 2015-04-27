@@ -1,13 +1,17 @@
 # Joins and Aggregates {#joins}
 
-In this chapter we'll learn about the different styles of join available to you,
-including implicit, explicit,inner,outer and zip.
-We'll round the chapter off with a quick look at aggregate functions and grouping.
+Wrangling data with joins and aggregates can be painful.  In this chapter we'll try to ease that pain by exploring:
+
+* different styles of join (implicit and explixit);
+* different ways to join (inner, outer and zip);
+* aggregate functions and grouping.
 
 
 ## Implicit Joins
 
-We have seen an example of implicit joins in the last chapter.
+The SQL standards recognize two styles of join: implicit and explicit.  Implicit joins have been deprecated, but they're common enough to deserve a brief investigation.
+
+We have seen an example of implicit joins in the last chapter:
 
 ~~~ scala
 val q = for {
@@ -16,49 +20,43 @@ val q = for {
 } yield (usr.name, msg.content)
 ~~~
 
-As the name suggests an implicit join is one where we don't specify the kind of join to use,
-rather we inform Slick how we want tables to be joined.
-
-In the above query the join is declared using Slick's foreign key method.
+Notice how we are using `msg.sender` which is defined as a foreign key:
 
 ``` scala
-def sender   = foreignKey("msg_sender_fk", senderId, users)(_.id)
+def sender = foreignKey("msg_sender_fk", senderId, users)(_.id)
 ```
-Slick generates the following SQL:
+
+Slick generates something like the following SQL:
 
 ``` sql
-select x2."name", x3."content" from "message" x3, "user" x2 where x2."id" = x3."sender"
+select u."name", m."content" from "message" m, "user" u where u."id" = m."sender"
 ```
 
-We can rewrite the query to declare the join ourselves:
+That's the implicit style of query.
+
+We could also rewrite the query to declare the join ourselves:
 
 ~~~ scala
-val q1 = for {
+val q = for {
   msg <- messages
   usr <- users
   if usr.id === msg.senderId
 } yield (usr.name, msg.content)
 ~~~
 
-and see the SQL generated is the same:
+Note how this time we're using `msg.senderId`, not the foreign key `sender`. This produces the same query when we joined using `sender`.
 
-``` sql
-select x2."name", x3."content" from "message" x3, "user" x2 where x2."id" = x3."sender"
-```
+Let's look at more complex implicit query,
+after reviewing the schema for this chapter, in figure 4.1.
 
-Let's look at more complex query,
-after reviewing our schema:
-
-<!--  This probably needs to be prettier -->
-![Database schema](src/img/Schema.png)
+![The database schema for this chapter.  Find this code in the _chat-schema.scala_ file of the example project on GitHub.](src/img/Schema.png)
 
 
-<!--  Shouldwe be querying on room title and user name, otherwise you really only need the message table. -->
-We can retrieve all messages by Dave for a given room using implicit joins:
+We can retrieve all messages by Dave in the Air Lock using implicit joins:
 
 ~~~ scala
-val daveId:Id[UserTable] = ???
-val roomId:Id[RoomTable] = ???
+val daveId: PK[UserTable] = ???
+val roomId: PK[RoomTable] = ???
 
 val davesMessages = for {
   message <- messages
@@ -71,8 +69,7 @@ val davesMessages = for {
 } yield message
 ~~~
 
-We can also use foreign keys defined on our tables when composing a query.
-Here we have reworked the same example to use `messages` foreign keys.
+As we have foreign keys (`sender`, `room`) defined on our `message` table, we can use them in the query. Here we have reworked the same example to use the foreign keys:
 
 ~~~ scala
 val daveId:Id[UserTable] = ???
