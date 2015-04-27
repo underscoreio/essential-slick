@@ -2,14 +2,14 @@
 
 Wrangling data with joins and aggregates can be painful.  In this chapter we'll try to ease that pain by exploring:
 
-* different styles of join (implicit and explixit);
-* different ways to join (inner, outer and zip);
+* different styles of join (implicit and explicit);
+* different ways to join (inner, outer and zip); and
 * aggregate functions and grouping.
 
 
 ## Implicit Joins
 
-The SQL standards recognize two styles of join: implicit and explicit.  Implicit joins have been deprecated, but they're common enough to deserve a brief investigation.
+The SQL standards recognize two styles of join: implicit and explicit. Implicit joins have been deprecated, but they're common enough to deserve a brief investigation.
 
 We have seen an example of implicit joins in the last chapter:
 
@@ -29,7 +29,12 @@ def sender = foreignKey("msg_sender_fk", senderId, users)(_.id)
 Slick generates something like the following SQL:
 
 ``` sql
-select u."name", m."content" from "message" m, "user" u where u."id" = m."sender"
+select
+  u."name", m."content"
+from
+  "message" m, "user" u
+where
+  u."id" = m."sender"
 ```
 
 That's the implicit style of query.
