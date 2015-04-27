@@ -1,5 +1,28 @@
 # Essential Slick
 
+**For Slick 2.10**
+
+Essential Slick is a guide to building a database application using the Slick library.
+It is aimed at Scala developers who need to become productive with Slick quickly.
+
+Topics covered:
+
+* A hands-on quick start to get you connecting to a database and running queries.
+
+* An introduction to the core concepts you need to work with Slick.
+
+* Modifying data (delete, insert, update) and working with primary keys.
+
+* Making use of the type system, with custom types, value classes, typed primary keys, foreign keys, optional values, and enumerations.
+
+* A variety of joins and aggregates.
+
+Exercises though the text allow the read to solidify their learning and further explore the material.
+
+
+----
+
+
 - The things you wish you knew before you started using Slick
 - We want to get developers up and running with Slick.
 - We want them to structure their applications the way you do in reality.
