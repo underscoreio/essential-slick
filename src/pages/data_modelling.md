@@ -581,7 +581,7 @@ The `O.AutoInc` marks the column as an H2 "IDENTIY"
 column which is, implicitly, a primary key as far as H2 is concerned.)
 
 Where `primaryKey` is more useful is when you have a compound key.
-This is a key which is based on the value of two columns.
+This is a key which is based on the value of two or more columns.
 
 By way of a not at all contrived example,
 let's add the ability for people to chat in rooms.
@@ -606,7 +606,7 @@ lazy val insertRoom = rooms returning rooms.map(_.id)
 **Benefit of Case Classes**
 
 Now we have `room` and `user` the benefit of case classes over tuples becomes apparent.
-As tuples, both would have the same type signature: `(String,Long)`.
+As tuples, both tables would have the same type signature: `(String,Long)`.
 It would get error prone passing around tuples like that.
 </div>
 
@@ -660,13 +660,14 @@ will complain that the key has been violated.
 Foreign keys are declared in a similar manner to compound primary keys.
 
 The method `foreignKey` takes four required parameters:
+
  * a name;
  * the column, or columns, that make up the foreign key;
  * the `TableQuery` that the foreign key belongs to; and
  * a function on the supplied `TableQuery[T]` taking the supplied column(s) as parameters and returning an instance of `T`.
 
 Lets walk through this by using foreign keys to connect a `message` to a `user`.
-To do this we change the definition of message to reference an `id` of a `user`:
+To do this we change the definition of `message` to reference an `id` of a `user`:
 
 ~~~ scala
 case class Message(senderId: Long, content: String, ts: DateTime, id: Long = 0L)
@@ -828,8 +829,10 @@ Remember it's the DDL commands from `users.ddl` that instruct the database to pr
  * `Int` - maximum length of the column; and
  * `Boolean` - `true` to use `VARCHAR`, `false` for a SQL `CHAR`.
 
-`O.DBType` has been used on the `avatar` column to control the exact type used by the database.
+You may or may not care if a `String` is represented as a `VARCHAR` or `CHAR`. If you're storing strings that are the same length, it can be more efficient to use `CHAR`. But check with the documentation for the relational database you're using.
 
+On the `avatar` column we've used `O.DBType` to control the exact type used by the database.  
+Again, the values you use here will depend on the database product in use.
 
 Finally, we can add an index to the table:
 
@@ -848,8 +851,7 @@ CREATE UNIQUE INDEX "name_idx" ON "user" ("name")
 
 #### Filtering Optional Columns
 
-Sometimes you want to look at all the users in the database.
-Sometimes you want to only see rows matching a particular value.
+Sometimes you want to look at all the users in the database, and sometimes you want to only see rows matching a particular value.
 
 Working with the optional email address for a user,
 write a method that will take an optional value,
@@ -861,7 +863,7 @@ The method signature is:
 def filterByEmail(email: Option[String]) = ???
 ~~~
 
-We want `filterByEmail(Some("dave@example.org")).run` to produce one row,
+With two records in the database, we want `filterByEmail(Some("dave@example.org")).run` to produce one row,
 and `filterByEmail(None).run` to produce two rows.
 
 <div class="solution">
