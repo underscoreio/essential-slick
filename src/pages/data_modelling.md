@@ -1393,13 +1393,14 @@ implicit val priorityType =
 
 ## Take Home Points
 
+Separate the specific profile (H2, Postgres...) from your schema definition if you need to be portable across databases. In this chapter we looked at a class called `Schema` that pulled together a profile with table definitions, which could then be imported into an application.
+
+Rows can be represented in a variety of ways: case classes, tuples, and HLists, for example. You have control over how columns are mapped to a row representation, using `<>`.
+
+Nullable columns are represented as `Option[T]` values, and the `?` operator lifts a non-null value into an optional value.
 
 Foreign keys define a constraint, and allow you to link tables in a join.
 
+Slick makes it relatively easy to abstract away from raw database types, such as `Long`, to meaningful types such as `UserPK`.  This removes a class of errors in your application, where you could have passed the wrong `Long` key value around.
+
 Slick's philosophy is to keep models simple. Model rows as rows, and don't try to include values from different tables.
-
-
-
-
-
-
