@@ -15,7 +15,7 @@ Aside from querying, Slick helps manage database connections, transactions, sche
 <div class="callout callout-info">
 **Slick isn't an ORM**
 
-If you've used other database libraries such as [Hibernate][link-hibernate] or [Active Record][active-record], you might expect Slick to be an _Object-Relational Mapping (ORM)_ tool. It is not, and it's best not to think of Slick in this way.
+If you've used other database libraries such as [Hibernate][link-hibernate] or [Active Record][link-active-record], you might expect Slick to be an _Object-Relational Mapping (ORM)_ tool. It is not, and it's best not to think of Slick in this way.
 
 ORMs attempt to map object standard oriented data models onto relational database backends. By contrast, Slick provides a more database-like set of tools such as queries, rows and columns. We're not going to argue the pros and cons of ORMs here, but if this is an area that interests you, take a look at ["Coming from ORM to Slick"][link-ref-orm].
 
