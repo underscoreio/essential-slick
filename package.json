@@ -1,35 +1,12 @@
 {
-  "name": "essential-slick",
-  "version": "1.0.0",
-  "description": "Book on the Slick database library",
-  "dependencies": {
-    "bootstrap": "^3.3.1",
-    "coffeeify": "^1.0.0",
-    "grunt": "^0.4.5",
-    "grunt-browserify": "^3.2.1",
-    "grunt-contrib-connect": "^0.9.0",
-    "grunt-contrib-copy": "^0.7.0",
-    "grunt-contrib-less": "^0.12.0",
-    "grunt-copy": "^0.1.0",
-    "grunt-contrib-watch": "^0.6.1",
-    "grunt-exec": "^0.4.6",
-    "jquery": "^2.1.1",
-    "pandoc-filter": "^0.1.2",
-    "uglifyify": "^2.6.0",
-    "underscore": "^1.7.0"
-  },
+  "name": "essential-play",
+  "description": "The essential guide to Play Framework",
+  "version": "0.0.1",
   "devDependencies": {
-    "grunt-contrib-clean": "^0.6.0",
-    "grunt-css-url-embed": "^1.3.1",
-    "js-yaml": "^3.2.3"
+    "underscore-ebook-template": "git+https://github.com/underscoreio/underscore-ebook-template.git#0.0.15"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specificed\" && exit 1"      
   },
-  "repository": {
-    "type": "git",
-    "url": "git@github.org:underscoreio/essential-slick.git"
-  },
-  "author": "Richard Dallway and Jonathan Ferguson",
-  "license": "Closed source"
+  "author": "Dave Gurnell and Noel Welsh"
 }
