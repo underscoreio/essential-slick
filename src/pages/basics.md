@@ -78,7 +78,7 @@ In addition we're using [Joda Time][link-joda-time], which is a great library fo
 
 ### The Code
 
-The Scala code we will end up with in this chapter is as follows. You don't need to understand all of this yet---we'll go through everyinth in detail later on---but you may find you get the gist:
+The Scala code we will end up with in this chapter is as follows. You don't need to understand all of this yet---we'll go through everything in detail later on---but you may find you get the gist:
 
 ~~~ scala
 package chapter01
