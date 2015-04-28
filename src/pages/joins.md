@@ -221,12 +221,28 @@ Only the last two are private messages, sent to Dave and Frank. The rest were pu
 <div class="callout callout-info">
 **NULLs in Joins**
 
-If you're thinking that detecting null values and adding `.?` to a column is a bit of a pain, you'd be right.  The good news is that the situation will be much better for Slick 3.
+If you're thinking that detecting null values and adding `.?` to a column is a bit of a pain, you'd be right.  The good news is that the situation will be much better for Slick 3. But in the meantime, you need to handle it for each column yourself.
 
-In the meantime, if you do miss a NULL column mapping, you'll see this when the query is executed:
+There's a way to tell if you've got it wrong. Take a look at this query, which is trying to list users and the rooms they are occupying:
 
+``` scala
+val outer = for {
+  (usrs, occ) <- users leftJoin occupants on (_.id === _.userId)
+} yield usrs.name -> occ.roomId
 ```
-Read NULL value (null) for ResultSet
+
+Do you see what's wrong here? If we run this,
+we'll get a `SlickException` with the following message:
+
+`Read NULL value (null) for ResultSet column Path s2._2`.
+
+This is due to one user (Elena) not having been assigned to any rooms. It's a limitation in Slick 2.x.
+even for non nullable columns.
+
+The fix is to manually add `.?` to the selected column:
+
+``` scala
+yield usrs.name -> occ.roomId.?
 ```
 </div>
 
@@ -286,80 +302,43 @@ The examples above show a join and each time we've used an `on` to constrain the
 Finally, we have shown examples of building queries using either for comprehension or maps and filters. You get to pick which style you prefer.
 
 
+## Seen Any Scary Queries?
 
+If you've been following along and running the example joins, you might have noticed large and unusual queries being generated.
 
-## Seen Any Monster Queries?
+For example:
 
-Now, let's have a look at the SQL Slick generates for each of these queries:
-
-``` sql
--- left
-select x2.x3, x2.x4, x2.x5, x2.x6, x2.x7, x2.x8, x2.x9
-from
-    (select x10.x11 as x4, x10.x12 as x9, x10.x13 as x6, x10.x14 as x8, x10.x15 as x7, x10.x16 as x5, x10.x17 as x3, x18.x19 as x20, x18.x21 as x22, x18.x23 as x24 from (select x25."content" as x11, x25."readBy" as x12, x25."id" as x13, x25."room" as x14, x25."to" as x15, x25."ts" as x16, x25."sender" as x17 from "message" x25) x10 left outer join (select x26."id" as x19, x26."name" as x21, x26."email" as x23 from "user" x26) x18 on x10.x17 = x18.x19) x2 left outer join (select x27."title" as x28, x27."id" as x29 from "room" x27) x30 on x2.x8 = x30.x29
-where (x2.x20 = 1) and (x30.x29 = 1)
-
--- right
-
-select x2.x3, x2.x4, x2.x5, x2.x6, x2.x7, x2.x8, x2.x9
-from
-  (select x10.x11 as x4, x10.x12 as x9, x10.x13 as x6, x10.x14 as x8, x10.x15 as x7, x10.x16 as x5, x10.x17 as x3, x18.x19 as x20, x18.x21 as x22, x18.x23 as x24 from (select x25."content" as x11, x25."readBy" as x12, x25."id" as x13, x25."room" as x14, x25."to" as x15, x25."ts" as x16, x25."sender" as x17 from "message" x25) x10 right outer join (select x26."id" as x19, x26."name" as x21, x26."email" as x23 from "user" x26) x18 on x10.x17 = x18.x19) x2 right outer join (select x27."title" as x28, x27."id" as x29 from "room" x27) x30 on x2.x8 = x30.x29
-where ((x2.x20 = 1) and (x30.x29 = 1)) and (x30.x29 = x2.x8)
-
--- inner
-
-select x2.x3, x2.x4, x2.x5, x2.x6, x2.x7, x2.x8, x2.x9
-from
-  (select x10.x11 as x4, x10.x12 as x9, x10.x13 as x6, x10.x14 as x8, x10.x15 as x7, x10.x16 as x5, x10.x17 as x3, x18.x19 as x20, x18.x21 as x22, x18.x23 as x24 from (select x25."content" as x11, x25."readBy" as x12, x25."id" as x13, x25."room" as x14, x25."to" as x15, x25."ts" as x16, x25."sender" as x17 from "message" x25) x10 inner join (select x26."id" as x19, x26."name" as x21, x26."email" as x23 from "user" x26) x18 on x10.x17 = x18.x19) x2 inner join (select x27."title" as x28, x27."id" as x29 from "room" x27) x30 on x2.x8 = x30.x29
-where ((x2.x20 = 1) and (x30.x29 = 1)) and (x30.x29 = x2.x8)
-```
-This is suffering from more than just bracketitis, a handwritten query is going to be much nicer than this.
-In the next section we will look how and when we need to worry about this and how Slick mitigates against this.
-
-## Slick is not a DSL for SQL
-
-These generated queries are a bit worrying,
-hand writing the query is far tighter:
-
-~~~ sql
-select *
-from "message" left outer join "user" on "message"."sender" = "user"."id"
-               left outer join "room" on "message"."room"   = "room"."id"
-where
-        "user"."id" = 1 and
-        "room"."id" = 1
+~~~ scala
+users.join(messages).on(_.id === _.senderId).map{ case (u,m) => u.name -> m.content }
 ~~~
 
-If slick generates such verbose queries surely they aren't going to be performant?
+The query we'd write by hand for this is:
 
-<!-- help help, I hate this - yes I am aware I've just mangled something you wrote. It has gone from lovley bullet points to bleh -->
-First, using Slick you are expressing what you want,
-discover an "Algebra" for your problem and describe it.
+~~~ sql
+select
+  "user".name, "message".content
+from
+  "user" inner join "message" on "user".id = "message".sender
+~~~
 
-The SQL generated depends on the database being targeted.
-The database saves the day by optimizing the Slick supplied SQL.
+Slick actually produces:
 
-<div class="callout callout-warn">
-**Mysql**
-MySQL particularly bad at this, so it doesn't so much save the day as look sheepish while trying to run the query while not making eye contact.
-</div>
+``` sql
+select
+  x2.x3, x4.x5
+from
+  (select x6."name" as x3, x6."id" as x7 from "user" x6) x2
+  inner join
+  (select x8."content" as x5, x8."sender" as x9 from "message" x8) x4 on x2.x7 = x4.x9
+```
 
+That's not so bad, but it is a little strange. For more involved queries they can look much worse.
+If Slick generates such verbose queries are they are going to be slow? Yes, sometimes they will be.
 
-<!-- See DifferentDatabases.scala  in chapter 4 and see if it makes sense to include examples. -->
+Here's the key concept: the SQL generated by Slick is fed to the database optimizer. That optimizer has far better knowledge about your database, indexes, query paths, than anything else.  It will optimize the SQL from Slick into something that works well.
 
-### What to do for queries the database can't optimise ?
+Unfortunately, some optimizers don't manage this very well. Postgres does a good job. MySQL is, at the time of writing, pretty bad at this. You know the lesson here: measure, use your database tools to EXPLAIN the query plan, and adjust queriesas necessary.  The ultimate adjustment of a query is to re-write it using _Plain SQL_. We will introduce _Plain SQL_ in TODO.
 
-If the database query optimizer can not help then it's time to look at plain SQL.
-
-TODO: LOOK HERE http://slick.typesafe.com/doc/2.1.0/sql.html
-
-
-  - different imports, no slick driver
-
-
-- give examples.
-
-- exercise rewrite inner and right as plain sql
 
 ## Zip Joins
 
@@ -394,41 +373,6 @@ and we get back the following:
 | HAL  | Pod      |
 \------+----------/
 ```
-
-
-## Outer Joins
-
-If we wanted a list of users and their room id, we could use an outer join:
-
-``` scala
-lazy val outer = for {
-  (usrs,occ) ← users leftJoin occupants on (_.id === _.userId)
-} yield usrs.name -> occ.roomId
-
-println("\n" + outer.list.mkString("\n"))
-```
-
-If we run this,
-we'll get a `SlickException` with the following message:
-`Read NULL value (null) for ResultSet column Path s2._2`.
-
-
-This is due to Elena not having been assigned to any rooms.
-Due to slick's current implementation not knowing that SQLs outer joins can contain nullable values,
-even for non nullable columns.
-
-To get around this Slick currently generates a `?` method on columns so you can inform Slick with columns may be null.
-
-Using this, we can now fix our query.
-
-``` scala
-lazy val outer = for {
-  (usrs,occ) ← users leftJoin occupants on (_.id === _.userId)
-} yield usrs.name -> occ.roomId.?
-
-println("\n" + outer.list.mkString("\n"))
-```
-We could have also used a `rightJoin` and only returned those users who had been assigned to at least one room.
 
 
 ## Aggregation
