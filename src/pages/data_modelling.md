@@ -990,7 +990,6 @@ val hasNot = for {
 </div>
 
 
-
 ## Value Classes {#value-classes}
 
 In modelling rows we are using `Long`s as primary keys.
@@ -1190,7 +1189,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 </div>
 
 
-### Alternative Enumerations
+#### Alternative Enumerations
 
 Modify your solution to the previous exercise to store the value in the database as an integer.
 
@@ -1208,7 +1207,7 @@ implicit val userRoleMapper =
 ~~~
 </div>
 
-### Boilerplate free primary keys
+#### Boilerplate free primary keys
 
 Modify the definition of to use type parameter definition of table primary keys, assume `User` and `Room` are already implement this way.
 
