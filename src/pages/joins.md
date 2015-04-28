@@ -39,6 +39,19 @@ where
 
 That's the implicit style of query, using foreign key relations.
 
+<div class="callout callout-info">
+**Run the Code**
+
+You'll find the example queries for this section in the file _joins.sql_ over at [the associated GitHub repository][link-example].
+
+From the _chapter-04_ folder, start SBT and at the SBT '>' prompt run:
+
+~~~
+runMain chapter04.JoinsExample
+~~~
+</div>
+
+
 We can also rewrite the query to control the table relationships ourselves:
 
 ~~~ scala
@@ -248,27 +261,30 @@ At the time of writing H2 does not support full outer joins. But if you want to 
 
 ``` scala
 val outer = for {
-  (msg, usr) <- messages outerJoin users on (_.senderId.? === _.id.?)
-} yield msg -> usr
+  (room, msg) <- rooms outerJoin messages on (_.id === _.roomId)
+} yield room.title.? -> msg.content.?
 ```
+
+That would be title of all room and messages in those rooms. Either side could be `NULL` because messages don't have to be in rooms, and rooms don't have to have any messages.
 
 
 ### Summary
 
 We've seen examples of the different kinds of join. You can also mix join types.
-If you want to left join on a couple of tables, and then right join on that, go ahead. Slick supports that. You don't need to use the same type of join throughout a query.
+If you want to left join on a couple of tables, and then right join on something else, go ahead because Slick supports that.
 
 We can also see different ways to construct the arguments to our `on` methods,
 either deconstructing the tuple with pattern matching, or by referencing the tuple position with an underscore method,
 e.g. `_1`. We would recommend using a case statement as it easier to read than walking the tuple.
 
-The examples above show a join and each time we've used an `on` to constrain the join.  This is optional.  If you omit the `on` call, you end up with a cross join.  For example:
+The examples above show a join and each time we've used an `on` to constrain the join.  This is optional.  If you omit the `on` call, you end up with an implicit cross join (every row from the left table with every row from the right table).  For example:
 
 ```scala
 (messages leftJoin users).run.foreach(println)
 ```
 
 Finally, we have shown examples of building queries using either for comprehension or maps and filters. You get to pick which style you prefer.
+
 
 
 
