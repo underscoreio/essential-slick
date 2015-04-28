@@ -280,7 +280,7 @@ Both creating the table and inserting data will require a connection to the data
 
 ### Querying
 
-As with inserts, queries look as though we are working with Scala collection. For instance, the query below will return all messages from the user `HAL`:
+As with inserts, queries look as though we are working with a Scala collection. For instance, the query below will return all messages from the user `HAL`:
 
 ~~~ scala
 val halSays = for {
