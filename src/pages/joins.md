@@ -170,11 +170,11 @@ val inner =
 Either way, when it comes to the `query` itself we're using pattern matching again to unpick the results of `inner`, and adding additional guard conditions (which will be a `WHERE` clause in SQL), and mapping to the columns we want.
 
 
-### Left Outer Join
+### Left Join
 
-A left outer join adds an extra twist. Now we are selecting all the records from a table, and matching records from another table _if they exist_, and if not we will have `NULL` values in the query result.
+A left join (a.k.a. left outer join), adds an extra twist. Now we are selecting all the records from a table, and matching records from another table _if they exist_, and if not we will have `NULL` values in the query result.
 
-For an example of from our chat schema, observe that messages can be sent privately to another user. So let's say we want a list of all the messages and who they were sent to.  Visually the left outer join is as shown in figure 4.2.
+For an example of from our chat schema, observe that messages can optionally be sent privately to another user. So let's say we want a list of all the messages and who they were sent to.  Visually the left outer join is as shown in figure 4.2.
 
 ![A visualization of the left outer join example. Selecting messages and associated recipients (users). For similar diagrams, see [A Visual Explanation of SQL Joins][link-visual-joins], _Coding Horror_, 11 Oct 2007.](src/img/left-outer.png)
 
@@ -188,7 +188,7 @@ val left = messages.
 left.run.foreach(result => println(result))
 ```
 
-We're producing a list of messages and the name of user they were sent to (if any). Note the `u.name.?` expression required to turn the potentially null result from the query into an `Option` value.
+We're producing a list of messages and the name of user they were sent to (if any). Note the `u.name.?` expression is required to turn the potentially null result from the query into an `Option` value.  You need to deal with this on a column-by-column basis.
 
 The result of the query, using the test data in _joins.sql_ over at GitHub, is:
 
@@ -208,7 +208,7 @@ Only the last two are private messages, sent to Dave and Frank. The rest were pu
 <div class="callout callout-info">
 **NULLs in Joins**
 
-If you're thinking that detecting and add `.?` to a column is a bit of a pain, you'd be right.  The good news is that the situation will be much better for Slick 3.
+If you're thinking that detecting null values and adding `.?` to a column is a bit of a pain, you'd be right.  The good news is that the situation will be much better for Slick 3.
 
 In the meantime, if you do miss a NULL column mapping, you'll see this when the query is executed:
 
@@ -221,7 +221,6 @@ Read NULL value (null) for ResultSet
 ### Right Outer Join
 
 ```
-//Right outer join
 lazy val right = for {
   ((msgs, usrs), rms) <- messages rightJoin users on (_.senderId === _.id)
                                   rightJoin rooms on (_._1.roomId === _.id)
