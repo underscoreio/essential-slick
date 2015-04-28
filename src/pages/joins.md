@@ -37,9 +37,9 @@ where
   u."id" = m."sender"
 ```
 
-That's the implicit style of query.
+That's the implicit style of query, using foreign key relations.
 
-We could also rewrite the query to declare the join ourselves:
+We can also rewrite the query to control the table relationships ourselves:
 
 ~~~ scala
 val q = for {
@@ -51,13 +51,12 @@ val q = for {
 
 Note how this time we're using `msg.senderId`, not the foreign key `sender`. This produces the same query when we joined using `sender`.
 
-Let's look at more complex implicit query,
-after reviewing the schema for this chapter, in figure 4.1.
+Let's look add one more table to see what a more involved query looks like. You'll probably want to refer to the schema for this chapter shown in figure 4.1.
 
 ![The database schema for this chapter.  Find this code in the _chat-schema.scala_ file of the example project on GitHub.](src/img/Schema.png)
 
 
-We can retrieve all messages by Dave in the Air Lock using implicit joins:
+We can retrieve all messages by Dave in the Air Lock, again as an implicit join:
 
 ~~~ scala
 val daveId: PK[UserTable] = ???
