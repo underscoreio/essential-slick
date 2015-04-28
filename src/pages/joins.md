@@ -179,14 +179,49 @@ For an example of from our chat schema, observe that messages can be sent privat
 
 ![A visualization of the left outer join example. Selecting messages and associated recipients (users). For similar diagrams, see [A Visual Explanation of SQL Joins][link-visual-joins], _Coding Horror_, 11 Oct 2007.](src/img/left-outer.png)
 
+To implement this type of query we need to be aware of what columns are being returned, and if they can be `NULL` or not:
 
 ``` scala
 val left = messages.
-  leftJoin(users).on(_.senderId === _.id).
-  leftJoin(rooms).on{ case ((m,u),r) => m.roomId === r.id}.
-  filter { case ((m, u), r) => u.id === daveId && r.id === airLockId }.
-  map { case ((m, u), r) => m }
+  leftJoin(users).on(_.toId === _.id).
+  map { case (m, u) => (m.content, u.name.?) }
 
+left.run.foreach(result => println(result))
+```
+
+We're producing a list of messages and the name of user they were sent to (if any). Note the `u.name.?` expression required to turn the potentially null result from the query into an `Option` value.
+
+The result of the query, using the test data in _joins.sql_ over at GitHub, is:
+
+```
+(Hello, HAL. Do you read me, HAL?,             None)
+(Affirmative, Dave. I read you.,               None)
+(Open the pod bay doors, HAL.,                 None)
+(I'm sorry, Dave. I'm afraid I can't do that., None)
+(Well, whaddya think?,                         None)
+(I'm not sure, what do you think?,             None)
+(Are you thinking what I'm thinking?,          Some(Dave))
+(Maybe,                                        Some(Frank))
+```
+
+Only the last two are private messages, sent to Dave and Frank. The rest were public, and have no user in the `toId` column.
+
+<div class="callout callout-info">
+**NULLs in Joins**
+
+If you're thinking that detecting and add `.?` to a column is a bit of a pain, you'd be right.  The good news is that the situation will be much better for Slick 3.
+
+In the meantime, if you do miss a NULL column mapping, you'll see this when the query is executed:
+
+```
+Read NULL value (null) for ResultSet
+```
+</div>
+
+
+### Right Outer Join
+
+```
 //Right outer join
 lazy val right = for {
   ((msgs, usrs), rms) <- messages rightJoin users on (_.senderId === _.id)
@@ -196,13 +231,14 @@ lazy val right = for {
      rms.id === msgs.roomId
 } yield msgs
 
-//Inner join
-lazy val inner = for {
-  ((msgs, usrs), rms) <- messages innerJoin users on (_.senderId === _.id)
-                                  innerJoin rooms on (_._1.roomId === _.id)
-  if usrs.id === daveId && rms.id === airLockId && rms.id.? === msgs.roomId
-} yield msgs
+
 ```
+
+### Summary
+
+Above we can see an example of each of the explicit joins.
+It is worth noting we can mix join types,
+we don't need to use the same type of join throughout a query.
 
 <div class="callout callout-info">
 **No Full outer Join**
@@ -219,9 +255,6 @@ val outer = for {
 ```
 </div>
 
-Above we can see an example of each of the explicit joins.
-It is worth noting we can mix join types,
-we don't need to use the same type of join throughout a query.
 
 We can also see different ways to construct the arguments to our `on` methods,
 either deconstructing the tuple using a case statement or by referencing the tuple position with an underscore method,
@@ -245,6 +278,12 @@ lazy val left = messages.
 We will see how this is incredibley useful in the next chapter when looking at composing queries.
 
 Finally, we have shown examples of building queries using either for comprehension or maps and filters.
+
+
+
+
+
+## Seen Any Monster Queries?
 
 Now, let's have a look at the SQL Slick generates for each of these queries:
 
