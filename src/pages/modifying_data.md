@@ -481,7 +481,7 @@ The steps here are:
 
 This results in _N + 1_ queries, where _N_ is the number of rows selected.  That may be excessive, depending on what your needs are.
 
-### Plain SQL
+### Plain SQL {#PlainSQL}
 
 The alternative is to use the SQL we original wanted via a _plain SQL query_. This is an alternative to the collections-like style we've used up to this point.  Here's how this update looks as a plain query:
 

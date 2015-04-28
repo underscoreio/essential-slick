@@ -6,7 +6,9 @@ Slick is a Scala library for accessing relational databases. The code you write 
 
 Your queries are type safe, meaning the compiler will spot some kinds of mistake you might make. A further benefit is that your queries _compose_, allowing you to build up expressions to run against the database.
 
-However, if that's not your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in **chapter or section TODO**.
+However, if that's not your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in [Plain SQL](#PlainSQL).
+
+
 
 Aside from querying, Slick helps manage database connections, transactions, schema, foreign keys, auto incrementing fields and all the things you might expect from any database library. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
 
