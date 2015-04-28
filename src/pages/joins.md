@@ -107,28 +107,75 @@ where (
 
 ## Explicit Joins
 
-An explicit join is where the join type is unsurprisingly explicitly defined.
-They should be the prefered type of join as the intention of the query is clear.
+An explicit join is where the join type is, unsurprisingly, explicitly defined.
+In SQL this is via the `JOIN` and `ON` keyword, which is mirrored in Slick as the `join` and `on` methods.
 
 Slick offers the following methods to join two or more tables:
 
-  * `innerJoin` - an inner join
-  * `leftJoin`  - a left outer join
-  * `rightJoin` - a right outer join
-  * `outerJoin` - a full outer join.
+  * `innerJoin` or `join` --- an inner join
+  * `leftJoin`  --- a left outer join
+  * `rightJoin` --- a right outer join
+  * `outerJoin` --- a full outer join.
 
-The above are convenience methods to `join` with an explicit `JoinType` parameter.
-If `join` isn't supplied `JoinType` it defaults to `innnerJoin`.
+The above are convenience methods to `join` with an explicit `JoinType` parameter (which defaults to `innnerJoin`).  As you can see, Slicks's explicit join syntax gives you more options for how to join tables.
 
-An explanation of SQL joins can be found on [Wikipedia][link-wikipedia-joins].
+As a quick taste of the syntax, we can join the `messages` table to the `users` on the `senderId`:
+
+``` scala
+val q = messages innerJoin users on (_.senderId === _.id)
+```
+
+This will be a query of `(MessageTable, UserTable)`. If we wanted to, we could be more explicit about the values used in the `on` part:
+
+``` scala
+val q = messages innerJoin users on ( (m: MessageTable, u: UserTable) => m.senderId === u.id)
+```
+
+...but it reads well without this.
+
+In the rest of this section we'll work through a variety of more involved joins.
+
+### Inner Join
 
 Let's rework the implicit examples from above using explicit methods:
+
+```scala
+val inner =
+  messages.
+  innerJoin(users).on(_.senderId === _.id).
+  innerJoin(rooms).on{ case ((msg,user), room) => msg.roomId === room.id}
+
+val query = for {
+  ((msgs, usrs), rms) <- inner
+  if usrs.id === daveId && rms.id === airLockId
+} yield (msgs.content, usrs.name, rms.title)
+
+val results = query.run
+```
+
+You might prefer to inline `inner` within the `query`. That's fine, but we've separated the parts out here to discuss them. And as queries in Slick compose, this works out nicely.
+
+Let's start with the `inner` part. We're joining `messages` to `users`, and `messages` to `rooms`. We need two `join` (if you are joining _n_ tables you'll need _n-1_ join expressions). Notice that the second `on` method call is given a tuple of `(MessageTable,UserTable)` and `RoomTable`.
+
+We're using a pattern match to make this explicit, and that's the style we prefer.  However, you may see this more concisely expressed as:
+
+``` scala
+val inner =
+  messages.
+  innerJoin(users).on(_.senderId  === _.id).
+  innerJoin(rooms).on(_._1.roomId === _.id)
+```
+
+Either way, when it comes to the `query` itself we're using pattern matching again to unpick the results of `inner`, and adding additional guard conditions (which will be a `WHERE` clause in SQL), and mapping to the columns we want.
+
+
+
 
 ``` scala
 //Left outer join
 lazy val left = messages.
   leftJoin(users).on(_.senderId === _.id).
-  leftJoin(rooms).on{ case ((m,u),r) => m.roomId === r.id}.
+  leftJoin(rooms).on{ kbcase ((m,u),r) => m.roomId === r.id}.
   filter { case ((m, u), r) => u.id === daveId && r.id === airLockId }.
   map { case ((m, u), r) => m }
 
@@ -158,10 +205,8 @@ so has not been included above.
 A simple example of a full out join would be:
 
 ``` scala
-
-//Full outer join
-lazy val outer = for {
-  (msg, usr) ← messages outerJoin users on (_.senderId.? === _.id.?)
+val outer = for {
+  (msg, usr) <- messages outerJoin users on (_.senderId.? === _.id.?)
 } yield msg -> usr
 ```
 </div>
