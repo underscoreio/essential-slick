@@ -218,66 +218,57 @@ Read NULL value (null) for ResultSet
 </div>
 
 
-### Right Outer Join
+### Right Join
+
+In the left join we selected all the records from one side of the join, with possibly `NULL` values from the other tables. The right join (or right outer join) reverses this.
+
+We can switch the example for left join and ask for all users, what private messages have they received:
 
 ```
-lazy val right = for {
-  ((msgs, usrs), rms) <- messages rightJoin users on (_.senderId === _.id)
-                                  rightJoin rooms on (_._1.roomId === _.id)
-  if usrs.id === daveId &&
-     rms.id === airLockId &&
-     rms.id === msgs.roomId
-} yield msgs
+val right = for {
+  (msg, user) <- messages.rightJoin(users).on(_.toId === _.id)
+} yield (user.name, msg.content.?)
 
-
+right.run.foreach(result => println(result))
 ```
 
-### Summary
+From the results this time we can see that just Dave and Frank have seen private messages:
 
-Above we can see an example of each of the explicit joins.
-It is worth noting we can mix join types,
-we don't need to use the same type of join throughout a query.
+```
+(Dave,  Some(Are you thinking what I'm thinking?))
+(HAL,   None)
+(Elena, None)
+(Frank, Some(Maybe))
+```
 
-<div class="callout callout-info">
-**No Full outer Join**
 
-At the time of writing H2 does not support full outer joins,
-so has not been included above.
+### Full Outer Join
 
-A simple example of a full out join would be:
+At the time of writing H2 does not support full outer joins. But if you want to try it out with a different database, a simple example would be:
 
 ``` scala
 val outer = for {
   (msg, usr) <- messages outerJoin users on (_.senderId.? === _.id.?)
 } yield msg -> usr
 ```
-</div>
 
+
+### Summary
+
+We've seen examples of the different kinds of join. You can also mix join types.
+If you want to left join on a couple of tables, and then right join on that, go ahead. Slick supports that. You don't need to use the same type of join throughout a query.
 
 We can also see different ways to construct the arguments to our `on` methods,
-either deconstructing the tuple using a case statement or by referencing the tuple position with an underscore method,
-e.g. `_1`.
+either deconstructing the tuple with pattern matching, or by referencing the tuple position with an underscore method,
+e.g. `_1`. We would recommend using a case statement as it easier to read than walking the tuple.
 
-We would recommend using a case statement as it easier to read than walking the tuple.
+The examples above show a join and each time we've used an `on` to constrain the join.  This is optional.  If you omit the `on` call, you end up with a cross join.  For example:
 
-The three examples above show a join and it's conditional grouped.
-We can however construct a query but adding all joins and then having one conditional.
-Let's look at an example of the left join using this method:
+```scala
+(messages leftJoin users).run.foreach(println)
+```
 
-~~~ scala
-lazy val left = messages.
-  leftJoin(users).
-  leftJoin(rooms).
-  on { case ((m, u), r) => m.senderId === u.id && m.roomId === r.id }.
-  filter { case ((m, u), r) => u.id === daveId && r.id === airLockId }.
-  map { case ((m, u), r) => m }
-~~~
-
-We will see how this is incredibley useful in the next chapter when looking at composing queries.
-
-Finally, we have shown examples of building queries using either for comprehension or maps and filters.
-
-
+Finally, we have shown examples of building queries using either for comprehension or maps and filters. You get to pick which style you prefer.
 
 
 
