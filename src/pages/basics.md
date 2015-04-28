@@ -213,7 +213,7 @@ We want to work with types that have meaning to our application. This means movi
 
 At a level down from that, we can also control how our types are converted into column values.  For example, we're using [JodaTime][link-jodatime]'s `DateTime` class. Support for this is not built-in to Slick, but we want to show it here to illustrate how painless it is to map types to the database.
 
-The mapping for JodaTime `DateTime` is:
+The mapping for JodaTime's `DateTime` is:
 
 ~~~ scala
 import java.sql.Timestamp
