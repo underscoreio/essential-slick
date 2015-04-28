@@ -6,14 +6,16 @@ Slick is a Scala library for accessing relational databases. The code you write 
 
 Your queries are type safe, meaning the compiler will spot some kinds of mistake you might make. A further benefit is that your queries _compose_, allowing you to build up expressions to run against the database.
 
-However, if that's not your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in **chapter or section TODO**.
+However, if that's not your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in [Plain SQL](#PlainSQL).
+
+
 
 Aside from querying, Slick helps manage database connections, transactions, schema, foreign keys, auto incrementing fields and all the things you might expect from any database library. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
 
 <div class="callout callout-info">
 **Slick isn't an ORM**
 
-If you've used other database libraries such as [Hibernate][link-hibernate] or [Active Record][active-record], you might expect Slick to be an _Object-Relational Mapping (ORM)_ tool. It is not, and it's best not to think of Slick in this way.
+If you've used other database libraries such as [Hibernate][link-hibernate] or [Active Record][link-active-record], you might expect Slick to be an _Object-Relational Mapping (ORM)_ tool. It is not, and it's best not to think of Slick in this way.
 
 ORMs attempt to map object standard oriented data models onto relational database backends. By contrast, Slick provides a more database-like set of tools such as queries, rows and columns. We're not going to argue the pros and cons of ORMs here, but if this is an area that interests you, take a look at ["Coming from ORM to Slick"][link-ref-orm].
 
@@ -55,7 +57,7 @@ name := "essential-slick-chapter-01"
 
 version := "1.0"
 
-scalaVersion := "2.11.5"
+scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick"           % "2.1.0",
@@ -76,7 +78,7 @@ In addition we're using [Joda Time][link-joda-time], which is a great library fo
 
 ### The Code
 
-The Scala code we will end up with in this chapter is as follows. You don't need to understand all of this yet---we'll go through everyinth in detail later on---but you may find you get the gist:
+The Scala code we will end up with in this chapter is as follows. You don't need to understand all of this yet---we'll go through everything in detail later on---but you may find you get the gist:
 
 ~~~ scala
 package chapter01
@@ -207,11 +209,11 @@ If you're a fan of terminology, know that this is the _lifted embedded_ approach
 
 ### Custom Column Mappings
 
-We want to work with types have have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
+We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
 
 At a level down from that, we can also control how our types are converted into column values.  For example, we're using [JodaTime][link-jodatime]'s `DateTime` class. Support for this is not built-in to Slick, but we want to show it here to illustrate how painless it is to map types to the database.
 
-The mapping for JodaTime `DateTime` is:
+The mapping for JodaTime's `DateTime` is:
 
 ~~~ scala
 import java.sql.Timestamp
@@ -278,7 +280,7 @@ Both creating the table and inserting data will require a connection to the data
 
 ### Querying
 
-As with inserts, queries look as though we are working with Scala collection. For instance, the query below will return all messages from the user `HAL`:
+As with inserts, queries look as though we are working with a Scala collection. For instance, the query below will return all messages from the user `HAL`:
 
 ~~~ scala
 val halSays = for {

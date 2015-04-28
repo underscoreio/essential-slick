@@ -25,7 +25,7 @@ Chapter 1
     you can explore Slick by creating a table, inserting data,
     and running queries.  You'll get to see concepts such
     as representing rows as case classes, the `Table[T]` schema,
-    and `Query` composition. Don't skip on the exercises.
+    and `Query` composition. Don't skip the exercises.
 
 Chapter 2
 :   Extends the basics through practice at deleting, inserting, and updating rows.
