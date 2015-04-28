@@ -137,7 +137,9 @@ In the rest of this section we'll work through a variety of more involved joins.
 
 ### Inner Join
 
-Let's rework the implicit examples from above using explicit methods:
+Let's rework the implicit examples from above using explicit `innerJoin` methods. It will produce the same results as the implicit join.
+
+An inner join is where we select records from multiple tables, where those records exist (in some sense) in all tables. For the chat example this will be messages that have a sender in the user table, and a room in the rooms table:
 
 ```scala
 val inner =
@@ -169,13 +171,14 @@ val inner =
 Either way, when it comes to the `query` itself we're using pattern matching again to unpick the results of `inner`, and adding additional guard conditions (which will be a `WHERE` clause in SQL), and mapping to the columns we want.
 
 
+### Left Outer Join
+
 
 
 ``` scala
-//Left outer join
-lazy val left = messages.
+val left = messages.
   leftJoin(users).on(_.senderId === _.id).
-  leftJoin(rooms).on{ kbcase ((m,u),r) => m.roomId === r.id}.
+  leftJoin(rooms).on{ case ((m,u),r) => m.roomId === r.id}.
   filter { case ((m, u), r) => u.id === daveId && r.id === airLockId }.
   map { case ((m, u), r) => m }
 
