@@ -12,6 +12,13 @@ npm install -g grunt-cli
 npm install
 ~~~
 
+For upgrading:
+
+~~~
+rm -rf node_modules
+npm install
+~~~
+
 Building
 --------
 
