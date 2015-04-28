@@ -36,7 +36,7 @@ Chapter 3
 :   Gets serious about data modelling.
 
     We want you to make the best use of Scala when working with Slick.  That means
-    getting to grips with how to structure you application, various ways to
+    getting to grips with how to structure your application, various ways to
     represent rows, and how columns are mapped between the database and your code.
 
     We will encourage you to use value classes, algebraic data types, and other
@@ -47,13 +47,7 @@ Chapter 4
 
     Joins can be vexing. We'll work through scenarios to give you a good
     understanding of how to work them in Slick. While we're on the
-    subject of queries, we'll investigate aggregates.
-
-Chapter 5
-:   Exploring query composition.
-
-    The way Slick's queries compose leads to some neat tricks. We will look
-    at pagination, sorting, and ad hoc extensions to queries.
+    subject of queries, we'll introduce aggregates.
 
 
 

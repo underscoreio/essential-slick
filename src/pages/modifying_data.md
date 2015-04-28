@@ -40,7 +40,7 @@ delete from "message" where "message"."sender" = 'HAL'
 
 In the previous chapter we noted you can see the SQL Slick would use by calling `selectStatement` on a query. There's also `deleteStatement` and `updateStatement`.  These are useful to see the SQL that would be produced by a query, but sometimes you want to see all the queries _when Slick executes them_.  You can do that by configuring logging.
 
-Slick uses a logging framework called [SLFJ][link-slf4j].  You can configure this to capture information about the queries being run.  The "essential-slick-example" project uses a logging back-end called [_Logback_][link-logback], which is configured in the file _src/main/resources/logback.xml_.  In that file we enable statement logging by turning up the logging to debug level. For example:
+Slick uses a logging framework called [SLFJ][link-slf4j].  You can configure this to capture information about the queries being run.  The example GitHub project uses a logging back-end called [_Logback_][link-logback], which is configured in the file _src/main/resources/logback.xml_.  In that file we enable statement logging by turning up the logging to debug level. For example:
 
 ~~~ xml
 <logger name="scala.slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
@@ -55,10 +55,10 @@ DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement:
 
 You can enable a variety of events to be logged:
 
-* `scala.slick.jdbc.JdbcBackend.statement` - which is for statement logging, as you've seen.
-* `scala.slick.jdbc.StatementInvoker.result` - which logs the results of a query.
-* `scala.slick.session` - for session information, such as connections being opened.
-* `scala.slick` - for everything!  This is usually too much.
+* `scala.slick.jdbc.JdbcBackend.statement` --- which is for statement logging, as you've seen.
+* `scala.slick.jdbc.StatementInvoker.result` --- which logs the results of a query.
+* `scala.slick.session` --- for session information, such as connections being opened.
+* `scala.slick` --- for everything!  This is usually too much.
 
 
 The `StatementInvoker.result` logger is pretty cute:
@@ -98,6 +98,7 @@ The method `column` evaluates, in this case, to a `Column[String]`. When we cons
 All the operations you can perform on a column, such as `like` or `toLowerCase`, are added onto `Column[T]` via _extension methods_. These are implicit conversions provided by Slick.  If you're keen, you can go look at them all in the Slick source file [ExtensionMethods.scala][link-source-extmeth].
 
 So `Column[T]` is for values, and deleting based on a value makes no sense in Slick or SQL. Imagine the query `SELECT 42`. You can represent this in Slick as `Query(42)`. You can `run` the query, but you cannot `delete` on it. But deleting on a table, like `MessageTable`, that makes more sense.
+
 
 ### Exercises
 
@@ -156,7 +157,7 @@ def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 
 Slick excludes `O.AutoInc` columns when inserting rows, allowing the database to step in an generate the value for us. (If you really do need to insert a value in place of an auto incrementing value, the method `forceInsert` is there for you.)
 
-This is just one way of dealing with automatically generated primary keys. We will look at other ways, including custom projections (**TODO: Will we?**) and `Option[T]` values, in chapter **TODO**.
+This is just one way of dealing with automatically generated primary keys. We will look at working with `Option[T]` values in chapter 3.
 </div>
 
 Let's modify the insert to give us back the primary key generated:
@@ -194,14 +195,14 @@ val id: Long = messagesInsert += Message("HAL", "I'm back", DateTime.now)
 <div class="callout callout-info">
 **Driver Capabilities**
 
-You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `` capability.
+You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `jdbc.returnInsertOther` capability.
 
 The Scala Doc for each driver also lists the capabilities the driver _does not_ have. For an example, take a look at the top of the [H2 Driver Scala Doc][link-ref-h2driver] page.
 </div>
 
 If we do want to get a populated `Message` back from an insert for any database, with the auto-generated `id` set, we can write a method to do that.  It would take a message as an argument, insert it returning the `id`, and then give back a copy the message setting the `id`. This would emulate the `jdbc.returnInsertOther` capability.
 
-We don't need to write that method as Slick supports it via `into`:
+However, we don't need to write that method as Slick's `into` does the job:
 
 ~~~ scala
 val messagesInsertWithId =
@@ -213,9 +214,7 @@ val result: Message =
 
 The `result` will be the message with the auto-generated `id` field correctly set.
 
-This is a general purpose client-side transformation. That is, it runs in your Scala application and not the database.
-
-Any `returning` expression can have an `into`.  The `into` part is a function from the type being inserted and the type returned, to some other type. In the above example the type of the `into` function is:
+That's one example, but `into` is a general purpose client-side transformation. That is, it runs in your Scala application and not the database. Any `returning` expression can have an `into`.  The `into` part is a function from the type being inserted and the type returned, to some other type. In the above example the type of the `into` function is:
 
 ~~~ scala
 (Message, Long) => Message
@@ -270,6 +269,24 @@ We don't generally talk about invokers as Slick provides them implicitly.
 </div>
 
 
+### Transactions
+
+So far all the database interactions we've seen have run independently.
+That is, each query, delete, or update succeeds or fails and is automatically committed to the database.
+
+A transaction allows you to rollback changes to the database if later ones fail, or if you detect a situation where you want to manually rollback.  The scope of the transaction starts with a call to `session.withTransaction` and ends when the `withTransaction` block ends:
+
+~~~ scala
+session.withTransaction {
+  // ...quries, updates, deletes ...
+}
+~~~
+
+At the end of the transaction, providing there were no exceptions or calls to `session.rollback`, the changes are committed to the database.
+
+You might always want a transaction. In that case, you can get a session with `db.withTransaction` in place of calls to `db.withSession`.
+
+
 ### Exercises
 
 
@@ -294,6 +311,30 @@ def insertOnce(sender: String, text: String)(implicit session: Session): Long = 
   }
 }
 ~~~
+</div>
+
+
+#### Rollback
+
+Assuming you already have an `implicit session`, what is the state of the database after this code is run?
+
+~~~ scala
+session.withTransaction {
+  messages.delete
+  session.rollback()
+  messages.delete
+  println("Surprised?")
+}
+~~~
+
+Is "Surprised?" printed?
+
+<div class="solution">
+The call to `rollback` only impacts Slick calls.
+
+This means the two calls to `delete` will have no effect: the database will have the same message records it had before this block of code was run.  
+
+It also means the message "Surprised?" will be printed.  
 </div>
 
 
@@ -465,7 +506,7 @@ val query =
 
 This gives us two benefits: the compiler will point out typos in variables names, but also the input is santitized against SQL injection attacks.
 
-We'll look at plain SQL in more depth in chapter/section **TODO**, including the `sql` interpolator for select statements.
+We'll look at plain SQL in more depth in chapter 4, including the `sql` interpolator for select statements.
 
 
 ### Exercises
@@ -523,7 +564,7 @@ Auto-incrementing values are not inserted by Slick, unless forced. The auto-incr
 
 Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
-Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is not performance advantage.
+Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is no advantage.
 
 Slick supports plain SQL queries as well as the lif􏰄ted embedded style we've used. Plain queries don't compose as nicely as lifted, but enable you to execute essentially arbitrary SQL when you need to.
 
