@@ -30,3 +30,5 @@
 [link-scala-value-classes]:               http://docs.scala-lang.org/overviews/core/value-classes.html
 [link-scala-interpolation]:               http://docs.scala-lang.org/overviews/core/string-interpolation.html
 [link-wikipedia-joins]:                   http://en.wikipedia.org/wiki/Join_(SQL)
+[link-visual-joins]:                      http://blog.codinghorror.com/a-visual-explanation-of-sql-joins/
+

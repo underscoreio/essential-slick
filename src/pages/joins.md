@@ -173,6 +173,11 @@ Either way, when it comes to the `query` itself we're using pattern matching aga
 
 ### Left Outer Join
 
+A left outer join adds an extra twist. Now we are selecting all the records from a table, and matching records from another table _if they exist_, and if not we will have `NULL` values in the query result.
+
+For an example of from our chat schema, observe that messages can be sent privately to another user. So let's say we want a list of all the messages and who they were sent to.  Visually the left outer join is as shown in figure 4.2.
+
+![A visualization of the left outer join example. Selecting messages and associated recipients (users). For similar diagrams, see [A Visual Explanation of SQL Joins][link-visual-joins], _Coding Horror_, 11 Oct 2007.](src/img/left-outer.png)
 
 
 ``` scala
