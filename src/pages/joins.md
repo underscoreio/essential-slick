@@ -1,6 +1,6 @@
 # Joins and Aggregates {#joins}
 
-Wrangling data with joins and aggregates can be painful.  In this chapter we'll try to ease that pain by exploring:
+Wrangling data with [joins][link-wikipedia-joins and aggregates can be painful.  In this chapter we'll try to ease that pain by exploring:
 
 * different styles of join (implicit and explicit);
 * different ways to join (inner, outer and zip); and
@@ -71,14 +71,14 @@ val davesMessages = for {
      message.roomId   === room.id &&
      user.id          === daveId  &&
      room.id          === airLockId
-} yield message
+} yield (message.content, user.name, room.title)
 ~~~
 
 As we have foreign keys (`sender`, `room`) defined on our `message` table, we can use them in the query. Here we have reworked the same example to use the foreign keys:
 
 ~~~ scala
-val daveId:Id[UserTable] = ???
-val roomId:Id[RoomTable] = ???
+val daveId: PK[UserTable] = ???
+val roomId: PK[RoomTable] = ???
 
 val davesMessages = for {
   message <- messages
@@ -86,14 +86,14 @@ val davesMessages = for {
   room    <- message.room
   if user.id        === daveId &&
      room.id        === airLockId
-} yield message
+} yield (message.content, user.name, room.title)
 ~~~
 
 Both cases will produce SQL something like this:
 
 ~~~ sql
 select
-  m."sender", m."content", m."ts", m."room", m."to", m."id"
+  m."content", u."name", r."title"
 from
   "message" m, "user" u, "room" r
 where (
