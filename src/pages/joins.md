@@ -472,6 +472,8 @@ So what's happened here? What `groupBy` has given us is a way to place rows into
 
 When it comes to mapping, we now have the key to the group (user's name in our case), and the corresponding group rows as a query.  Because we've joined messages and users, our group is a query of those two tables.  In this example we don't care what the query is because we're just counting the number of rows.  But sometimes we will need to know more about the query.
 
+#### A More Complex Example
+
 Let's look at a more involved example, by collecting some statistics about our messages. We want to find, for each user, how many messages they sent, and the date of their first message.  We want a result something like this:
 
 ```
@@ -486,7 +488,7 @@ We have all the aggregate functions we need to do this:
 ``` scala
 val stats =
    messages.join(users).on(_.senderId === _.id).
-   groupBy { case (msg, user)   => user.name }.
+   groupBy { case (msg, user) => user.name }.
    map     {
     case (name, group) =>
       (name, group.length, group.map{ case (msg, user) => msg.ts}.min)
@@ -564,6 +566,40 @@ messages.filter(_.content like "%read%").groupBy(_ => true).map {
 
 The effect here is to group all rows into the same group! This allows us to reuse the `msgs` collection, and obtain the result we want.
 </div>
+
+#### Grouping by Multiple Columns
+
+The result of `groupBy` doesn't need to be a single value: it can be a tuple.  This gives us access to grouping by multiple columns.
+
+We can look at the number of messages per user per room.  Something like this:
+
+```
+Vector(
+  (Air Lock, HAL,   2),
+  (Air Lock, Dave,  2),
+  (Pod,      Dave,  2),
+  (Pod,      Frank, 2) )
+```
+
+That is, we need to group by room and then by user, and finally count the number of rows in each group:
+
+``` scala
+val msgsPerRoomPerUser =
+   rooms.
+   join(messages).on(_.id === _.roomId).
+   join(users).on{ case ((room,msg), user) => user.id === msg.senderId }.
+   groupBy { case ((room,msg), user)   => (room.title, user.name) }.
+   map     { case ((room,user), group) => (room, user, group.length) }.
+   sortBy  { case (room, user, group)  => room }
+```
+
+Hopefully you're now in a position where you can unpick this:
+
+* We join on messages, room and user to be able to display the room and and user name.
+* The value passed into the `groupBy` will be determined by the join.
+* The result of the `groupBy` is the columns for the grouping, which is a tuple of the room title and the user's name.
+* We select just the columns we want: room, user and the number of rows
+* For fun we've thrown in a `sortBy` to get the results in room order.
 
 
 ### Exercises
