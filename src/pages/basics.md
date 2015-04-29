@@ -6,14 +6,14 @@ Slick is a Scala library for accessing relational databases using an interface s
 
 Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also supports *plain SQL queries* that look more like the prepared statements you may be used to from JDBC.
 
-The majority of this book will focus on standard Scala queries. We will discuss plain SQL queries in more detail in **[TODO: PLAIN SQL CHAPTER NUMBER](#PlainSQL)**.
+The majority of this book will focus on standard Scala queries. We will discuss plain SQL queries in more detail in [Chapter 5](#PlainSQL).
 
 In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
 
 <div class="callout callout-info">
 **Slick isn't an ORM**
 
-If you've used other database libraries such as [Hibernate][link-hibernate] or [Active Record][link-active-record], you might expect Slick to be an _Object-Relational Mapping (ORM)_ tool. It is not, and it's best not to think of Slick in this way.
+If you've used other database libraries such as [Hibernate][link-hibernate] or [Active Record][link-active-record], you might expect Slick to be an *Object-Relational Mapping (ORM)* tool. It is not, and it's best not to think of Slick in this way.
 
 ORMs attempt to map object standard oriented data models onto relational database backends. By contrast, Slick provides a more database-like set of tools such as queries, rows and columns. We're not going to argue the pros and cons of ORMs here, but if this is an area that interests you, take a look at the [Coming from ORM to Slick][link-ref-orm] article in the Slick manual.
 
@@ -41,7 +41,7 @@ chapter-05
 
 Each chapter of the book is associated with a separate SBT project that provides a combination of examples and exercises. We've bundled everything you need to run SBT in the directory for each chapter.
 
-We'll be using a running example of a chat application, _Slack_, _Flowdock_, or an _IRC_ application. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
+We'll be using a running example of a chat application, *Slack*, *Flowdock*, or an *IRC* application. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
 
 For now, we will start with a simple conversation between two famous celebritiries. Change to the `chapter-01` directory now, use the `sbt.sh` script to start SBT, and compile and run the example to see what happens:
 
@@ -280,51 +280,41 @@ messages ++= Seq(
 
 The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query. Our table is now populated with data.
 
-### Querying
+### Selecting Data
 
-Now our database is populated, we can start running queries to select it. We do this by invoking one of a number of "invoker" methods on a query object. For example:
-
-~~~ scala
-messages.run.foreach(println)
-~~~
-
-In this code, `messages.run` executes the `messages` query against the database and returns a `Seq` of the results. In this case, the following SQL is issued to H2:
+Now our database is populated, we can start running queries to select it. We do this by invoking one of a number of "invoker" methods on a query object. For example, the `run` method executes the query and returns a `Seq` of results:
 
 ~~~ scala
-messages.selectStatement
-// res1: String = select x2."sender", x2."content", x2."id" from "message" x2
-~~~
-
-Because `messages` is defined as a query over a `Table[Message]`, the result is a `Vector` of `Message` objects:
-
-~~~ scala
-scala> messages.run
-// res2: Seq[Example.MessageTable#TableElementType] = Vector( ↩
+messages.run
+// res1: Seq[Example.MessageTable#TableElementType] = Vector( ↩
 //   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
 //   Message(HAL,Affirmative, Dave. I read you.,2), ↩
 //   Message(Dave,Open the pod bay doors, HAL.,3), ↩
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-If we want to retrieve a subset of the messages in our table, we simply run a modified version of our query. For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL:
+We can see the SQL issued to H2 using the `selectStatement` method on the query:
+
+~~~ scala
+messages.selectStatement
+// res2: String = select x2."sender", x2."content", x2."id" from "message" x2
+~~~
+
+If we want to retrieve a subset of the messages in our table, we simply run a modified version of our query. For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL that retrieves the expected subset of results:
 
 ~~~ scala
 scala> messages.filter(_.sender === "HAL").selectStatement
 // res3: String = select x2."sender", x2."content", x2."id" ↩
 //                from "message" x2 ↩
 //                where x2."sender" = 'HAL'
-~~~
 
-If we run this query, we get back a subset of messages as we might expect:
-
-~~~ scala
 scala> messages.filter(_.sender === "HAL").run
 // res4: Seq[Example.MessageTable#TableElementType] = Vector( ↩
 //   Message(HAL,Affirmative, Dave. I read you.,2), ↩
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-We actually generated this query earlier in the example and stored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
+If you remember, we actually generated this query earlierstored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
 
 ~~~ scala
 scala> halSays.run
@@ -333,21 +323,21 @@ scala> halSays.run
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-If you remember, we actually created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses:
+The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of `run`:
 
 ~~~ scala
-halSays.filter(_.content like "%afraid%").selectStatement
-// res6: String = select x2."sender", x2."content", x2."id" ↩
+halSays.map(_.id).selectStatement
+// res6: String = select x2."id" ↩
 //                from "message" x2 ↩
-//                where (x2."sender" = 'HAL') ↩
-//                and (x2."content" like '%afraid%')
+//                where (x2."sender" = 'HAL')
 
-halSays.filter(_.content like "%afraid%").run
-// res7: Seq[Example.MessageTable#TableElementType] = Vector( ↩
-//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+halSays.map(_.id).run
+// res7: Seq[Int] = Vector(2, 4)
 ~~~
 
-Query objects implement methods called `map`, `flatMap`, `filter`, and `withFilter`, making them compatible with Scala for comprehensions. You will often see Slick queries written like this:
+### For Comprehensions
+
+Queries implement methods called `map`, `flatMap`, `filter`, and `withFilter`, making them compatible with Scala for comprehensions. You will often see Slick queries written in this style:
 
 ~~~ scala
 val halSays2 = for {
@@ -359,12 +349,13 @@ Remember that for comprehensions are simply aliases for chains of method calls. 
 
 ~~~ scala
 halSays2.run
+// res8: Seq[Message] = ...
 ~~~
 
 <!--
 ### Database Connections and Sessions
 
-Queries are executed in the scope of a _session_. You need a session to be able to run a query, but you do not need one to construct a query.
+Queries are executed in the scope of a *session*. You need a session to be able to run a query, but you do not need one to construct a query.
 
 A session is our connection to the database, and we can obtain one from Slick's `Database` object. We can do that from a configuration file, and Java's `DataSource` or JNDI technologies.  For this introduction, we're going to use a JDBC URL:
 
@@ -387,15 +378,15 @@ db.withSession {
   Java Database Connectivity (JDBC).  It's a specification for accessing databases in a vendor
   neutral way. That is, it aims to be independent of the specific database you are connecting to.
 
-  The specification is mirrored by a library implemented for each database you want to connect to. This library is called  the _JDBC driver_.
+  The specification is mirrored by a library implemented for each database you want to connect to. This library is called  the *JDBC driver*.
 
-  JDBC works with _connection strings_, which are URLs for telling the driver where your database is, and
+  JDBC works with *connection strings*, which are URLs for telling the driver where your database is, and
   providing connection details (such as a username and password, perhaps).
 </div>
 
-Each database product (H2, Oracle, PostgresSQL, and so on) has a different take on how queries should be constructed, how data should be represented, and what capabilities are implemented. This is abstracted by the Slick _driver_.  We import the right driver for the database we are using.
+Each database product (H2, Oracle, PostgresSQL, and so on) has a different take on how queries should be constructed, how data should be represented, and what capabilities are implemented. This is abstracted by the Slick *driver*.  We import the right driver for the database we are using.
 
-With that import done we set up our database connection, `db`, by providing `Database` with a JDBC connection string, and the class name of the JDBC driver being used.  Yes, there are two kinds of _driver_ being used: Slick's abstraction is called a driver; and it uses a JDBC driver too.
+With that import done we set up our database connection, `db`, by providing `Database` with a JDBC connection string, and the class name of the JDBC driver being used.  Yes, there are two kinds of *driver* being used: Slick's abstraction is called a driver; and it uses a JDBC driver too.
 
 From our database connection we can obtain a session. Sessions are required by Slick methods that need to actually go and communicate with the database.  Typically the session parameter is marked as `implicit`, meaning you do not have to manually supply the parameter.  We're doing this
 in the code sample above as `run` requires a session, and the session it uses is the one we defined as implicit.
