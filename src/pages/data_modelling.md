@@ -756,7 +756,6 @@ Action          Description
                 later in this chapter.
 -----------     --------------------------------------------------
 
-: Referential Actions
 </div>
 
 
