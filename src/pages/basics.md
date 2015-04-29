@@ -2,15 +2,13 @@
 
 ## Orientation
 
-Slick is a Scala library for accessing relational databases. The code you write with Slick looks a lot like code you'd write using the Scala collections library. You can treat a query like a collection and `map` and `filter` over it or use it in a for comprehension. This is how we'll be working with Slick for the majority of this text.
+Slick is a Scala library for accessing relational databases using an interface similar to the Scala collections library. You can treat queries like collections, transforming and combining them with methods like `map`, `flatMap`, and `filter` before sending them to the database to fetch results. This is how we'll be working with Slick for the majority of this text.
 
-Your queries are type safe, meaning the compiler will spot some kinds of mistake you might make. A further benefit is that your queries _compose_, allowing you to build up expressions to run against the database.
+Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also supports *plain SQL queries* that look more like the prepared statements you may be used to from JDBC.
 
-However, if this isn't your style, you'll be happy to know that Slick supports _plain SQL queries_. These look a lot like SQL embedded in your Scala code. We show this style in [Chapter 2](#PlainSQL).
+The majority of this book will focus on standard Scala queries. We will discuss plain SQL queries in more detail in **[TODO: PLAIN SQL CHAPTER NUMBER](#PlainSQL)**.
 
-
-
-Aside from querying, Slick helps manage database connections, transactions, schema, foreign keys, auto incrementing fields, and all the things you might expect from any database library. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
+In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
 
 <div class="callout callout-info">
 **Slick isn't an ORM**
@@ -22,35 +20,84 @@ ORMs attempt to map object standard oriented data models onto relational databas
 If you aren't familiar with ORMs, congratulations. You already have one less thing to worry about!
 </div>
 
-## The Chat Example
+## Examples and Exercises
 
-The aim of this first chapter is to introduce core concepts and get you up and running with Slick.
+The aim of this first chapter is to provide a high-level overview of the core concepts involved in Slick, and get you up and running with a simple end-to-end example. You can grab this example now by cloning the Git repo of exercises for this book:
 
-We'll be using an example of a chat application here and in the rest of the book. Think of it as the database behind a _Slack_, _Flowdock_, or an _IRC_ application. It will have users, messages, and rooms. These will be modeled as tables, relationships between tables, and various kinds of queries.
+~~~ bash
+bash$ git clone git@github.com:underscoreio/essential-slick-code.git
+Cloning into 'essential-slick-code'...
 
-For now, though, we're going to start with a single table for storing messages.
+bash$ cd essential-slick-code
 
+bash$ ls -1
+README.md
+chapter-01
+chapter-02
+chapter-03
+chapter-04
+chapter-05
+~~~
 
-## Getting Started
+Each chapter of the book is associated with a separate SBT project that provides a combination of examples and exercises. We've bundled everything you need to run SBT in the directory for each chapter.
 
-All of the examples in this book will use the [H2][link-h2-home] database. H2 is written in Java and runs along-side our application code as a simple library. We've picked H2 because there are no external software dependencies to install. In other words, we can forego any system administration and get on with writing Scala code immediately.
+We'll be using a running example of a chat application, _Slack_, _Flowdock_, or an _IRC_ application. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
 
-You might prefer to use _MySQL_, _PostgreSQL_, or some other database---and you can. In [Appendix A](#altdbs) we point you at the changes you'll need to make to work with other databases. However, we recommend sticking with H2 for at least this first chapter, so you can get confidence using Slick without running into database-specific complications.
+For now, we will start with a simple conversation between two famous celebritiries. Change to the `chapter-01` directory now, use the `sbt.sh` script to start SBT, and compile and run the example to see what happens:
+
+~~~ bash
+bash$ cd chapter-01
+
+bash$ ./sbt.sh
+# SBT log messages...
+
+> compile
+# More SBT log messages...
+
+> run
+Creating database table
+
+Inserting test data
+
+Selecting all messages:
+Message("Dave","Hello, HAL. Do you read me, HAL?",1)
+Message("HAL","Affirmative, Dave. I read you.",2)
+Message("Dave","Open the pod bay doors, HAL.",3)
+Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
+
+Selecting only messages from HAL:
+Message("HAL","Affirmative, Dave. I read you.",2)
+Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
+~~~
+
+If you get output similar to the above, congratulations! You're all set up and ready to run with the examples and exercises throughout the rest of this book. If you encounter any errors, let us know on our [Gitter channel][link-underscore-gitter] and we'll do what we can to help out.
 
 <div class="callout callout-info">
-**Download the Code for this Book**
+**New to SBT?**
 
-If you don't want to type in the code for the next few section we have a [GitHub project][link-example] containing the build file, directory structure, and Scala source files.
+The first time you run SBT, it will download a lot of library dependencies from the Internet and cache them on your hard drive. This means two things:
 
-You can download a ZIP file with all the code in it, or clone it as you would any other Git project. Once you have the code downloaded, look in the _chapter-01_ folder.
+ - you need a working Internet connection to get started;
+ - the first `compile` command you issue could take a while to complete.
+
+If you haven't used SBT before, you may find the primer in [TODO: SBT PRIMER APPENDIX NUMBER](#SBT) useful.
 </div>
 
+## Example: An SQL Oddysey
 
-### SBT Build File
+The test application we saw above creates an in-memory database using [H2][link-h2-home], creates a single table, populates it with test data, and then runs some example queries. The rest of this section will walk you through the code and provide an overview of things to come. We'll reproduce the essential parts of the code in the text, but you can follow along in the codebase for the exercises as well.
 
-We're going to see how to model a table of chat messages in Slick, how to connect to it, insert data, and query it. To do this we'll need a Scala project.
+<div class="callout callout-warning">
+**Choice of Database**
 
-We'll create a regular project using the [Scala Build Tool (SBT)][link-sbt]. If you don't have SBT installed, follow the instructions at the [scala-sbt site][link-sbt]. Here's the _build.sbt_ file we'll be using:
+All of the examples in this book use the [H2][link-h2-home] database. H2 is written in Java and runs in-process along-side our application code. We've picked H2 because it allows us to forego any system administration and skip to writing Scala code.
+
+You might prefer to use *MySQL*, *PostgreSQL*, or some other database---and you can. In [Appendix A](#altdbs) we point you at the changes you'll need to make to work with other databases. However, we recommend sticking with H2 for at least this first chapter so you can build confidence using Slick without running into database-specific complications.
+</div>
+
+### Library Dependencies
+
+Before diving into Scala code, let's look at the SBT configuration. You'll find this in `build.sbt` in the example:
 
 ~~~ scala
 name := "essential-slick-chapter-01"
@@ -62,118 +109,41 @@ scalaVersion := "2.11.6"
 libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick"           % "2.1.0",
   "com.h2database"      % "h2"              % "1.4.185",
-  "ch.qos.logback"      % "logback-classic" % "1.1.2",
-  "joda-time"           % "joda-time"       % "2.6",
-  "org.joda"            % "joda-convert"    % "1.2")
+  "ch.qos.logback"      % "logback-classic" % "1.1.2"
+)
 ~~~
 
-This file declares the minimum dependencies we require:
+This file declares the minimum library dependencies for a Slick project:
 
 - Slick itself;
-- the H2 database; and
-- a logging library, which Slick requires for debug logging.
+- the H2 database;
+- a logging library.
 
-In addition we're using [Joda Time][link-joda-time], which is a great library for working with dates and times.
+If we were using a separate database like MySQL or PostgreSQL, we would substitute the H2 dependency for the JDBC driver for that database. We may also bring in a connection pooling library such as [C3P0][link-c3p0] or [DBCP][link-dbcp]. Slick is based on JDBC under the hood, so many of the same low-level configuration options exist.
 
+### Defining our Schema
 
-### The Code
-
-The Scala code we will end up with in this chapter is as follows. You don't need to understand all of this yet---we'll go through everything in detail later on---but you may find you get the gist:
-
-~~~ scala
-package chapter01
-
-import scala.slick.driver.H2Driver.simple._
-import java.sql.Timestamp
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone.UTC
-
-object Example extends App {
-
-  // Custom column mapping:
-  implicit val jodaDateTimeType =
-    MappedColumnType.base[DateTime, Timestamp](
-      dt => new Timestamp(dt.getMillis),
-      ts => new DateTime(ts.getTime, UTC))
-
-  // Row representation:
-  final case class Message(
-    sender: String,
-    content: String,
-    ts: DateTime,
-    id: Long = 0L)
-
-  // Schema:
-  final class MessageTable(tag: Tag)
-      extends Table[Message](tag, "message") {
-
-    def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def sender  = column[String]("sender")
-    def content = column[String]("content")
-    def ts      = column[DateTime]("ts")
-
-    def * = (sender, content, ts, id) <>
-      (Message.tupled, Message.unapply)
-  }
-
-  // Table:
-  lazy val messages = TableQuery[MessageTable]
-
-  // Our first query:
-  val halSays = for {
-    message <- messages
-    if message.sender === "HAL"
-  } yield message
-
-  // Database connection details:
-  def db = Database.forURL(
-    "jdbc:h2:mem:chapter01",
-    driver="org.h2.Driver")
-
-  db.withSession { implicit session =>
-    // Create the table:
-    messages.ddl.create
-
-    // Insert the conversation,
-    // which took place in Feb, 2001:
-    val start = new DateTime(2001, 2, 17, 10, 22, 50)
-
-    messages ++= Seq(
-      Message("Dave", "Hello, HAL. Do you read me, HAL?",
-        start),
-      Message("HAL", "Affirmative, Dave. I read you.",
-        start plusSeconds 2),
-      Message("Dave", "Open the pod bay doors, HAL.",
-        start plusSeconds 4),
-      Message("HAL", "I'm sorry, Dave. I'm afraid I can't do that.",
-        start plusSeconds 6)
-    )
-
-    // Run the query:
-    println(halSays.run)
-  }
-}
-~~~
-
-Let's look at the concepts in this code before we run it.
-
-
-### Representing a Table and Row
-
-Slick models database tables with instances of the `Table` trait, and rows using a variety of data structures. In this example we're modelling rows using a natural Scala representation---a case class, `Message`.
-
-The `Message` case class represents a single row of the `message` table, which is constructed from
-four columns: the `sender` of the message, the `content` of the message, the time it was sent,`ts` and a unique `id`. This is the class we use to hold data in Scala---it has very little to do with the database itself:
+Our first job is to tell Slick what tables we have in our database and how to map them onto Scala values and types. The most common representation of data in Scala is a `case class`, so we start by defining a `Message` class representing a row in our single example table:
 
 ~~~ scala
 final case class Message(
   sender: String,
   content: String,
-  ts: DateTime,
   id: Long = 0L)
 ~~~
 
-In addition to `Message` we also have `MessageTable`, which tells Slick how to translate between the `messages` table at the database level and the `Message` class in our Scala application:
+We also define a helper method to create a few test `Messages` for demonstration purposes:
+
+~~~ scala
+def freshTestData = Seq(
+  Message("Dave", "Hello, HAL. Do you read me, HAL?"),
+  Message("HAL",  "Affirmative, Dave. I read you."),
+  Message("Dave", "Open the pod bay doors, HAL."),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.")
+)
+~~~
+
+Next we define a `Table` object, which defines the schema in our database table and tells Slick how to map back and forth between database data and instances of our case class:
 
 ~~~ scala
 final class MessageTable(tag: Tag)
@@ -182,35 +152,47 @@ final class MessageTable(tag: Tag)
   def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def sender  = column[String]("sender")
   def content = column[String]("content")
-  def ts      = column[DateTime]("ts")
 
-  def * = (sender, content, ts, id) <>
+  def * = (sender, content, id) <>
     (Message.tupled, Message.unapply)
 }
 ~~~
 
-`MessageTable` defines four columns: `id`, `sender`, `content`, and `ts`. It also defines the types of those columns and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is the primary key for the table and auto-increments.
+`MessageTable` defines three `columns`: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
 
-The mysterious `*` is the _default projection_, which uses Slick's `<>` method to define a mapping between the four database columns and the four fields of `Message`. This dictates the data type we'll get back when we query the `"messages"` table.
-Don't worry too much about the details here---we'll go into methods such as `*`, `<>`, `tupled`, and `unapply` in more detail in Chapter 3.
+The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in Chapter 3. For now, all you need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(Long, String, String)`.
 
 The `tag` is an implementation detail that allows Slick to manage multiple uses of the table in a single query. Think of it like a table alias in SQL. We don't need to provide tags in our user code---slick takes case of them automatically.
 
-After the definition of `MessageTable`, the last part of out code defines a `TableQuery`, which is our main entry point we use to access, persist, and alter data:
+### Example Queries
+
+Slick allows us to define and compose queries in advance of running them against the database. We start by defining a `TableQuery` object that represents a simple `SELECT *` style query on our message table:
 
 ~~~ scala
 lazy val messages = TableQuery[MessageTable]
 ~~~
 
-There's plenty going on in these three short code snippets. In particular there are three concepts being introduced:
+Note that we're not *running* this query at the moment---we're simply defining it as a means to build other queries. For example, we can create a `SELECT * WHERE` style query using a combinator called `filter`:
 
-- a _representation of our data_---in this case a case class called `Message`;
-- a `Table` object _representing the schema for a table_---in this case `MessageTable`; and
-- a table query acting as _an entry point for querying the database_.
+~~~ scala
+val halSays = messages.filter(_.sender === "HAL")
+~~~
 
-If you're a fan of terminology, know that this is the _lifted embedded_ approach to Slick.  It is the standard, non-experimental, way to work with Slick.
+Again, we haven't run this query yet---we've simply defined it as a useful building block for yet more queries. This demonstrates an important part of Slick's query language---it is made from *composable* building blocks that permit a lot of valuable code re-use.
 
+<div class="callout callout-info">
+**Lifted Embedding**
 
+If you're a fan of terminology, know that what we have discussed so far is called the *lifted embedding* approach in Slick:
+
+ - define data types to store row data (case classes, tuples, or other types);
+ - define `Table` objects representing mappings between our data types and the database;
+ - define `TableQueries` and combinators to build useful queries before we run them against the database.
+
+ Slick provides other querying models, but lifted embedding is the standard, non-experimental, way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 5](#PlainSQL).
+ </div>
+
+<!--
 ### Custom Column Mappings
 
 We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
@@ -239,93 +221,147 @@ What we're providing here is two functions:
 Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime`.
 
 This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
+-->
 
+### Connecting to the Database
 
-### Creating the Table in the Database
+We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for opening connections and starting transactions:
 
-Having modelled the table in Scala, we can ask Slick to create the table in the database:
+~~~ scala
+def db = Database.forURL(
+  url    = "jdbc:h2:mem:chat-database;DB_CLOSE_DELAY=-1",
+  driver = "org.h2.Driver")
+~~~
+
+The `Database.forURL` method is part of Slick, but the parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chat-database"` and configuring H2 to keep the data around indefinitely when no connections are open. H2-specific JDBC URLs are discussed in detail in the [H2 documentation][link-h2-jdbc-url].
+
+We can use the `db` object to open a `Session` with our database, which wraps a JDBC-level `Connection` and provides a context in which we can execute a sequence of queries.
+
+~~~ scala
+db.withSession { implicit session =>
+  // Run queries, profit!
+}
+~~~
+
+The `session` object provides methods for starting, commiting, and rolling back transactions (see [TODO: TRANSACTION CHAPTER](#Transactions)), and is passed an implicit parameter to methods that actually run queries against the database.
+
+### Inserting Data
+
+Having opened a session, we can start sending SQL to the database. We start by issuing a `CREATE` statement for `MessageTable`, which we build using methods of our `TableQuery` object, `messages`:
 
 ~~~ scala
 messages.ddl.create
 ~~~
 
-"DDL" in this case stands for _Data Definition Language_---the standard part of SQL used to create and modify the database schema. For example, the Scala code above translates to the following SQL in H2:
-
-~~~ sql
-create table "message" (
-  "sender"  VARCHAR NOT NULL,
-  "content" VARCHAR NOT NULL,
-  "ts"      TIMESTAMP NOT NULL,
-  "id"      BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1) NOT NULL PRIMARY KEY
-)
-~~~
-
-We can also execute the following code to delete the table from the database:
+"DDL" in this case stands for *Data Definition Language*---the standard part of SQL used to create and modify the database schema. The Scala code above issues the following SQL to H2:
 
 ~~~ scala
-messages.ddl.drop
+messages.ddl.createStatements.toList
+// res0: List[String] = List("""
+//   create table "message" (
+//     "sender" VARCHAR NOT NULL,
+//     "content" VARCHAR NOT NULL,
+//     "id" BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1)
+//          NOT NULL PRIMARY KEY
+//   )
+// """)
 ~~~
 
-The `create` and `drop` methods are useful for testing and demo purposes, but tend to be too simplistic for use in production. Real-world schema migrations are best done with separate migration scripts written in plain SQL.
-
-### Inserting Data
-
-Inserting rows into the table looks just like adding elements to a Scala collection.
-The following code create four new rows in our table:
+Once our table is set up, we need to insert some test data:
 
 ~~~ scala
 messages ++= Seq(
-  Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
-  Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
-  Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
-  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
+  Message("Dave", "Hello, HAL. Do you read me, HAL?"),
+  Message("HAL",  "Affirmative, Dave. I read you."),
+  Message("Dave", "Open the pod bay doors, HAL."),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.")
 )
 ~~~
 
-Both creating the table and inserting data will require a connection to the database, which we will look at in a moment.  But first, let's see what a query looks like.
-
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query. Our table is now populated with data.
 
 ### Querying
 
-As with inserts, queries look as though we are working with a Scala collection. For instance, the query below will return all messages from the user `HAL`:
+Now our database is populated, we can start running queries to select it. We do this by invoking one of a number of "invoker" methods on a query object. For example:
 
 ~~~ scala
-val halSays = for {
-  message <- messages
-  if message.sender === "HAL"
+messages.run.foreach(println)
+~~~
+
+In this code, `messages.run` executes the `messages` query against the database and returns a `Seq` of the results. In this case, the following SQL is issued to H2:
+
+~~~ scala
+messages.selectStatement
+// res1: String = select x2."sender", x2."content", x2."id" from "message" x2
+~~~
+
+Because `messages` is defined as a query over a `Table[Message]`, the result is a `Vector` of `Message` objects:
+
+~~~ scala
+scala> messages.run
+// res2: Seq[Example.MessageTable#TableElementType] = Vector( ↩
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
+//   Message(HAL,Affirmative, Dave. I read you.,2), ↩
+//   Message(Dave,Open the pod bay doors, HAL.,3), ↩
+//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+~~~
+
+If we want to retrieve a subset of the messages in our table, we simply run a modified version of our query. For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL:
+
+~~~ scala
+scala> messages.filter(_.sender === "HAL").selectStatement
+// res3: String = select x2."sender", x2."content", x2."id" ↩
+//                from "message" x2 ↩
+//                where x2."sender" = 'HAL'
+~~~
+
+If we run this query, we get back a subset of messages as we might expect:
+
+~~~ scala
+scala> messages.filter(_.sender === "HAL").run
+// res4: Seq[Example.MessageTable#TableElementType] = Vector( ↩
+//   Message(HAL,Affirmative, Dave. I read you.,2), ↩
+//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+~~~
+
+We actually generated this query earlier in the example and stored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
+
+~~~ scala
+scala> halSays.run
+// res5: Seq[Example.MessageTable#TableElementType] = Vector( ↩
+//   Message(HAL,Affirmative, Dave. I read you.,2), ↩
+//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+~~~
+
+If you remember, we actually created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses:
+
+~~~ scala
+halSays.filter(_.content like "%afraid%").selectStatement
+// res6: String = select x2."sender", x2."content", x2."id" ↩
+//                from "message" x2 ↩
+//                where (x2."sender" = 'HAL') ↩
+//                and (x2."content" like '%afraid%')
+
+halSays.filter(_.content like "%afraid%").run
+// res7: Seq[Example.MessageTable#TableElementType] = Vector( ↩
+//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+~~~
+
+Query objects implement methods called `map`, `flatMap`, `filter`, and `withFilter`, making them compatible with Scala for comprehensions. You will often see Slick queries written like this:
+
+~~~ scala
+val halSays2 = for {
+  message <- messages if message.sender === "HAL"
 } yield message
 ~~~
 
-This is _not_ executing a query. This is important, as it allows us to compose queries and pass queries around without holding open a database connection. The type of `halSays` is `Query[MessageTable, Message, Seq]`, and `Query` defines various `Query => Query`-style methods for composing queries.
-
-As for comprehensions are sugar for `map`, `filter`, and related methods, this query can be re-written as:
+Remember that for comprehensions are simply aliases for chains of method calls. All we are doing here is building a query with a `WHERE` clause on it. We don't touch the database until we execute the query:
 
 ~~~ scala
-val halSays = messages.filter(_.sender === "HAL")
+halSays2.run
 ~~~
 
-Which style you use is a matter of your circumstance and team preference.
-
-Note also that we use triple equals `===` and not `==` in the query. The `===` is Slicks way of inserting the SQL `=` operator in here, rather than the Scala `equals` check. But aside from that, the query looks just the same as the code you'd write to work with any Scala collection.
-
-The `===` and corresponding `=!=` are the only special cases.  Other operators, if defined for the type you're working with, behave as you expect. For example, we can use less than:
-
-~~~ scala
-val now = new DateTime(2001, 2, 17, 10, 22, 54)
-val recentMessages = halSays.filter(_.ts < now)
-~~~
-
-...and when we `run` that the SQL will be something like:
-
-~~~ sql
-select "sender", "content", "ts", "id" from "message" where
-  ("sender" = 'HAL') and
-  ("ts" < '2001-02-17 10:22:54.0')
-~~~
-
-Now that we have a few queries, we should run them.
-
-
+<!--
 ### Database Connections and Sessions
 
 Queries are executed in the scope of a _session_. You need a session to be able to run a query, but you do not need one to construct a query.
@@ -366,9 +402,9 @@ in the code sample above as `run` requires a session, and the session it uses is
 
 With a session we can execute our query. There are a number of calls you can make on a query, as listed in the table below.
 
-------------------------------------------------------------------
+==================================================================
 Method          Executes the query and will:
------------     --------------------------------------------------
+===========     ==================================================
  `execute`      Ignore the result.
 
  `first`        Return the first result, or throw an exception if there is no result.
@@ -381,7 +417,7 @@ Method          Executes the query and will:
 
  `run`          Acts like `first` for queries for a value, but something like `list` for a collection
                 of values.
------------     --------------------------------------------------
+===========     ==================================================
 
 : A Selection of Statement Invokers
 
@@ -471,7 +507,7 @@ Vector(
 ~~~
 
 You have now built and run a simple Slick application.
-
+-->
 
 ### Exercises
 
