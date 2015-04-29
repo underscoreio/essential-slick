@@ -403,6 +403,47 @@ Unfortunately, some optimizers don't manage this very well. Postgres does a good
 
 ## Aggregation
 
+Aggregate functions are all about computing a single value from some set of rows. A simple example is `count`. we will also look at grouping rows, and computing values on those groups.
+
+### Functions
+
+Slick provides a few aggregate functions, as listed in the table below.
+
+--------------------------------------------------------------------
+Method           SQL
+---------------  ---------------------------------------------------
+ `length`        `COUNT(1)`
+
+ `countDistinct` `COUNT(DISTINCT column)`
+
+ `min`           `MIN(column)`
+
+ `max`           `MAX(column)`
+
+ `sum`           `SUM(column)`
+
+ `avg`           `AVG(column)` --- mean of the column values
+-----------      --------------------------------------------------
+
+: A Selection of Aggregate Functions
+
+
+Using them causes no great surprises, as shown in the following examples:
+
+``` scala
+val numRows: Int = messages.length.run
+
+val numSenders: Int = messages.map(_.senderId).countDistinct.run
+
+val firstSent: Option[DateTime] = messages.map(_.ts).min.run
+```
+
+While `length` and `countDistinct` return an `Int`, the rest of the other functions is an `Option`. This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
+
+
+### Grouping
+
+
 Lets have a quick looks at how we can use aggregation functions to return Dave's first and last message:
 
 ``` scala
