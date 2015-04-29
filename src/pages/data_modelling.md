@@ -576,9 +576,15 @@ meaning the DDL will emit:
 ALTER TABLE "user" ADD CONSTRAINT "pk_id" PRIMARY KEY("id")
 ~~~
 
-(As it happens, this specific example [doesn't currently work with H2 and Slick](https://github.com/slick/slick/issues/763).
+<div class="callout callout-info">
+**H2 Issue**
+
+As it happens, this specific example [doesn't currently work with H2 and Slick](https://github.com/slick/slick/issues/763).
+
 The `O.AutoInc` marks the column as an H2 "IDENTIY"
-column which is, implicitly, a primary key as far as H2 is concerned.)
+column which is, implicitly, a primary key as far as H2 is concerned.
+</div>
+
 
 Where `primaryKey` is more useful is when you have a compound key.
 This is a key which is based on the value of two or more columns.
