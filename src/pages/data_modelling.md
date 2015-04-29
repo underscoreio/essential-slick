@@ -966,7 +966,7 @@ Hint: Slick provides `in` for SQL's `WHERE x IN (SELECT ...)` expressions.
 <div class="solution">
 There are a few ways to model this table regarding constraints and defaults.
 Here's one way, where the default is on the database,
-and he unique primary key is simply the user's `id`:
+and the unique primary key is simply the user's `id`:
 
 ~~~ scala
 case class Bill(userId: Long, amount: BigDecimal)
