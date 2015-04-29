@@ -443,32 +443,134 @@ While `length` and `countDistinct` return an `Int`, the rest of the other functi
 
 ### Grouping
 
-
-Lets have a quick looks at how we can use aggregation functions to return Dave's first and last message:
+You may find you use the aggregate functions with column grouping. For example, how many messages has each user sent?  Slick provides `groupBy` which will group rows by some expression. Here's an example:
 
 ``` scala
-lazy val firstAndLastMessage = messages.filter(_.senderId === daveId).groupBy { _ => true }.map {
-  case (_, group) => (group.map(_.id).max, group.map(_.id).min)
-}
+val msgPerUser =
+  messages.groupBy(_.senderId).
+  map { case (senderId, msgs) => senderId -> msgs.length }.
+  run
 ```
-<!-- found this on stackoverflow, should I reference it?
-    //http://stackoverflow.com/questions/27049646/how-to-select-max-min-in-same-query-in-slick/27055250#27055250
--->
-Notice the `groupBy { _ => true }`?
-This is needed so we can use the aggregate functions `min` and `max`.
-Slick will ignore this when generating the SQL.
-We can see this using `selectStatement`:
+
+That'll work, but it will be in terms of a user's primary key. It'd be nicer to see the user's name. We can do that using our join skills:
+
+``` scala
+val msgsPerUser =
+   messages.join(users).on(_.senderId === _.id).
+   groupBy { case (msg, user)  => user.name }.
+   map     { case (name, group) => name -> group.length }.
+   run
+```
+
+The results would be:
+
+``` scala
+Vector((Frank,2), (HAL,2), (Dave,4))
+```
+
+So what's happened here? What `groupBy` has given us is a way to place rows into groups, according to some function we supply. In this example, the function is to group rows based on the user's name. It doesn't have to be a `String`, it could be any type in the table.
+
+When it comes to mapping, we now have the key to the group (user's name in our case), and the corresponding group rows as a query.  Because we've joined messages and users, our group is a query of those two tables.  In this example we don't care what the query is because we're just counting the number of rows.  But sometimes we will need to know more about the query.
+
+Let's look at a more involved example, by collecting some statistics about our messages. We want to find, for each user, how many messages they sent, and the date of their first message.  We want a result something like this:
+
+```
+Vector(
+  (Frank, 2, Some(2001-02-16T20:55:00.000Z)),
+  (HAL,   2, Some(2001-02-17T10:22:52.000Z)),
+  (Dave,  4, Some(2001-02-16T20:55:04.000Z)))
+```
+
+We have all the aggregate functions we need to do this:
+
+``` scala
+val stats =
+   messages.join(users).on(_.senderId === _.id).
+   groupBy { case (msg, user)   => user.name }.
+   map     {
+    case (name, group) =>
+      (name, group.length, group.map{ case (msg, user) => msg.ts}.min)
+   }
+```
+
+We've now started to create a bit of a monster query. We can simplify this, but before doing so, it may help to clarify that this query is equivalent to the following SQL:
 
 ``` sql
-select max(x2."id"), min(x2."id") from "message" x2 where x2."sender" = 1
+select
+  user.name, count(1), min(message.ts)
+from
+  message inner join user on message.sender = user.id
+group by
+  user.name
 ```
 
-## Group By
+Convince yourself the Slick and SQL queries are equivalent, by comparing:
 
-TODO: Monster example of a join and aggregate?
+* the `map` expression in the Slick query to the `SELECT` clause in the SQL;
+* the `join` to the SQL `INNER JOIN`; and
+* the `groupBy` to the SQL `GROUP` expression.
+
+If you do that you'll see the Slick expression makes sense. But when seeing these kinds of queries in code it may help to simplify by introducing intermediate functions with meaningful names.
+
+There are a few ways to go at simplifying this, but the lowest hanging fruit is that `min` expression inside the `map`.  The issue here is that the `group` pattern is a `Query` of `(MessageTable, UserTable)` as that's our join, which leads to us having to split it further to access the message's timestamp field.
+
+Let's pull that part out as a method:
+
+```scala
+import scala.language.higherKinds
+
+def timestampOf[S[_]](group: Query[(MessageTable,UserTable), (Message,User), S]) =
+  group.map { case (msg, user) => msg.ts }
+```
+
+What we've done here is introduced a method to work on the group query.  The query is parameterized by the join, the mapped values, and the container for the results. By container we mean something like `Vector[T]` (from `run`-ing the query) or `List[T]` (if we `list` the query).  We don't really care what our results go into, but we do care we're working with messages and users.
+
+With this little piece of domain specific language in place, the query becomes:
+
+``` scala
+val nicerStats =
+   messages.join(users).on(_.senderId === _.id).
+   groupBy { case (msg, user)   => user.name }.
+   map     { case (name, group) => (name, group.length, timestampOf(group).min) }
+```
+
+We think these small changes make code more maintainable and, quite frankly, less scary. It may be marginal in this case, but real world queries can become large. Your team mileage may vary, but if you see Slick queries that are hard to understand, try pulling the query apart into named methods.  
+
+
+<div class="callout callout-info">
+**Group By True**
+
+There's a `groupBy { _ => true}` trick you can use where you want to select more than one aggregate from a query.
+
+As an example, have a go at translating this SQL into a Slick query:
+
+``` sql
+select min(ts), max(ts) from message where content like '%read%'
+```
+
+It's pretty easy to get either `min` or `max`:
+
+``` scala
+messages.filter(_.content like "%read%").map(_.ts).min
+```
+
+But you want both `min` and `max` in one query. This is where `groupBy { _ => true}` comes into play:
+
+``` scala
+messages.filter(_.content like "%read%").groupBy(_ => true).map {
+  case (_, msgs) => (msgs.map(_.ts).min, msgs.map(_.ts).max)
+}
+```
+
+The effect here is to group all rows into the same group! This allows us to reuse the `msgs` collection, and obtain the result we want.
+</div>
 
 
 ### Exercises
+
+
+TODO: Exercise idea: HAVING a lot of msgs.  modify msgsPerUser to return the counts for just those uses with more than 2 messages. (Slick doesn't distinguish WHERE and HAVING, so just filter as normal).
+
 
 #### User rooms
 
