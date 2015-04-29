@@ -64,12 +64,12 @@ You can enable a variety of events to be logged:
 The `StatementInvoker.result` logger is pretty cute:
 
 ~~~
-StatementInvoker.result - /--------+----------------------+----------------------+----\
-StatementInvoker.result - | sender | content              | ts                   | id |
-StatementInvoker.result - +--------+----------------------+----------------------+----+
-StatementInvoker.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
-StatementInvoker.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
-StatementInvoker.result - \--------+----------------------+----------------------+----/
+SI.result - /--------+----------------------+----------------------+----\
+SI.result - | sender | content              | ts                   | id |
+SI.result - +--------+----------------------+----------------------+----+
+SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
+SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
+SI.result - \--------+----------------------+----------------------+----/
 ~~~
 </div>
 
@@ -332,9 +332,9 @@ Is "Surprised?" printed?
 <div class="solution">
 The call to `rollback` only impacts Slick calls.
 
-This means the two calls to `delete` will have no effect: the database will have the same message records it had before this block of code was run.  
+This means the two calls to `delete` will have no effect: the database will have the same message records it had before this block of code was run.
 
-It also means the message "Surprised?" will be printed.  
+It also means the message "Surprised?" will be printed.
 </div>
 
 

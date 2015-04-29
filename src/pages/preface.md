@@ -6,14 +6,16 @@ Slick is a Scala library for working with databases: querying, inserting data, u
 
 This material is aimed at a Scala developer who has:
 
-* taken the [Essential Scala][link-essential-scala] course or equivalent;
-* experience with relational databases (rows, columns, joins, indexes, SQL); and
-* JDK 7 installed, along with an editor or an IDE (Scala IDE for Eclipse, or IntelliJ).
+* a working knowledge of Scala
+  (we recommend [Essential Scala][link-essential-scala] or an equivalent book);
+* experience with relational databases
+  (familiarity with concepts such as rows, columns, joins, indexes, SQL); and
+* an installed JDK 7, along with a programmer's text editor or IDE
+  (Scala IDE for Eclipse or IntelliJ are both good choices).
 
-The material presented focuses on Slick version 2.1.0, examples use [H2][link-h2-home] as the relational database.
+The material presented focuses on Slick version 2.1.0. Examples use [H2][link-h2-home] as the relational database.
 
 Many thanks to the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
-
 
 ## Roadmap {-}
 
@@ -21,7 +23,7 @@ Many thanks to the team at [Underscore][link-underscore] for their invaluable co
 Chapter 1
 :   We want you to get to your keyboard and start writing code.
 
-    This first chapters gives you a working environment where
+    This first chapter gives you a working environment where
     you can explore Slick by creating a table, inserting data,
     and running queries.  You'll get to see concepts such
     as representing rows as case classes, the `Table[T]` schema,
