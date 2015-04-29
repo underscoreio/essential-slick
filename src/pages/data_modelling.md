@@ -589,8 +589,7 @@ column which is, implicitly, a primary key as far as H2 is concerned.
 Where `primaryKey` is more useful is when you have a compound key.
 This is a key which is based on the value of two or more columns.
 
-By way of a not at all contrived example,
-let's add the ability for people to chat in rooms.
+We'll look at this by adding the ability for people to chat in rooms.
 
 The room definition is straight-forward:
 
@@ -618,8 +617,8 @@ It would get error prone passing around tuples like that.
 
 
 To say who is in which room, we will add a table called `occupant`.
-And rather than have a sane auto-generated primary key for `occupant`, we'll
-make it a compound of the user and the room:
+And rather than have an auto-generated primary key for `occupant`,
+we'll make it a compound of the user and the room:
 
 ~~~ scala
 case class Occupant(roomId: Long, userId: Long)
