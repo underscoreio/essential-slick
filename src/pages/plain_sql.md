@@ -80,6 +80,53 @@ The methods `+` and `+?` are the only `StaticQuery` method for composing queries
 
 ## Exercises
 
+#### Robert Tables
+
+What will the following do?
+
+~~~ scala
+def userByEmail(email:String) = {
+    sql"""select * from "user" where "user"."email" = '#${email}'"""
+}
+
+val ohDear = userByEmail("""';DROP TABLE "user";--- """).as[User].list
+
+results.foreach(result => println(result))
+
+sql"""select * from "user" """.as[User].list.foreach(result => println(result))
+~~~
+
+
+<div class="solution">
+If you are familiar with [joins][link-xkcd],
+the title of the exercise has probably tipped you off.
+`#$` does not escape input, so the SQL we run is actually two queries:
+
+~~~ sql
+SELECT * FROM "user" WHERE "user"."email" = '';
+~~~
+and
+
+~~~ sql
+DROP TABLE "user";---
+~~~
+
+When we attempt to return all users from `user`,
+the table has been dropped and get we get the error:
+
+~~~
+org.h2.jdbc.JdbcSQLException: Table "user" not found; SQL statement:
+select * from "user"  [42102-185]
+~~~
+</div>
+
+
 ## Take Home Points
+
+- `#$` is incredibly dangerous. Information should always be escaped before it goes near a database. Never forget little bobby tables.
+
+![Image from https://xkcd.com/327](src/img/exploits_of_a_mom.png)
+
+
 
 
