@@ -89,7 +89,7 @@ DDB.forURL(dbURL,dbDriver) withDynSession {
 
 
 <div class="callout callout-warning">
-** SELECT * **
+**`SELECT *`**
 
 Throughout the chapter we will use `SELECT *`,this is for brevity.
 You should avoid this in your code base as Slick depends on the
