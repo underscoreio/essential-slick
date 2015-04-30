@@ -15,6 +15,60 @@ TODO: SetParameter[T]
 
 ## Select
 
+Let's start with a simple example, return a list of room Ids.
+
+~~~ scala
+    val s = sql"""select "room" from "message" """
+    val q = s.as[Long]
+    val r = q.list
+
+    r.foreach { println}
+~~~
+
+
+-- Explain what is happening.
+This would better if we were using the types we created in chapter 2.
+
+~~~ scala
+    val s = sql"""select "room" from "message" """
+    val q = s.as[Id[RoomTable]]
+    val r = q.list
+
+    r.foreach { println}
+~~~
+
+If we try and run this we will get a compiler error
+
+~~~
+could not find implicit value for parameter rconv: scala.slick.jdbc.GetResult[chapter05.ChatSchema.Id[chapter05.PlainQueries.schema.RoomTable]]
+~~~
+
+This is because slick needs to know how to map from the database value to our class `Id[RoomTable]`.
+We create these mappings as impilicits, if you look in the chapter 5 chat schema you'll seem a bunch of them defined.
+
+To get our example working, we need to tell slick how to map from a `Long` to `Id[RoomTable]`.
+We use the Slick object `GetResult` to do this:
+
+~~~ scala
+implicit val getRoomIdResult    = GetResult(r => Id[RoomTable](r.nextLong()))
+~~~
+
+The signature of `GetResult` is `GetResult[T]( PositionedResult => T)`,
+`PositionedResult` has many methods on it defining the different type a column can be.
+As we can see in the example above `nextLong` is one of them.
+There are also two helper methods, which make life *much* easier - `<<` and `<<?`.
+They wrap  `GetResult` and mean we do not need to define what we expect the column type to be.
+Hence we can re-write the room id mapping to:
+
+~~~ scala
+implicit val getRoomIdResult    = GetResult(r => Id[RoomTable](r << ?))
+~~~
+
+`<<?` is used for optional column mappings.
+
+
+TODO: FINISH THIS.
+
 ~~~ scala
 DDB.forURL(dbURL,dbDriver) withDynSession {
   import Q.interpolation
@@ -33,7 +87,23 @@ DDB.forURL(dbURL,dbDriver) withDynSession {
     results.foreach(result => println(result))
 ~~~
 
-TODO: GetResult
+
+<div class="callout callout-warning">
+** SELECT * **
+
+Throughout the chapter we will use `SELECT *`,this is for brevity.
+You should avoid this in your code base as Slick depends on the
+column ordering of the results set to be known so you can populate
+your case classes via `GetResult` objects.
+
+<!--
+    Isn't this a reason TO use SELECT *  ?
+    If the column ordering is defined by the projection
+    Then that will provide at least *some* type saftey -
+    It needs to be the same order as the case class.
+  -->
+
+</div>
 
 
 ## Update
