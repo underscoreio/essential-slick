@@ -20,7 +20,7 @@ ORMs attempt to map object standard oriented data models onto relational databas
 If you aren't familiar with ORMs, congratulations. You already have one less thing to worry about!
 </div>
 
-## Examples and Exercises
+## Running the Examples and Exercises
 
 The aim of this first chapter is to provide a high-level overview of the core concepts involved in Slick, and get you up and running with a simple end-to-end example. You can grab this example now by cloning the Git repo of exercises for this book:
 
@@ -83,7 +83,7 @@ The first time you run SBT, it will download a lot of library dependencies from 
 If you haven't used SBT before, you may find the primer in [TODO: SBT PRIMER APPENDIX NUMBER](#SBT) useful.
 </div>
 
-## Example: A SQL Oddysey
+## Example: A Sequel Oddysey
 
 The test application we saw above creates an in-memory database using [H2][link-h2-home], creates a single table, populates it with test data, and then runs some example queries. The rest of this section will walk you through the code and provide an overview of things to come. We'll reproduce the essential parts of the code in the text, but you can follow along in the codebase for the exercises as well.
 
@@ -120,6 +120,16 @@ This file declares the minimum library dependencies for a Slick project:
 - a logging library.
 
 If we were using a separate database like MySQL or PostgreSQL, we would substitute the H2 dependency for the JDBC driver for that database. We may also bring in a connection pooling library such as [C3P0][link-c3p0] or [DBCP][link-dbcp]. Slick is based on JDBC under the hood, so many of the same low-level configuration options exist.
+
+### Importing Library Code
+
+Database management systems are not all created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *driver*. For example, we access most of the Slick API for H2 via the following `import`:
+
+~~~ scala
+import scala.slick.driver.H2Driver.simple._
+~~~
+
+Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 6](#altdbs) covers some of the differences between different drivers and provides tips for working with multiple DBMSs.
 
 ### Defining our Schema
 
@@ -498,7 +508,6 @@ Vector(
 ~~~
 
 You have now built and run a simple Slick application.
--->
 
 ### Exercises
 
@@ -655,27 +664,136 @@ select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where lower
 
 There are three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".
 </div>
-
-
+-->
 
 ## Take Home Points
 
-Slick models a database using:
+In this chapter we've seen a broad overview of the main aspects Slick, including defining a schema, connecting to the database, and issuing queries to retrieve and modify data.
 
-* Scala types, such as case classes, for rows;
-* `Table[T]` classes for the table schema; and
-* `TableQuery[T]` for the table itself.
+We typically model data from the database as case classes and tuples that map to rows from a table. We define the mappings between these types and the database using `Table` classes such as `MessageTable`.
 
-Slick will map column values to and from the database, and we can teach Slick about our own types with custom mappings.
+We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`. These transformations look like transformations on collections, but the operate on the parameters of the query rather than the results returned. We execute a query by opening a session with the database and calling an *invoker* method such as `run`.
 
-Queries and inserts look much like operations on Scala collections.
+The query language is the one of the richest and most significant parts of Slick. We will spend the entire next chapter discussing the various queries and transformations available.
 
-Session are:
+## Exercise: Bring Your Own Data
 
-* Required when running a query, insert, or schema change; but
-* Not required to construct and compose queries.
+Let's get some experience with Slick by running queries against the example database. Start SBT using `sbt.sh` and type `console` to enter the interactive Scala console. We've configured SBT to run the example application before giving you control, so you should start off with the test database set up and ready to go:
 
-In the next chapter we will look deleting and updating data, and in more depth on inserting data.
+~~~ bash
+bash$ ./sbt.sh
+# SBT logging...
 
+> console
+# More SBT logging...
+# Application runs...
 
+scala>
+~~~
 
+Start by inserting an extra line of dialog into the database. This line hit the cutting room floor late in the development of the film 2001, but we're happy to reinstate it here:
+
+~~~ scala
+Message("Dave","What if I say 'Pretty please'?")
+~~~
+
+You'll need to connect to the database using `db.withSession` and insert the row using the `+=` method on `messages`. Alternatively you could put the message in a `Seq` and use `++=`. We've included some common pitfalls in the solution in case you get stuck.
+
+<div class="solution">
+Here's the solution:
+
+~~~ scala
+db.withSession { implicit session =>
+  messages += Message("Dave","What if I say 'Pretty please'?")
+}
+// res5: Int = 1
+~~~
+
+The return value indicates that `1` row was inserted. Because we're using an auto-incrementing primary key, Slick ignores the `id` field for our `Message` and asks the database to allocate an `id` for the new row. It is possible to get the insert query to return the new `id` instead of the row count, as we shall see next chapter.
+
+Here are some things that might go wrong:
+
+When using `db.withSession`, be sure to mark the `session` parameter as `implicit`. If you don't do this you'll get an error message saying the compiler can't find an implicit `Session` parameter for the `+=` method:
+
+~~~ scala
+db.withSession { session =>
+  messages += Message("Dave","What if I say 'Pretty please'?")
+}
+// <console>:15: error: could not find implicit value ↩
+//   for parameter session: scala.slick.jdbc.JdbcBackend#SessionDef
+//                 messages += Message("Dave","What if I say 'Pretty please'?")
+//                          ^
+~~~
+</div>
+
+Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to connect to the database again using `db.withSession`, build the appropriate query using `messages.filter`, and execute it using its `run` method. Again, we've included some common pitfalls in the solution.
+
+<div class="solution">
+Here's the code:
+
+~~~ scala
+db.withSession { implicit session =>
+  messages.filter(_.sender === "Dave").run
+}
+// res0: Seq[Example.MessageTable#TableElementType] = Vector( ↩
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
+//   Message(Dave,Open the pod bay doors, HAL.,3), ↩
+//   Message(Dave,What if I say 'Pretty please'?,5))
+~~~
+
+Here are some things that might go wrong:
+
+Again, if we omit the `implicit` keyword, we'll get an error message about a missing implicit parameter, this time on the `run` method:
+
+~~~ scala
+db.withSession { session =>
+  messages.filter(_.sender === "Dave").run
+}
+// <console>:15: error: could not find implicit value ↩
+//   for parameter session: scala.slick.jdbc.JdbcBackend#SessionDef
+//                 messages.filter(_.sender === "Dave").run
+//                                                      ^
+~~~
+
+Note that the parameter to `filter` is built using a triple-equals operator, `===`, not a regular `==`. If you use `==` you'll get an interesting compile error:
+
+~~~ scala
+db.withSession { implicit session =>
+  messages.filter(_.sender == "Dave").run
+}
+// <console>:15: error: inferred type arguments [Boolean] ↩
+//   do not conform to method filter's type parameter bounds ↩
+//   [T <: scala.slick.lifted.Column[_]]
+//                 messages.filter(_.sender == "Dave").run
+//                          ^
+// <console>:15: error: type mismatch;
+//  found   : Example.MessageTable => Boolean
+//  required: Example.MessageTable => T
+//                 messages.filter(_.sender == "Dave").run
+//                                          ^
+// <console>:15: error: Type T cannot be a query condition ↩
+//   (only Boolean, Column[Boolean] and Column[Option[Boolean]] are allowed
+//                 messages.filter(_.sender == "Dave").run
+//                                ^
+~~~
+
+The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`. A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Column[Boolean]`[^column-expressions]. The error message is baffling when you first see it but makes sense once you understand what's going on.
+
+[^column-expressions]: Slick uses the `Column` type to represent expressions over `Columns` as well as `Columns` themselves.
+
+Finally, if you forget to call `run`, you'll end up returning the query object itself rather than the result of executing it:
+
+~~~ scala
+db.withSession { implicit session =>
+  messages.filter(_.sender === "Dave")
+}
+// res1: scala.slick.lifted.Query[ ↩
+//         Example.MessageTable, ↩
+//         Example.MessageTable#TableElementType,
+//         Seq
+//       ] = ↩
+//   scala.slick.lifted.WrappingQuery@ead3be9
+~~~
+
+`Query` types tend to be verbose, which can be distracting from the actual cause of the problem (which is that we're not expecting a `Query` object at all). We will discuss `Query` types in more detail next chapter.
+</div>

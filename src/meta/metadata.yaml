@@ -6,10 +6,11 @@ filenameStem: "essential-slick"
 # Used by Pandoc to generate the PDF cover...
 # see src/css/book.css for HTML/ePub covers:
 coverColor: "F58B40"
+tocDepth: 3
 pages:
   - src/pages/preface.md
   - src/pages/basics.md
-  - src/pages/modifying_data.md
+  - src/pages/querying.md
   - src/pages/data_modelling.md
   - src/pages/joins.md
   - src/pages/plain_sql.md
