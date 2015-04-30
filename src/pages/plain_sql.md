@@ -2,7 +2,39 @@
 
 Slick supports plain SQL queries as well as the lif􏰄ted embedded style we've used. Plain queries don't compose as nicely as lifted, but enable you to execute essentially arbitrary SQL when you need to.
 
+To be able to use plain SQL we need to configure our environment a little differently to when we used Slick. As we are no longer using Slick, we don't need the Slick driver, we now
+need to use a JDBC driver. The JDBC driver offers a `dynamicSession` method which simplifies session hanlding. Finally we need to import access to plain SQL functionality. We do this by importing `scala.slick.jdbc.StaticQuery`, giving us:
+
+~~~ scala
+import scala.slick.driver.JdbcDriver.backend.{ Database ⇒ DDB }
+import Database.dynamicSession
+import scala.slick.jdbc.{ StaticQuery ⇒ Q }
+~~~
+
+TODO: SetParameter[T]
+
 ## Select
+
+~~~ scala
+DDB.forURL(dbURL,dbDriver) withDynSession {
+  import Q.interpolation
+
+  val daveId:Id[RoomTable]    = Id(1)
+  val airLockId               = 1
+
+  val plainSQL = sql"""
+      select *
+      from "message" inner join "user" on "message"."sender" = "user"."id"
+                     inner join "room" on "message"."room"   = "room"."id"
+      where "user"."id" = ${daveId} and "room"."id" = ${airLockId}"""
+
+    val results = plainSQL.as[Message].list
+
+    results.foreach(result => println(result))
+~~~
+
+TODO: GetResult
+
 
 ## Update
 
