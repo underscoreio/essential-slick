@@ -86,8 +86,6 @@ We'll see how to fix this in the next section.
 
 ### Select with Custom Types
 
-**TODO**: Decide if we want to talk about   `asUpdate`
-
 `sql` returns a `SQLInterpolationResult`, we use use the `as[T]` method to declare the expected Scala type.
 If, as in the case above there isn't an implicit available to map between the SQL types and our expected type,
 we get an error.
