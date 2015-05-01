@@ -116,23 +116,24 @@ implicit val getRoomIdResult    = GetResult(r => Id[RoomTable](r << ?))
 `<<?` is used for optional column mappings, such as the room id on message. Rather than writing
 
 ~~~ scala
-implicit val getORoomIdResult: GetResult[Option[Id[RoomTable]]] = GetResult(r => r.nextLongOption().map(i => Id[RoomTable](i)))
+implicit val getORoomIdResult: GetResult[Option[Id[RoomTable]]] = ↩
+             GetResult(r => r.nextLongOption().map(i => Id[RoomTable](i)))
 ~~~
 
-We can write
+we can write:
 
+<!-- << ? breaks the syntax highlighter in sublime. -->
 ~~~ scala
-implicit val getOptionalRoomIdResult: GetResult[Option[Id[RoomTable]]]   = GetResult( _ <<?)
+implicit val getOptionalRoomIdResult: GetResult[Option[Id[RoomTable]]] = ↩
+             GetResult( _ <<?)
 ~~~
 
-
+There are some things to be aware of when using plain SQL.
+The complier will not be able to help you, apart from pointing out when values are mispelt.
 
 ~~~ scala
-DDB.forURL(dbURL,dbDriver) withSession {
-  import Q.interpolation
-
-  val daveId:Id[RoomTable]    = Id(1)
-  val airLockId               = 1
+  val daveId[RoomTable] = Id(1)
+  val airLockId         = 1
 
   val plainSQL = sql"""
       select *
@@ -144,6 +145,11 @@ DDB.forURL(dbURL,dbDriver) withSession {
 
     results.foreach(result => println(result))
 ~~~
+
+In the example above, notice that `daveId` is actually of type  `Id[RoomTable]` and `airLockId` is a plain old `Long`,
+and yet, this example will compile and run.
+It will of course, return rubbish.
+
 
 ### Exercises
 
@@ -175,7 +181,7 @@ SELECT * FROM "user" WHERE "user"."email" = '';
 and
 
 ~~~ sql
-DROP TABLE "user";---
+DROP TABLE "user";
 ~~~
 
 When we attempt to return all users from `user`,
