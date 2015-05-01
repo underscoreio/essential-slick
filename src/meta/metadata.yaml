@@ -10,7 +10,8 @@ tocDepth: 3
 pages:
   - src/pages/preface.md
   - src/pages/basics.md
-  - src/pages/querying.md
+  - src/pages/selecting.md
+  - src/pages/modifying.md
   - src/pages/data_modelling.md
   - src/pages/joins.md
   - src/pages/plain_sql.md

@@ -138,7 +138,7 @@ could not find implicit value for parameter rconv:
 
 As you've probably guessed, to return a case class from a Plain SQL query means providing a `GetResult` for the case class.  Let's work through an example for the messages table.
 
-Recall that a message contains: an ID, some content, the sender ID, a timestamp, an optional room ID, and an optional recipient for private messages.  We'll model this as we did in Chapter 4, by wrapping the `Long` primary keys in the type `Id[Table]`.  
+Recall that a message contains: an ID, some content, the sender ID, a timestamp, an optional room ID, and an optional recipient for private messages.  We'll model this as we did in Chapter 4, by wrapping the `Long` primary keys in the type `Id[Table]`.
 
 This gives us:
 
@@ -266,7 +266,7 @@ org.h2.jdbc.JdbcSQLException: Table "user" not found
 
 ## Updates
 
-Back in [Chapter 3](#Querying) we saw how to modify rows with the `update` method. We noted that batch updates where challenging when we wanted to use the row's current value. The example we used was appending an exclamation mark to a message's content:
+Back in [Chapter 4](#Querying) we saw how to modify rows with the `update` method. We noted that batch updates where challenging when we wanted to use the row's current value. The example we used was appending an exclamation mark to a message's content:
 
 ``` sql
 UPDATE "message" SET "content" = CONCAT("content", '!')
@@ -332,7 +332,7 @@ implicit val SetDateTime = SetParameter[DateTime](
 
 The value `pp` is a `PositionedParameters`. This is an implementation detail of Slick, wrapping a SQL statement and a place holder for a value.  Effectively we're saying how to treat a `DateTime` regardless of where it appears in the update statement.
 
-In addition to a `Timestamp` (via `setTimestamp`), you can set: `Boolean`, `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `BigDecimal`, `Array[Byte]`, `Blob`, `Clob`, `Date`, `Time`, as well as `Object` and `null`.  There are _setXXX_ methods on `PositionedParameters` for `Option` types, too.  
+In addition to a `Timestamp` (via `setTimestamp`), you can set: `Boolean`, `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `BigDecimal`, `Array[Byte]`, `Blob`, `Clob`, `Date`, `Time`, as well as `Object` and `null`.  There are _setXXX_ methods on `PositionedParameters` for `Option` types, too.
 
 There's further symmetry with `GetResuts` in that we could have used `>>` in our `SetParameter`:
 

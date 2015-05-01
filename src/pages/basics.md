@@ -6,9 +6,16 @@ Slick is a Scala library for accessing relational databases using an interface s
 
 Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also supports *plain SQL queries* that look more like the prepared statements you may be used to from JDBC.
 
-The majority of this book will focus on standard Scala queries. We will discuss plain SQL queries in more detail in [Chapter 5](#PlainSQL).
-
 In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
+
+This book provides a compact, no-nonsense guide to everything you need to know to use Slick in a commercial setting:
+
+ - Chapter 1 provides an abbreviated overview of the library as a whole, demonstrating the fundamentals of data modelling, connecting to the database, and running queries.
+ - Chapter 2 covers basic select queries, introducing Slick's query language and delving into some of the details of type inference and type checking.
+ - Chapter 3 covers queries for inserting, updating, and deleting data.
+ - Chapter 4 discusses data modelling, including defining custom column and table types.
+ - Chapter 5 discusses advanced select queries, including joins and agregates.
+ - Chapter 6 provides a brief overview of an experimental feature of Slick---*plain SQL* queries.
 
 <div class="callout callout-info">
 **Slick isn't an ORM**
@@ -170,7 +177,7 @@ final class MessageTable(tag: Tag)
 
 `MessageTable` defines three `columns`: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
 
-The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in Chapter 3. For now, all you need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(Long, String, String)`.
+The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in Chapter 4. For now, all you need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(Long, String, String)`.
 
 The `tag` is an implementation detail that allows Slick to manage multiple uses of the table in a single query. Think of it like a table alias in SQL. We don't need to provide tags in our user code---slick takes case of them automatically.
 
@@ -199,7 +206,7 @@ If you're a fan of terminology, know that what we have discussed so far is calle
  - define `Table` objects representing mappings between our data types and the database;
  - define `TableQueries` and combinators to build useful queries before we run them against the database.
 
- Slick provides other querying models, but lifted embedding is the standard, non-experimental, way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 5](#PlainSQL).
+ Slick provides other querying models, but lifted embedding is the standard, non-experimental, way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
  </div>
 
 <!--
