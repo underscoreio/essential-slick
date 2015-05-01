@@ -333,11 +333,12 @@ It is very easy to get this query wrong and only find out at run-time. Notice, f
 
 ## Take Home Points
 
+Plain SQL updates allow you overcome limitations in the lifted embedded style of updates. They are created with the `sqlu` interpolator. They have limited ability to be composed, offering just `+` for `String`s and `+?` for parameters.
+
+Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
+
 - `#$` is incredibly dangerous. Information should always be escaped before it goes near a database. Never forget little bobby tables.
 
 ![Image from https://xkcd.com/327](src/img/exploits_of_a_mom.png)
 
-Plain SQL updates allow you overcome limitations in the lifted embedded style of updates. They are created with the `sqlu` interpolator. They have limited ability to be composed, offering just `+` for `String`s and `+?` for parameters.
-
-Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
 
