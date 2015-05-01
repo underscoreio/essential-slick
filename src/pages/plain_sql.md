@@ -229,7 +229,7 @@ This gives us two benefits: the compiler will point out typos in variables names
 ### Updating with Custom Types
 
 
-For plain queries this mapping is implemented via `SetParameter` type class, which is the mirror of the `GetParamater` type class discussed in the previous section.
+For plain queries this mapping is implemented via `SetParameter` type class, which is the mirror of the `GetResult` type class discussed in the previous section.
 
 What happens if you try to set a parameter of a type not automatically handled by Slick? In that case you need to provide an instance of `SetParameter` for the type.
 
@@ -339,5 +339,5 @@ It is very easy to get this query wrong and only find out at run-time. Notice, f
 
 Plain SQL updates allow you overcome limitations in the lifted embedded style of updates. They are created with the `sqlu` interpolator. They have limited ability to be composed, offering just `+` for `String`s and `+?` for parameters.
 
-Custom types can be used with the interpolators providing an implicit `GetParamter` (select) or `SetParameter`(update) is in scope for the type.
+Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
 
