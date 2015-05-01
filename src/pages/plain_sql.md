@@ -20,7 +20,7 @@ your case classes via `GetResult` objects.
 </div>
 
 
-### Constructing Queries
+## Constructing Queries
 
 Interpolators are used to create plain SQL queries, `sql` for select and `sqlu` for update.
 The queries produced by both and `sql` and `sqlu` are `StaticQuery`s. As the word "static" suggests,
