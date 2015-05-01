@@ -83,7 +83,7 @@ All we need to do is ask for the next value we want via methods such as `nextBig
 With this knowledge we can fix the previous example:
 
 ~~~ scala
-implicit val getRoomIdResult    = GetResult(r => Id[RoomTable](r.nextLong()))
+implicit val getRoomIdResult = GetResult(r => Id[RoomTable](r.nextLong()))
 ~~~
 
 <!-- this needs improving -->
