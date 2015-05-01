@@ -2,22 +2,7 @@
 
 Slick supports plain SQL queries as well as the lif􏰄ted embedded style we've used. Plain queries don't compose as nicely as lifted, but enable you to execute essentially arbitrary SQL when you need to.
 
-<div class="callout callout-warning">
-**`SELECT *`**
 
-Throughout the chapter we will use `SELECT *`,this is for brevity.
-You should avoid this in your code base as Slick depends on the
-column ordering of the results set to be known so you can populate
-your case classes via `GetResult` objects.
-
-<!--
-    Isn't this a reason TO use SELECT *  ?
-    If the column ordering is defined by the projection
-    Then that will provide at least *some* type saftey -
-    It needs to be the same order as the case class.
-  -->
-
-</div>
 
 
 ## Constructing Queries
@@ -147,6 +132,15 @@ The complier will not be able to help you, apart from pointing out when values a
 In the example above, notice that `daveId` is actually of type  `Id[RoomTable]` and `airLockId` is a plain old `Long`,
 and yet, this example will compile and run.
 It will of course, return rubbish.
+
+<div class="callout callout-warning">
+**`SELECT *`**
+
+We use use `SELECT *` in this chapter to fit our code examples onto the page.
+You should avoid this in your code base as it leads to brittle code.
+
+For example, if outside of Slick a table is modified to add a column, the results from the query will unexpectedly change.  You code may not longer be able to map results.
+</div>
 
 
 ### Exercises
