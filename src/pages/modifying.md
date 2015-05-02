@@ -1,8 +1,147 @@
-# Creating and Modifying Rows {#Modifying}
+# Creating and Modifying Data {#Modifying}
 
 In the last chapter we saw how to retrieve data from the database using select queries. In this chapter we will look at three other main types that modify the stored data: insert, update, and delete queries.
 
 SQL veterans will know that update and delete queries, in particular, share many similarities with select queries. The same is in Slick, where we use the same `Query` monad and combinators to build all four kinds of query. Ensure you are familiar with the content of [Chapter 3]{#Selecting} before proceeding.
+
+## Inserting Data
+
+As we saw in [Chapter 1](#Basics}, adding new data a table looks like a destuctive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
+
+### Inserting Single Rows
+
+To insert a single row into a table we use the `+=` method, which is an alias for `insert`:
+
+~~~ scala
+messages += Message("HAL", "No. Seriously, Dave, I can't let you in.")
+// res2: Int = 1
+
+messages insert Message("Dave", "Ok, but you're off my Christmas card list for good!")
+// res3: Int = 1
+~~~
+
+In each case the return value is the number of rows inserted. However, it is often useful to return something else, such as the primary key generated for the new row, or the entire row as a case class. As we will see below, we can get this information using a new method called `returning`.
+
+### Primary Key Allocation
+
+If we recall the definition of `Message`, we put the `id` field at the end of the case class and gave it a default value of `0L`:
+
+~~~ scala
+final case class Message(sender: String, content: String, ts: DateTime, id: Long = 0L)
+~~~
+
+Giving the `id` parameter a default value allows us to omit it when creating a new object. Placing the `id` at the end of the constructor allows us to omit it without having to pass the remaining arguments using keyword parameters:
+
+~~~ scala
+Message("HAL", "I'm a computer, Dave, what would I do with a Christmas card anyway?")
+~~~
+
+There's nothing special about our default value of `0L`---it's not a magic value meaning "this record has no `id`". In our running example the `id` field of `Message` is mapped to an auto-incrementing primary key (using the `O.AutoInc` option), which causes Slick to ignore the value of the field when generating an insert query and allows the database to step in an generate the value for us. Slick provides a `forceInsert` method that allows us to specify a primary key on insert, ignoring the value the database would allocate.
+
+### Retrieving Primary Keys on Insert
+
+Let's modify the insert to give us back the primary key generated:
+
+~~~ scala
+(messages returning messages.map(_.id)) += Message("Dave", "So... what do we do now?")
+// res5: Long = 7
+~~~
+
+The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense here. We can provide that the return value is a primary key by looking up the record we just inserted:
+
+~~~ scala
+messages.filter(_.id === 7L).firstOption
+// res6: Option[Example.MessageTable#TableElementType] =
+//   Some(Message(Dave,So... what do we do now?,7))
+~~~
+
+H2 only allows us to retrieve the primary key from an insert. Some databases allow us to retrieve the complete inserted record. For example, we could ask for the whole `Message` back:
+
+~~~ scala
+(messages returning messages) += Message("HAL", "I don't know. I guess we wait.")
+// res7: Message = ...
+~~~
+
+If we tried this with H2, we get a runtime error:
+
+~~~ scala
+(messages returning messages) += Message("HAL", "I don't know. I guess we wait.")
+// scala.slick.SlickException: ↩
+//   This DBMS allows only a single AutoInc column to be returned from an INSERT
+//   at ...
+~~~
+
+This is a shame, but getting the primary key is often all we need. Typing `messages returning messages.map(_.id)` isn't exactly convenient, but we can easily define a query specifically for inserts:
+
+~~~ scala
+lazy val messagesInsert = messages returning messages.map(_.id)
+// messagesInsert: slick.driver.H2Driver.ReturningInsertInvokerDef[
+//   Example.MessageTable#TableElementType,
+//   Long
+// ] = <lazy>
+
+messagesInsert += Message("Dave", "You're such a jerk.")
+// res8: Long = 8
+~~~
+
+<div class="callout callout-info">
+**Driver Capabilities**
+
+The Slick manual contains a comprehensive table of the [capabilities for each database driver][link-ref-dbs]. The ability to return complete records from an insert query is referenced as the `jdbc.returnInsertOther` capability.
+
+The API documentation for each driver also lists the capabilities that the driver *doesn't* have. For an example, the top of the [H2 Driver Scaladoc][link-ref-h2driver] page points out several of its shortcomings.
+</div>
+
+If we do want to get a populated `Message` back from an insert for any database, we can do it by retrieving the primary key and manually adding it to the inserted record. Slick simplifies this with another method, `into`:
+
+~~~ scala
+val messagesInsertWithId =
+  messages returning messages.map(_.id) into { (message, id) =>
+    message.copy(id = id)
+  }
+// messagesInsertWithId: slick.driver.H2Driver.IntoInsertInvokerDef[
+//   Example.MessageTable#TableElementType,
+//   Example.Message
+// ] = ...
+
+messagesInsertWithId += Message("Dave", "You're such a jerk.")
+// res8: messagesInsertWithId.SingleInsertResult =
+//   Message(Dave,You're such a jerk.,8)
+~~~
+
+The `into` method allows us to specify a function to combine the record and the new primary key. It's perfect for emulating the `jdbc.returnInsertOther` capability, although we can use it for any post-processing we care to imagine on the inserted data.
+
+### Inserting Multiple Rows
+
+Suppose we want to insert several `Messages` into the database. We could just use `+=` to insert each one in turn. However, this would result in a separate query being issued to the database for each record, which could be slow for large numbers of inserts.
+
+As an alternative, Slick supports batch inserts, where all the inserts are sent to the database in one go. We've seen this already in the first chapter:
+
+~~~ scala
+val testMessages = Seq(
+  Message("Dave", "Hello, HAL. Do you read me, HAL?"),
+  Message("HAL",  "Affirmative, Dave. I read you."),
+  Message("Dave", "Open the pod bay doors, HAL."),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.")
+)
+// testMessages: Seq[Message] = ...
+
+messages ++= testMessages
+// res9: Option[Int] = Some(4)
+~~~
+
+This code prepares one SQL statement and uses it for each row in the `Seq`. This can result in a significant boost in performance when inserting many records.
+
+As we saw earlier this chapter, the default return value of a single insert is the number of rows inserted. The multi-row insert above is also returning the number of rows, except this time the type is `Option[Int]`. The reason for this is that the JDBC specification permits the underlying database driver to return to indicate that the number of rows inserted is unknown.
+
+Slick also provides a batch version of `messages returning...`, including the `into` method. We can use the `messagesInsertWithId` query we defined last section and write:
+
+~~~ scala
+messagesInsertWithId ++= testMessages
+// res9: messagesInsertWithId.MultiInsertResult = List(
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,13),
+//   ...)
+~~~
 
 ## Deleting Rows
 
@@ -107,158 +246,6 @@ How would you delete all messages?
 val deleted = messages.delete
 ~~~
 </div>
-
-## Inserting a Row
-
-As we saw in chapter 1, adding new rows to a table also looks like a collections operation:
-
-~~~ scala
-val result =
-  messages += Message("HAL", "I'm back", DateTime.now)
-~~~
-
-The `+=` method is an alias for `insert`, so if you prefer you can write:
-
-~~~ scala
-val result =
-  messages insert Message("HAL", "I'm back", DateTime.now)
-~~~
-
-The `result` this will give is the number of rows inserted. However, it is often useful to return something else, such as the primary key or the case class with the primary key populated.
-
-<div class="callout callout-info">
-**Automatic Primary Key Generation**
-
-In our example the `id` field of the `Message` case class maps to the primary key of the table. This value was filled in for us by Slick when we inserted the row.
-
-Recall the definition of `Message`:
-
-~~~ scala
-final case class Message(sender: String, content: String, ts: DateTime, id: Long = 0L)
-~~~
-
-Putting the `id` at the end and giving it a default value is a trick that allows us to simply write `Message("HAL", "I'm back", DateTime.now)` and not mention `id`.  The [rules of named and default arguments][link-sip-named-default] would allow us to put `id` first, but then we'd need to name the other field values: `Message(sender="HAL", ...)`.
-
-Note that there's nothing special about the `0L` for the `id`. It's _not_ a magic value meaning "this record has no `id`".  Instead, what is happening here is that Slick recognizes
-that the column was defined as auto-incrementing:
-
-~~~ scala
-def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
-~~~~
-
-Slick excludes `O.AutoInc` columns when inserting rows, allowing the database to step in an generate the value for us. (If you really do need to insert a value in place of an auto incrementing value, the method `forceInsert` is there for you.)
-
-This is just one way of dealing with automatically generated primary keys. We will look at working with `Option[T]` values in chapter 4.
-</div>
-
-Let's modify the insert to give us back the primary key generated:
-
-~~~ scala
-val result =
-  (messages returning messages.map(_.id)) += Message("HAL", "I'm back", DateTime.now)
-~~~
-
-The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense there.  Some databases allow you return values other than just the auto incremented value. For example, we could ask for the whole `Message` back:
-
-~~~ scala
-val result: Message =
-  (messages returning messages) += Message("HAL", "I'm back", DateTime.now)
-~~~
-
-Unfortunately, H2 isn't one of the databases to support this. If you tried the above you'll be told:
-
-~~~
-This DBMS allows only a single AutoInc column to be returned from an INSERT
-~~~
-
-That's a shame, but getting the primary key is often all that's needed. However, typing `messages returning messages.map(_.id)` isn't exactly convenient. If this is something you need to do often, define a query that does it for you at the same point in the code where `messages` is defined:
-
-~~~ scala
-lazy val messagesInsert = messages returning messages.map(_.id)
-~~~
-
-This allows us to insert and get the primary key in one shorter expression:
-
-~~~ scala
-val id: Long = messagesInsert += Message("HAL", "I'm back", DateTime.now)
-~~~
-
-<div class="callout callout-info">
-**Driver Capabilities**
-
-You can find out the capabilities of different databases in the Slick manual page for [Driver Capabilities][link-ref-dbs].  For the example in this section it's the `jdbc.returnInsertOther` capability.
-
-The Scala Doc for each driver also lists the capabilities the driver _does not_ have. For an example, take a look at the top of the [H2 Driver Scala Doc][link-ref-h2driver] page.
-</div>
-
-If we do want to get a populated `Message` back from an insert for any database, with the auto-generated `id` set, we can write a method to do that.  It would take a message as an argument, insert it returning the `id`, and then give back a copy the message setting the `id`. This would emulate the `jdbc.returnInsertOther` capability.
-
-However, we don't need to write that method as Slick's `into` does the job:
-
-~~~ scala
-val messagesInsertWithId =
-  messages returning messages.map(_.id) into { (m, i) => m.copy(id=i) }
-
-val result: Message =
-  messagesInsertWithId += Message("HAL", "I'm back", DateTime.now)
-~~~
-
-The `result` will be the message with the auto-generated `id` field correctly set.
-
-That's one example, but `into` is a general purpose client-side transformation. That is, it runs in your Scala application and not the database. Any `returning` expression can have an `into`.  The `into` part is a function from the type being inserted and the type returned, to some other type. In the above example the type of the `into` function is:
-
-~~~ scala
-(Message, Long) => Message
-~~~
-
-
-## Inserting Multiple Rows
-
-Let's say we have a number of messages we want to insert. You could just `+=` each one in turn, and that would work.  However, each one of those inserts will be sent to the database individually, and the result returned. This can be slow for large numbers of inserts.
-
-As an alternative, Slick supports batch inserts, where all the inserts are sent to the database in one go. We've seen this already in the first chapter:
-
-~~~ scala
-val start = new DateTime(2001,2,17, 10,22,50)
-
-messages ++= Seq(
-  Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
-  Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
-  Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
-  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
-)
-~~~
-
-The above code will prepare one statement (the insert) and use that one statement for each row. In comparison, inserting each message individually will produce four statements.  It's a saving in time that's worth having.
-
-You already know that with single inserts you can see the number of rows inserted and get at the auto incremented values, if you want to.  Let's see how that works for batch inserts because there are some differences.
-
-The result of the above `messages ++= ...` code is an `Option[Int]`.  Specifically, it's `Some(4)`. It's optional because the underlying JDBC specifications permits the database to indicate that the number of rows is unknown for batch inserts. In that situation, Slick cannot give a count even though the insert will have succeeded.
-
-The batch version of `messages returning...`, including `into`, is also available for batch inserts. We can use the `messagesInsert` query and write:
-
-~~~ scala
-val ids = messagesInsert ++= Seq(
-  Message("Dave", "Hello, HAL. Do you read me, HAL?",             start),
-  Message("HAL",  "Affirmative, Dave. I read you.",               start plusSeconds 2),
-  Message("Dave", "Open the pod bay doors, HAL.",                 start plusSeconds 4),
-  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6)
-)
-~~~
-
-The result will be a list of the auto-incremented `id` fields, as a `List[Long]`. However, this will be executed as four separate statements, rather than one. This is because returning column values from a batch insert is not, on the whole, supported by databases.
-
-
-<div class="callout callout-info">
-**Invokers**
-
-Queries don't directly expose the methods to execute a query. The execution methods are instead defined by a trait called `Invoker`.  There are query invokers, row counting insert invokers, returning insert invokers, update invokers, delete invokers... and others.  This is where you will find methods like `firstOption`, `list` or `delete`.
-
-If you looked at the invoker for `messagesInsert`, which you can via `messagesInsert.insertInvoker`, you would see that it is a `ReturningInsertInvoker`.  It is there that Slick switches to turning the bulk insert into a useful sequence of individual inserts.
-
-We don't generally talk about invokers as Slick provides them implicitly.
-</div>
-
 
 ### Transactions
 
