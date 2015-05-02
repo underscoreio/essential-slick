@@ -6,7 +6,7 @@ This chapter covers *selecting* data using Slick's rich type-safe Scala reflecti
 
 Select queries are our main means of retrieving data. In this section we'll look at simple select queries that operate on a single table. In [Chapter 5](#joins) we'll look at more complex queries involving joins, agregates, and grouping clauses.
 
-## Selecting All The Rows
+## Select All The Rows!
 
 The simplest select query is the `TableQuery` generated from a `Table`. In the following example, `messages` is a `TableQuery` for `MessageTable`:
 
@@ -49,7 +49,7 @@ import scala.slick.driver.H2Driver.simple._
 ~~~
 </div>
 
-## The *filter* Method
+## Filtering the results: the *filter* Method
 
 We can create a query for a subset of rows using the `filter` method:
 
@@ -108,7 +108,7 @@ messages.filter(_.sender === 123)
 //                                        ^
 ~~~
 
-## The *map* Method
+## Transforming the results: the *map* Method
 
 Sometimes we don't want to select all of the data in a `Table`. We can use the `map` method on a `Query` to select specific columns for inclusion in the results. This changes both the mixed type and the unpacked type of the query:
 
@@ -182,6 +182,82 @@ We can also select column expressions as well as single `Columns`:
 messages.map(t => t.id * 1000L).selectStatement
 // res7: String = select x2."id" * 1000 ...
 ~~~
+
+<div class="callout callout-info">
+**Query's *flatMap* method**
+
+`Query` also has a `flatMap` method with similar monadic semantics to that of `Option` or `Future`. `flatMap` is mostly used for joins, so we'll cover it in [Chapter 5](#joins).
+</div>
+
+## Query Invokers
+
+Once we've built a query, we can run it by establishing a session with the database and using one of several *query invoker* methods. We've seen one invoker---the `run` method---already. Slick has several invoker methods, each of which is added to `Query` as an extension method, and each of which accepts an implicit `Session` parameter that determines which database to use.
+
+If we want to return a sequence of the results of a query, we can use the `run` or `list` invokers. `list` always returns a `List` of the query's unpacked type; `run` returns the query's collection type:
+
+~~~ scala
+messages.run
+// res0: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//   ...)
+
+messages.list
+// res1: List[Example.MessageTable#TableElementType] = List(
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//   ...)
+~~~
+
+If we only want to retrieve a single item from the results, we an use the `firstOption` invoker. Slick retrieves the first row and discards the rest of the results:
+
+~~~ scala
+messages.firstOption
+// res2: Option[Example.MessageTable#TableElementType] =
+//   Some(Message(Dave,Hello, HAL. Do you read me, HAL?,1))
+
+messages.filter(_.sender === "Nobody").firstOption
+// res3: Option[Example.MessageTable#TableElementType] =
+//   None
+~~~
+
+If we want to retrieve large numbers of records, we can use the `iterator` invoker to return an `Iterator` of results. We can extract results from the iterator one-at-a-time without consuming large amounts of memory:
+
+~~~ scala
+messages.iterator.foreach(println)
+// Message(Dave,Hello, HAL. Do you read me, HAL?,1)
+// ...
+~~~
+
+Note that the `Iterator` can only retrieve results while the session is open:
+
+~~~ scala
+db.withSession { implicit session =>
+  messages.iterator
+}.foreach(println)
+// org.h2.jdbc.JdbcSQLException: ↩
+//   The object is already closed [90007-185]
+//   at ...
+~~~
+
+Finally, we can use the `execute` invoker to run a query and discard all of the results. This will come in useful in the next chapter when we cover insert, update, and delete queries.
+
+---------------------------------------------------------------------------------------------------------------------------
+Method                Return Type   Description
+--------------------- ------------- ---------------------------------------------------------------------------------------
+`query.run`           `C[U]`        Return a collection of results. The collection type is determined by the query.
+
+`query.list`          `List[U]`     Run the query, return a `List` of results. Ignore the query's collection type.
+
+`query.iterator`      `Iterator[U]` Run the query, return an `Iterator` of results.
+                                    Results must be retrieved from the iterator before the session is closed.
+
+`query.firstOption`   `Option[U]`   Return the first result wrapped in an `Option`; return `None` if there are no results.
+
+`query.execute`       `Unit`        Run the query, ignore the result. Useful for updating the database---see [Chapter 3](#Modifying).
+
+---------------------------------------------------------------------------------------------------------------------------
+
+: Common query invoker methods.
+  Return types are specified for a query of type `Query[M, U, C]`.
 
 ## Column Expressions
 
@@ -275,7 +351,7 @@ Scala Code              Operand Column Types               Result Type        SQ
 : String column methods.
   Operand and result types should be interpreted as parameters to `Column[_]`.
 
-### Numeric Methods
+### Numeric Methods {#NumericColumnMethods}
 
 Slick provides a comprehensive set of methods that operate on `Columns` with numeric values: `Ints`, `Longs`, `Doubles`, `Floats`, `Shorts`, `Bytes`, and `BigDecimals`.
 
@@ -376,7 +452,7 @@ Scala Code              Operand Column Types               Result Type        SQ
 TODO: The examplesfor `isEmpty` and `isDefined` above aren't great. We should have a table with a nullable column in it so we can use that instead of `_.sender.?`.
 </div>
 
-## Type Equivalence in Column Expressions
+### Type Equivalence in Column Expressions
 
 Slick type-checks our column expressions to make sure the operands are of compatible types. For example, we can compare `Strings` for equality but we can't compare a `String` and an `Int`:
 
@@ -418,41 +494,72 @@ messages.filter(_.id === Some(123L)).selectStatement
 //                                            ^
 ~~~
 
-## Query Invokers
+## Counting results: the *length* method and column queries
 
-<div class="callout callout-danger">
-TODO: Put this somewhere better in the content above.
-</div>
+We can create a `Column` expression representing the length of any `Query` by calling its `length` method:
 
-Each database product (H2, Oracle, PostgresSQL, and so on) has a different take on how queries should be constructed, how data should be represented, and what capabilities are implemented. This is abstracted by the Slick *driver*.  We import the right driver for the database we are using.
+~~~ scala
+messages.length
+// res8: scala.slick.lifted.Column[Int] =
+//   Column(Apply Function count(*))
+~~~
 
-With that import done we set up our database connection, `db`, by providing `Database` with a JDBC connection string, and the class name of the JDBC driver being used.  Yes, there are two kinds of *driver* being used: Slick's abstraction is called a driver; and it uses a JDBC driver too.
+We can either use this in larger expressions or, interestingly, invoke it directly:
 
-From our database connection we can obtain a session. Sessions are required by Slick methods that need to actually go and communicate with the database.  Typically the session parameter is marked as `implicit`, meaning you do not have to manually supply the parameter.  We're doing this
-in the code sample above as `run` requires a session, and the session it uses is the one we defined as implicit.
+~~~ scala
+messages.length.run
+// res9: Int = 4
+~~~
 
-With a session we can execute our query. There are a number of calls you can make on a query, as listed in the table below.
+But how does this work? A `Column` isn't a `Query` so how can we invoke it?
 
-==================================================================
-Method          Executes the query and will:
-===========     ==================================================
- `execute`      Ignore the result.
+Slick provides limited support for running column expressions directly against the database. We can't use all of the invoker methods described in the last section, but we can use `run` and `selectStatement`. Here's a simple example:
 
- `first`        Return the first result, or throw an exception if there is no result.
+~~~ scala
+((10 : Column[Int]) + 20).run
+// res10: Int = 30
+~~~
 
- `firstOption`  Return `Some[T]` for the first result; `None` if there is no result.
+Here we create a constant `Column[Int]` of value `10`, and use the `+` method described in the [Numeric Column Methods](#NumericColumnMethods) section to create a simple SQL expression `10 + 20`. We use the `run` method to execute this against the database and retrieve the value `30`. If we use the `selectStatement` method we'll see that the database is actually doing all of the math:
 
- `list`         Return a fully populated `List[T]` of the results.
+~~~ scala
+((10 : Column[Int]) + 20).selectStatement
+// res11: String = select 10 + 20
+~~~
 
- `iterator`     Provides an iterator over the results.
+It's this same process that allows us to call `messages.length.run`. Let's look at the SQL:
 
- `run`          Acts like `first` for queries for a value, but something like `list` for a collection
-                of values.
-===========     ==================================================
+~~~ scala
+messages.length.selectStatement
+// res9: String =
+//   select x2.x3 from (
+//     select count(1) as x3 from (
+//       select x4."sender" as x5, x4."content" as x6, x4."id" as x7
+//       from "message" x4
+//     ) x8
+//   ) x2
+~~~
 
-: A Selection of Statement Invokers
+Slick generates an overly complicated query here. There are two issues:
 
-For now we're using `run`, which will return the results of the query as a collection.
+ 1. the query contains three nested `SELECT` statements instead of one;
+ 2. the query counts distinct values of the tuple `(sender, content, id)`, instead of simply counting `ids`.
+
+These issues cause varying amounts of trouble depending on the quality of the query planner in our database. PostgreSQL, for example, has an excellent query planner that will optimise the nested selects away, although your mileage may vary with other database engines.
+
+We can help our database out by being slightly cleverer in our choice of query. For example, counting values of a single indexed primary key is considerably faster than counting entire rows:
+
+~~~ scala
+messages.map(_.id).length.selectStatement
+// res10: String =
+//   select x2.x3 from (
+//     select count(1) as x3 from (
+//       select x4."id" as x5 from "message" x4
+//     ) x6
+//   ) x2
+~~~
+
+When using Slick, or indeed any database library that generates SQL from a DSL, it's important to keep one eye on the performance characteristics of the queries we're generating. Knowing SQL and the query planning capabilities of the database server is as important as knowing the query DSL itself.
 
 ## Take Home Points
 
@@ -534,7 +641,6 @@ select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where x2."i
 
 From this we see how `filter` corresponds to a SQL `where` clause.
 </div>
-
 
 ### Selecting Columns
 
