@@ -261,7 +261,9 @@ Method                Return Type   Description
 
 ## Column Expressions
 
-Methods like `filter` and `map` require us to build expressions based on columns in our tables. The `Column` type is used to represent expressions as well as individual columns. Slick provides a variety of extension methods on `Column` for building expressions. Here are the most important ones:
+Methods like `filter` and `map` require us to build expressions based on columns in our tables. The `Column` type is used to represent expressions as well as individual columns. Slick provides a variety of extension methods on `Column` for building expressions.
+
+We will cover the most common methods below. You can find a complete list in [ExtensionMethods.scala][link-source-extmeth] in the Slick codebase.
 
 ### Equality and Inequality Methods
 
@@ -449,7 +451,7 @@ Scala Code              Operand Column Types               Result Type        SQ
   Operand and result types should be interpreted as parameters to `Column[_]`.
 
 <div class="callout callout-danger">
-TODO: The examplesfor `isEmpty` and `isDefined` above aren't great. We should have a table with a nullable column in it so we can use that instead of `_.sender.?`.
+TODO: The examples for `isEmpty` and `isDefined` above aren't great. We should have a table with a nullable column in it so we can use that instead of `_.sender.?`.
 </div>
 
 ### Type Equivalence in Column Expressions
@@ -683,7 +685,6 @@ You should get "Affirmative, Dave. I read you."
 For Alice, `first` will throw a run-time exception. Use `firstOption` instead.
 </div>
 
-
 ### The Start of Something
 
 The method `startsWith` on a `String` tests to see if the string starts with a particular sequence of characters. Slick also implements this for string columns. Find the message that starts with "Open". How is that query implemented in SQL?
@@ -699,7 +700,6 @@ The query is implemented in terms of `LIKE`:
 select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where x2."content" like 'Open%' escape '^'
 ~~~
 </div>
-
 
 ### Liking
 
@@ -719,4 +719,41 @@ select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where lower
 ~~~
 
 There are three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".
+</div>
+
+### Client-Side or Server-Side?
+
+What does this do and why?
+
+~~~ scala
+messages.map(_.content + "!").list
+~~~
+
+<div class="solution">
+The query Slick generates looks something like this:
+
+~~~ sql
+select '(message Path @1413221682).content!' from "message"
+~~~
+
+That is, a select expression for a strange constant string.
+
+The `_.content + "!"` expression converts `content` to a string and appends the exclamation point. What is `content`? It's a `Column[String]`, not a `String` of the content. The end result is that we're seeing something of the internal workings of Slick.
+
+This is an unfortunate effect of Scala allowing automatic conversion to a `String`. If you are interested in disabling this Scala behaviour, tools like [WartRemover][link-wartremover] can help.
+
+It is possible to do this mapping in the database with Slick.  We just need to remember to
+work in terms of `Column[T]` classes:
+
+~~~ scala
+messages.map(m => m.content ++ LiteralColumn("!")).run
+~~~
+
+Here `LiteralColumn[T]` is type of `Column[T]` for holding a constant value to be inserted into the SQL.  The `++` method is one of the extension methods defined for any `Column[String]`.
+
+This will produce the desired result:
+
+~~~ sql
+select "content"||'!' from "message"
+~~~
 </div>

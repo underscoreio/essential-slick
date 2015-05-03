@@ -16,7 +16,7 @@ To insert a single row into a table we use the `+=` method, which is an alias fo
 messages += Message("HAL", "No. Seriously, Dave, I can't let you in.")
 // res2: Int = 1
 
-messages insert Message("Dave", "Ok, but you're off my Christmas card list for good!")
+messages insert Message("Dave", "You're off my Christmas card list.")
 // res3: Int = 1
 ~~~
 
@@ -36,14 +36,56 @@ Giving the `id` parameter a default value allows us to omit it when creating a n
 Message("HAL", "I'm a computer, Dave, what would I do with a Christmas card anyway?")
 ~~~
 
-There's nothing special about our default value of `0L`---it's not a magic value meaning "this record has no `id`". In our running example the `id` field of `Message` is mapped to an auto-incrementing primary key (using the `O.AutoInc` option), which causes Slick to ignore the value of the field when generating an insert query and allows the database to step in an generate the value for us. Slick provides a `forceInsert` method that allows us to specify a primary key on insert, ignoring the value the database would allocate.
+There's nothing special about our default value of `0L`---it's not a magic value meaning "this record has no `id`". In our running example the `id` field of `Message` is mapped to an auto-incrementing primary key (using the `O.AutoInc` option), causing Slick to ignore the value of the field when generating an insert query and allows the database to step in an generate the value for us. We can see the SQL we're executing using the `insertStatement` method:
+
+~~~ scala
+messages.insertStatement
+// res4: String =
+//   insert into "message" ("sender","content")
+//   values (?,?)
+~~~
+
+Slick provides a `forceInsert` method that allows us to specify a primary key on insert, ignoring the database's suggestion:
+
+~~~ scala
+messages forceInsert Message("Dave", "Point taken.", 1000)
+// res5: Int = 1
+
+messages.filter(_.id === 1000L).run
+// res6: Seq[Example.MessageTable#TableElementType] =
+//   Vector(Message(Dave,Point taken.,1000))
+~~~
+
+### Inserting Specific Columns
+
+If we our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by `mapping` over a query before calling `insert`:
+
+~~~ scala
+messages.map(_.sender).insertStatement
+// res7: String =
+//   insert into "message" ("sender")
+//   values (?)
+~~~
+
+The parameter type of the `+=` method is matched to the *unpacked* type of the query, so we execute thisquery by passing it a `String` for the `sender`:
+
+~~~ scala
+messages.map(_.sender) += "HAL"
+// org.h2.jdbc.JdbcSQLException:
+//   NULL not allowed for column "content"; SQL statement:
+// insert into "message" ("sender")  values (?) [23502-185]
+//   at ...
+~~~
+
+The query fails at runtime because the `content` column is non-nullable in our schema. No matter. We'll cover nullable columns when discussing schemas in [Chapter 4](#Modelling).
 
 ### Retrieving Primary Keys on Insert
 
 Let's modify the insert to give us back the primary key generated:
 
 ~~~ scala
-(messages returning messages.map(_.id)) += Message("Dave", "So... what do we do now?")
+(messages returning messages.map(_.id)) +=
+  Message("Dave", "So... what do we do now?")
 // res5: Long = 7
 ~~~
 
@@ -58,16 +100,19 @@ messages.filter(_.id === 7L).firstOption
 H2 only allows us to retrieve the primary key from an insert. Some databases allow us to retrieve the complete inserted record. For example, we could ask for the whole `Message` back:
 
 ~~~ scala
-(messages returning messages) += Message("HAL", "I don't know. I guess we wait.")
+(messages returning messages) +=
+  Message("HAL", "I don't know. I guess we wait.")
 // res7: Message = ...
 ~~~
 
 If we tried this with H2, we get a runtime error:
 
 ~~~ scala
-(messages returning messages) += Message("HAL", "I don't know. I guess we wait.")
+(messages returning messages) +=
+  Message("HAL", "I don't know. I guess we wait.")
 // scala.slick.SlickException: ↩
-//   This DBMS allows only a single AutoInc column to be returned from an INSERT
+//   This DBMS allows only a single AutoInc column ↩
+//     to be returned from an INSERT
 //   at ...
 ~~~
 
@@ -143,58 +188,244 @@ messagesInsertWithId ++= testMessages
 //   ...)
 ~~~
 
-## Deleting Rows
+## Updating Rows
 
-In the last chapter we saw a query to select all the messages from HAL:
+So far we've only looked at inserting new data into the database, but what if we want to update records that are already in the database? Slick lets us create SQL `UPDATE` queries using the same `Query` objects we saw in [Chapter 2](#Selecting).
+
+### Updating a Single Field
+
+In the `Messages` we've created so far we've referred to the computer from *2001: A Space Odyssey* as `"HAL"`, but the correct name is "HAL 9000".  Let's fix that:
 
 ~~~ scala
-val halSays = messages.filter(_.sender === "HAL")
+messages.filter(_.sender === "HAL").
+  map(_.sender).update("HAL 9000")
+// res1: Int = 2
 ~~~
 
-We can use that query to delete all the messages from HAL:
+We can retrieve the SQL for this query by calling `updateStatment` instead of `update`:
 
 ~~~ scala
-db.withSession {
-  implicit session =>
-    val rowCount = halSays.delete
+messages.filter(_.sender === "HAL").
+  map(_.sender).updateStatement
+// res2: String =
+//   update "message"
+//   set "sender" = ?
+//   where "message"."sender" = 'HAL'
+~~~
+
+Let's break down the code in the Scala expression. By building our update query from the `messages` `TableQuery`, we specify that we want to update records in the `message` table in the database:
+
+~~~ scala
+val messagesByHal = messages.filter(_.sender === "HAL")
+// messagesByHal: scala.slick.lifted.Query[
+//   Example.MessageTable,
+//   Example.MessageTable#TableElementType,
+//   Seq
+// ] = scala.slick.lifted.WrappingQuery@537c3243
+~~~
+
+We only want to update the `sender` column, so we use `map` to reduce the query to just that column:
+
+~~~ scala
+val halSenderCol  = messagesByHal.map(_.sender)
+// halSenderCol: scala.slick.lifted.Query[
+//   scala.slick.lifted.Column[String],
+//   String,
+//   Seq
+// ] = scala.slick.lifted.WrappingQuery@509f9e50
+~~~
+
+Finally we call the `update` method, which takes a parameter of the *unpacked* type (in this case `String`), runs the query, and returns the number of affected rows:
+
+~~~ scala
+val rowsAffected = halSenderCol.update("HAL 9000")
+// rowsAffected: Int = 4
+~~~
+
+### Updating Multiple Fields
+
+We can update more than one field at the same time by `mapping` the query down to a tuple of the columns we care about:
+
+~~~ scala
+messages.
+  filter(_.id === 4L).
+  map(message => (message.sender, message.content)).
+  update("HAL 9000", "Sure, Dave. Come right in.")
+// res3: Int = 1
+
+messages.filter(_.sender === "HAL 9000").run
+// res4: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(HAL 9000,Affirmative, Dave. I read you.,2),
+//   Message(HAL 9000,Sure, Dave. Come right in.,4))
+~~~
+
+Again, we can see the SQL we're running using the `updateStatement` method. The returned SQL contains two `?` placeholders, one for each field as expected:
+
+~~~ scala
+messages.
+  filter(_.id === 4L).
+  map(message => (message.sender, message.content)).
+  updateStatement
+// res5: String =
+//   update "message"
+//   set "sender" = ?, "content" = ?
+//   where "message"."id" = 4
+~~~
+
+### Updating with a Computed Value
+
+Let's now turn to more interesting updates. How about converting every message to be all capitals? Or adding an exclamation mark to the end of each message? Both of these queries involve expressing the desired result in terms of the current value in the database. In SQL we might write something like:
+
+~~~ sql
+update "message" set "content" = "content" || '!'
+~~~
+
+This is not currently supported by `update` in Slick, but there are ways to achieve the same result. One such way is to use plain SQL queries, which we cover in [Chapter 6](#PlainSQL). Another is to perform a *client side update* by defining a Scala function to capture the change to each row:
+
+~~~ scala
+def exclaim(msg: Message): Message =
+  msg.copy(content = msg.content + "!")
+exclaim: Message => Message = <function1>
+~~~
+
+We can update rows by selecting the relevant data from the database, applying this function, and writing the results back individually. Note that approach can be quite inefficient for large datasets---it takes `N + 1` queries to apply an update to `N` results:
+
+~~~ scala
+messages.iterator.foreach { message =>
+  messages.filter(_.id === message.id).update(exclaim(message))
 }
 ~~~
 
-Rather than `run`ing this query, we are `delete`ing the rows selected by the query. The result of `delete` is an `Int`. It's the number of rows deleted, and in this case it will be 2.
+We recommend plain SQL queries over this approach if you can use them. See [Chapter 6](#PlainSQL) for details.
 
-As you might expect the SQL from running this delete is:
+## Deleting Rows
 
-~~~ sql
-delete from "message" where "message"."sender" = 'HAL'
+Deleting rows is very similar to updating them. We specify which rows to delete using the `filter` method and call `delete`:
+
+~~~ scala
+messages.filter(_.sender === "HAL").delete
+// res6: Int = 2
 ~~~
 
-<div class="callout callout-info">
-**Logging Queries and Results**
+As usual, the return value is the number of rows affected, and as usual, Slick provides a method that allows us to view the generated SQL:
 
-In the previous chapter we noted you can see the SQL Slick would use by calling `selectStatement` on a query. There's also `deleteStatement` and `updateStatement`.  These are useful to see the SQL that would be produced by a query, but sometimes you want to see all the queries _when Slick executes them_.  You can do that by configuring logging.
+~~~ scala
+messages.filter(_.sender === "HAL").delete
+// res7: String =
+//   delete from "message"
+//   where "message"."sender" = 'HAL'
+~~~
 
-Slick uses a logging framework called [SLF4J][link-slf4j].  You can configure this to capture information about the queries being run.  The example GitHub project uses a logging back-end called [_Logback_][link-logback], which is configured in the file _src/main/resources/logback.xml_.  In that file we enable statement logging by turning up the logging to debug level. For example:
+Note that it is an error to use `delete` in combination with `map`. We can only call `delete` on a `TableQuery`:
+
+~~~ scala
+messages.map(_.content).delete
+// <console>:14: error: value delete is not a member of ↩
+//   scala.slick.lifted.Query[scala.slick.lifted.Column[String],String,Seq]
+//               messages.map(_.content).delete
+//                                       ^
+~~~
+
+## Transactions
+
+So far, each of the changes we've made to the database has run independently of the others. That is, each insert, update, or delete query, we run can succeed or fail independently of the rest.
+
+We often want to tie sets of modifications together in a *transaction* so that they either *all* succeed or *all* fail. We can do this in Slick using the `session.withTransaction` method:
+
+~~~ scala
+def updateContent(id: Long) =
+  messages.filter(_.id === id).map(_.content)
+
+db.withSession { implicit session =>
+  session.withTransaction {
+    updateContent(2L).update("Wanna come in?")
+    updateContent(3L).update("Pretty please!")
+    updateContent(4L).update("Opening now.")
+  }
+
+  messages.run
+}
+// res1: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//   Message(HAL,Wanna come in?,2),
+//   Message(Dave,Pretty please!,3),
+//   Message(HAL,Opening now.,4))
+~~~
+
+The changes we make in the `withTransaction` block are temporary until the block completes, at which point they are *committed* and become permanent. We can alternatively *roll back* the transaction mid-stream by calling `session.rollback`, which causes all changes to be reverted:
+
+~~~ scala
+db.withSession { implicit session =>
+  session.withTransaction {
+    updateContent(2L).update("Wanna come in?")
+    updateContent(3L).update("Pretty please!")
+    updateContent(4L).update("Opening now.")
+    session.rollback
+  }
+
+  messages.run
+}
+// res1: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//   Message(HAL,Affirmative, Dave. I read you.,2),
+//   Message(Dave,Open the pod bay doors, HAL.,3),
+//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+~~~
+
+Note that the rollback doesn't happen until the `withTransaction` block ends. If we run queries *within* the block, before the rollback actually occurs, they will still see the modified state:
+
+~~~ scala
+db.withSession { implicit session =>
+  session.withTransaction {
+    session.rollback
+    updateContent(2L).update("Wanna come in?")
+    updateContent(3L).update("Pretty please!")
+    updateContent(4L).update("Opening now.")
+    messages.run
+  }
+}
+// res1: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//   Message(HAL,Wanna come in?,2),
+//   Message(Dave,Pretty please!,3),
+//   Message(HAL,Opening now.,4))
+~~~
+
+## Logging Queries and Results
+
+We've seen how to retrieve the SQL of a query using the `selectStatement`, `insertStatement`, `updateStatement`, and `deleteStatement` queries. These are useful for exprimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
+
+Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
 
 ~~~ xml
 <logger name="scala.slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
 ~~~
 
-When we next run a query, delete or update rows, and even modify the schema, each statement will be recorded on standard output or wherever you configure it to go:
+This causes Slick to log every query, even modifications to the schema:
 
 ~~~
-DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement:
+DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
   delete from "message" where "message"."sender" = 'HAL'
 ~~~
 
-You can enable a variety of events to be logged:
+We can modify the level of various loggers to log additional information:
 
-* `scala.slick.jdbc.JdbcBackend.statement` --- which is for statement logging, as you've seen.
-* `scala.slick.jdbc.StatementInvoker.result` --- which logs the results of a query.
-* `scala.slick.session` --- for session information, such as connections being opened.
-* `scala.slick` --- for everything!  This is usually too much.
+-------------------------------------------------------------------------------------------------------------
+Logger                                     Level   Effect
+------------------------------------------ ------- ----------------------------------------------------------
+`scala.slick.jdbc.JdbcBackend.statement`   `DEBUG` Logs SQL sent to the database as described above.
 
+`scala.slick.jdbc.StatementInvoker.result` `DEBUG` Logs the results of each query.
 
-The `StatementInvoker.result` logger is pretty cute:
+`scala.slick.session`                      `DEBUG` Logs session events such as opening/closing connections.
+
+`scala.slick`                              `DEBUG` Logs everything! Equivalent to changing all of the above.
+
+------------------------------------------ ------- ----------------------------------------------------------
+
+: Slick loggers and their effects.
+
+The `StatementInvoker.result` logger, in particular, is pretty cute:
 
 ~~~
 SI.result - /--------+----------------------+----------------------+----\
@@ -204,71 +435,40 @@ SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
 SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
 SI.result - \--------+----------------------+----------------------+----/
 ~~~
+
+## Take Home Points
+
+<div class="callout callout-danger">
+TODO: Take home points
 </div>
 
-There's not a lot more to say about deleting data. If you have a query that selects a table, then you can use it to delete rows.
+<!--
+For modifying the rows in the database we have seen that:
 
-But to expand on that, consider this variation on the `halSays` query:
+* deletes are via a `delete` call to a query;
+* updates are via an `update` call on a query, but are somewhat limited; and
+* inserts are via an `insert` (or `+=`) call on a table.
 
-~~~ scala
-val halText = halSays.map(_.content)
-~~~
+Auto-incrementing values are not inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
 
-That's a valid query, and will select just the `content` column from the `messages` table.  You'll find you cannot use that query with `delete`, as it'll be a compile error. The method `delete` is not defined for this kind of query. `halText` is of type `Query[Column[String], String, Seq]`, whereas `halSays` is of type `Query[MessageTable, Message, Seq]`.
+Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
-### `Column[T]`
+Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is no advantage.
 
-What is this `Column[String]` and why can't we delete using it?
+The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
+-->
 
-Recall we defined the column `content` as:
+## Exercises
 
-~~~ scala
-def content = column[String]("content")
-~~~
+<div class="callout callout-danger">
+TODO: Fix up these exercises
+</div>
 
-The method `column` evaluates, in this case, to a `Column[String]`. When we construct a query to return a column, the query will be in terms of a `Column[String]`.  When we count the number of rows in a table, the query will be in terms of `Column[Int]`.  More generally, a single value from the database will be a `Column[T]` in the context of a query.
-
-All the operations you can perform on a column, such as `like` or `toLowerCase`, are added onto `Column[T]` via _extension methods_. These are implicit conversions provided by Slick.  If you're keen, you can go look at them all in the Slick source file [ExtensionMethods.scala][link-source-extmeth].
-
-So `Column[T]` is for values, and deleting based on a value makes no sense in Slick or SQL. Imagine the query `SELECT 42`. You can represent this in Slick as `Query(42)`. You can `run` the query, but you cannot `delete` on it. But deleting on a table, like `MessageTable`, that makes more sense.
-
-
-### Exercises
-
+<!--
 Experiment with the queries we discuss before trying the exercises in this chapter. The code for this chapter is in the [GitHub repository][link-example] in the _chapter-02_ folder.  As with chapter 1, you can use the `run` command in SBT to execute the code against a H2 database.
+-->
 
-#### Delete All The Messages
-
-How would you delete all messages?
-
-<div class="solution">
-~~~ scala
-val deleted = messages.delete
-~~~
-</div>
-
-### Transactions
-
-So far all the database interactions we've seen have run independently.
-That is, each query, delete, or update succeeds or fails and is automatically committed to the database.
-
-A transaction allows you to rollback changes to the database if later ones fail, or if you detect a situation where you want to manually rollback.  The scope of the transaction starts with a call to `session.withTransaction` and ends when the `withTransaction` block ends:
-
-~~~ scala
-session.withTransaction {
-  // ...quries, updates, deletes ...
-}
-~~~
-
-At the end of the transaction, providing there were no exceptions or calls to `session.rollback`, the changes are committed to the database.
-
-You might always want a transaction. In that case, you can get a session with `db.withTransaction` in place of calls to `db.withSession`.
-
-
-### Exercises
-
-
-#### Insert New Messages Only
+### Insert New Messages Only
 
 Messages sent over a network might fail, and might be resent.  Write a method that will insert a message for someone, but only if the message content hasn't already been stored. We want the `id` of the message as a result.
 
@@ -291,8 +491,7 @@ def insertOnce(sender: String, text: String)(implicit session: Session): Long = 
 ~~~
 </div>
 
-
-#### Rollback
+### Rollback
 
 Assuming you already have an `implicit session`, what is the state of the database after this code is run?
 
@@ -315,51 +514,7 @@ This means the two calls to `delete` will have no effect: the database will have
 It also means the message "Surprised?" will be printed.
 </div>
 
-
-## Updating Rows
-
-In all the rows we've created so far we've referred to "HAL". That's a computer from the film _2001: A Space Odyssey_, but the correct name is "HAL 9000".  Let's fix that:
-
-~~~ scala
-val rowsAffected: Int =
-  messages.filter(_.sender === "HAL").map(_.sender).update("HAL 9000")
-~~~
-
-If we break this down it may be easier to see the same patterns we've used elsewhere:
-
-~~~ scala
-val queryForHAL  = messages.filter(_.sender === "HAL")
-val selectSender = queryForHal.map(_.sender)
-val rowsAffected: Int = selectSender.update("HAL 9000")
-~~~
-
-We're selecting the messages from HAL, and composing that query to just return the `sender` field. Then we can call `update` and supply a new value for the sender.
-
-This update is equivalent to the SQL:
-
-~~~ sql
-UPDATE "message" SET "sender" = 'HAL 9000' WHERE "sender" = 'HAL'
-~~~
-
-We can also update multiple columns at the same time. We can fix HAL's name and change the timestamp on the message to "now":
-
-~~~ scala
-val rowsAffected =
-  messages.filter(_.sender === "HAL").map(msg => (msg.sender, msg.ts)).update("HAL 9000", DateTime.now)
-~~~
-
-Now we are selecting a _tuple_ of `(sender, ts)`, which means `update` expects us to supply two values.  The SQL will be something like this:
-
-~~~ sql
-UPDATE  "message"
-  SET   "sender" = 'HAL 9000', "ts" = '2015-01-29 15:02'
-  WHERE "sender" = 'HAL'
-~~~
-
-### Exercises
-
-
-#### Update Using a For Comprehension
+### Update Using a For Comprehension
 
 Rewrite the update statement below to use a for comprehension.
 
@@ -381,101 +536,12 @@ val rowsAffected = query.update("HAL 9000", DateTime.now)
 ~~~
 </div>
 
+### Delete All The Messages
 
-#### Client-Side or Server-Side?
-
-What does this do...
-
-~~~ scala
-messages.map(_.content + "!").list
-~~~
-
-...and why?
+How would you delete all messages?
 
 <div class="solution">
-The query Slick generates looks something like this:
-
-~~~ sql
-select '(message Path @1413221682).content!' from "message"
-~~~
-
-That is, a select expression for a strange constant string.
-
-The `_.content + "!"` expression converts `content` to a string and appends the exclamation point. What is `content`? It's a `Column[String]`, not a `String` of the content. The end result is that we're seeing something of the internal workings of Slick.
-
-This is an unfortunate effect of Scala allowing automatic conversion to a `String`. If you are interested in disabling this Scala behaviour, tools like [WartRemover][link-wartremover] can help.
-
-It is possible to do this mapping in the database with Slick.  We just need to remember to
-work in terms of `Column[T]` classes:
-
 ~~~ scala
-messages.map(m => m.content ++ LiteralColumn("!")).run
-~~~
-
-Here `LiteralColumn[T]` is type of `Column[T]` for holding a constant value to be inserted into the SQL.  The `++` method is one of the extension methods defined for any `Column[String]`.
-
-This will produce the desired result:
-
-~~~ sql
-select "content"||'!' from "message"
+val deleted = messages.delete
 ~~~
 </div>
-
-
-## Updating with a Computed Value
-
-Let's now turn to more interesting updates. How about converting every message to be all capitals. Or adding an exclamation mark to the end of each message.  Both of these examples need us to do something to each row in turn.  In SQL it might be something like:
-
-~~~ sql
-UPDATE "message" SET "content" = CONCAT("content", '!')
-~~~
-
-This is not currently supported by `update` in Slick. But there are ways to achieve the same result.
-
-The way we'd recommend is to use plain SQL updates, which we turn to in [Chapter 6](#PlainSQL).  However, it's worth knowing that you can also solve this with a client side update.
-
-### Client Side Update
-
-Let's define a Scala function to capture how we want to change each row:
-
-~~~ scala
-def exclaim(msg: Message): Message =
-  msg.copy(content = msg.content + "!")
-~~~
-
-This is a standard _copy constructor_ in Scala which will take a `Message` and return a copy, with only the `content` field modified.  The `id`, `ts`, `sender`, will all be unchanged.
-
-Using this we can update the rows in the database:
-
-~~~ scala
-messages.list.map(exclaim).foreach {
-  m => messages.filter(_.id === m.id).update(m)
-}
-~~~
-
-The steps here are:
-
-1. Select all the messages in the table (`messages.list`)
-2. In Scala, create new `Message`s with the desired change (`map(exclaim)`)
-3. For each row, update the row in the database (`foreach { ... }`)
-
-This results in _N + 1_ queries, where _N_ is the number of rows selected.  That may be excessive, depending on what your needs are.
-
-
-
-## Take Home Points
-
-For modifying the rows in the database we have seen that:
-
-* deletes are via a `delete` call to a query;
-* updates are via an `update` call on a query, but are somewhat limited; and
-* inserts are via an `insert` (or `+=`) call on a table.
-
-Auto-incrementing values are not inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
-
-Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
-
-Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is no advantage.
-
-The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
-
