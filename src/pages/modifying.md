@@ -408,20 +408,20 @@ DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
   delete from "message" where "message"."sender" = 'HAL'
 ~~~
 
-We can modify the level of various loggers to log additional information:
+We can modify the level of various loggers, as shown in table 3.1.
 
--------------------------------------------------------------------------------------------------------------
-Logger                                     Level   Effect
------------------------------------------- ------- ----------------------------------------------------------
-`scala.slick.jdbc.JdbcBackend.statement`   `DEBUG` Logs SQL sent to the database as described above.
+-------------------------------------------------------------------------------------------------------------------
+Logger                                                   Effect
+----------------------------------------------------     ----------------------------------------------------------
+`scala.slick.jdbc.JdbcBackend.statement`                 Logs SQL sent to the database as described above.
 
-`scala.slick.jdbc.StatementInvoker.result` `DEBUG` Logs the results of each query.
+`scala.slick.jdbc.StatementInvoker.result`               Logs the results of each query.
 
-`scala.slick.session`                      `DEBUG` Logs session events such as opening/closing connections.
+`scala.slick.session`                                    Logs session events such as opening/closing connections.
 
-`scala.slick`                              `DEBUG` Logs everything! Equivalent to changing all of the above.
+`scala.slick`                                            Logs everything! Equivalent to changing all of the above.
 
------------------------------------------- ------- ----------------------------------------------------------
+------------------------------------------               ----------------------------------------------------------
 
 : Slick loggers and their effects.
 
