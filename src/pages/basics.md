@@ -312,7 +312,7 @@ scala> messages.filter(_.sender === "HAL").run
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-If you remember, we actually generated this query earlierstored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
+If you remember, we actually generated this query earlier and stored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
 
 ~~~ scala
 scala> halSays.run
@@ -352,7 +352,7 @@ halSays2.run
 
 ## Take Home Points
 
-In this chapter we've seen a broad overview of the main aspects Slick, including defining a schema, connecting to the database, and issuing queries to retrieve and modify data.
+In this chapter we've seen a broad overview of the main aspects of Slick, including defining a schema, connecting to the database, and issuing queries to retrieve data.
 
 We typically model data from the database as case classes and tuples that map to rows from a table. We define the mappings between these types and the database using `Table` classes such as `MessageTable`.
 
