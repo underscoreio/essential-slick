@@ -1269,8 +1269,7 @@ The other half is known as _sum types_, which we will look at now.
 
 As an example we will add a flag to messages.
 Perhaps an administrator of the chat will be able to mark messages as important, offensive, or spam.
-In the database we'll store these as characters: `!`, `X`, and `$`.
-We don't want to use those symbols in source code, so instead we will establish a sealed trait
+The natural way to do this is establish a sealed trait
 and a set of case objects:
 
 ~~~ scala
@@ -1280,7 +1279,7 @@ case object Offensive extends Flag
 case object Spam extends Flag
 ~~~
 
-As with other custom types, we define a mapping to the database values:
+How we store them in the database depends on the mapping. Maybe we want to store them as characters: `!`, `X`, and `$`:
 
 ~~~ scala
 implicit val flagType =
@@ -1299,7 +1298,7 @@ implicit val flagType =
 
 This is similar to the enumeration pattern from the last set of exercises.
 There is a difference, though, in that sealed traits can be checked by the compiler to
-ensure we have covered all the cases.  That is, is we add a new flag (`OffTopic`),
+ensure we have covered all the cases.  That is, if we add a new flag (`OffTopic` perhaps),
 but forget to add it to our `Flag => Char` function,
 the compiler will warn us that we have missed a case.
 (By enabling the Scala compiler's `-Xfatal-warnings` option,
@@ -1324,7 +1323,8 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
   def * = (senderId, content, ts, flag, id) <> (Message.tupled, Message.unapply)
 
-  def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+  def sender =
+    foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
 }
 
 lazy val messages = TableQuery[MessageTable]
@@ -1334,17 +1334,17 @@ And we can add a message with a flag set:
 
 ~~~ scala
 messages +=
-  Message(halId,  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6, Some(Important))
+  Message(halId, "Just kidding. LOL.", start plusSeconds 20, Some(Important))
 ~~~
 
-When we execute a query, we can express ourselves in terms of our meaningful type.
+When we execute a query, we can work in terms of our meaningful type.
 However, we need to give the compiler a little help:
 
 ~~~ scala
 messages.filter(_.flag === (Important : Flag)).run
 ~~~
 
-Notice the _type annotation_ added to the `Important` value.
+Notice the _type ascription added to the `Important` value.
 If you find yourself writing that kind of query often, be aware that extension methods allow you to package code like this into `messages.isImportant`  or similar.
 
 
