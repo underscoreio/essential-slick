@@ -161,7 +161,7 @@ def freshTestData = Seq(
 )
 ~~~
 
-Next we define a `Table` object, which defines the schema in our database table and tells Slick how to map back and forth between database data and instances of our case class:
+Next we define a `Table` object, which corresponds to our database table and tells Slick how to map back and forth between database data and instances of our case class:
 
 ~~~ scala
 final class MessageTable(tag: Tag)
