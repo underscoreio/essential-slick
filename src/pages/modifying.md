@@ -67,7 +67,7 @@ messages.map(_.sender).insertStatement
 //   values (?)
 ~~~
 
-The parameter type of the `+=` method is matched to the *unpacked* type of the query, so we execute thisquery by passing it a `String` for the `sender`:
+The parameter type of the `+=` method is matched to the *unpacked* type of the query, so we execute this query by passing it a `String` for the `sender`:
 
 ~~~ scala
 messages.map(_.sender) += "HAL"
@@ -89,7 +89,7 @@ Let's modify the insert to give us back the primary key generated:
 // res5: Long = 7
 ~~~
 
-The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense here. We can provide that the return value is a primary key by looking up the record we just inserted:
+The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense here. We can show that the return value is a primary key by looking up the record we just inserted:
 
 ~~~ scala
 messages.filter(_.id === 7L).firstOption
