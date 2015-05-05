@@ -272,15 +272,13 @@ messages.ddl.createStatements.toList
 Once our table is set up, we need to insert some test data:
 
 ~~~ scala
-messages ++= Seq(
-  Message("Dave", "Hello, HAL. Do you read me, HAL?"),
-  Message("HAL",  "Affirmative, Dave. I read you."),
-  Message("Dave", "Open the pod bay doors, HAL."),
-  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.")
-)
+messages ++= freshTestData
 ~~~
 
+Recall that `freshTestData` is just a regular Scala `Seq[Message]`.
+
 The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query. Our table is now populated with data.
+
 
 ### Selecting Data
 
