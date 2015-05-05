@@ -344,7 +344,7 @@ The data from this query will start:
 ```
 
 
-### Summary
+## Joins Summary
 
 We've seen examples of the different kinds of join. You can also mix join types.
 If you want to left join on a couple of tables, and then right join on something else, go ahead because Slick supports that.
