@@ -224,16 +224,6 @@ def db = Database.forURL(
 
 The `Database.forURL` method is part of Slick, but the parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chat-database"` and configuring H2 to keep the data around indefinitely when no connections are open. H2-specific JDBC URLs are discussed in detail in the [H2 documentation][link-h2-jdbc-url].
 
-We can use the `db` object to open a `Session` with our database, which wraps a JDBC-level `Connection` and provides a context in which we can execute a sequence of queries.
-
-~~~ scala
-db.withSession { implicit session =>
-  // Run queries, profit!
-}
-~~~
-
-The `session` object provides methods for starting, committing, and rolling back transactions (see [Chapter 3](#Modifying)), and is passed an implicit parameter to methods that actually run queries against the database.
-
 <div class="callout callout-info">
 **JDBC**
 
@@ -244,6 +234,18 @@ The specification is mirrored by a library implemented for each database you wan
 
 JDBC works with *connection strings*, which are URLs like the one above that tell the driver where your database is and how to connect to it (e.g. by providing login credentials).
 </div>
+
+We can use the `db` object to open a `Session` with our database, which wraps a JDBC-level `Connection` and provides a context in which we can execute a sequence of queries.
+
+~~~ scala
+db.withSession { implicit session =>
+  // Run queries, profit!
+}
+~~~
+
+The `session` object provides methods for starting, committing, and rolling back transactions (see [Chapter 3](#Modifying)), and is passed an implicit parameter to methods that actually run queries against the database.
+
+
 
 ### Inserting Data
 
