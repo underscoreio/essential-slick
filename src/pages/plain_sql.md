@@ -136,7 +136,14 @@ could not find implicit value for parameter rconv:
 
 ### Case Classes
 
-As you've probably guessed, to return a case class from a Plain SQL query means providing a `GetResult` for the case class.  Let's work through an example for the messages table.
+As you've probably guessed, returning a case class from a Plain SQL query means providing a `GetResult` for the case class.  Let's work through an example for the messages table.
+
+<div class="callout callout-info">
+**Run the Code**
+
+You'll find the example queries for this section in the file _select.sql_ over at [the associated GitHub repository][link-example].
+</div>
+
 
 Recall that a message contains: an ID, some content, the sender ID, a timestamp, an optional room ID, and an optional recipient for private messages.  We'll model this as we did in Chapter 4, by wrapping the `Long` primary keys in the type `Id[Table]`.
 
