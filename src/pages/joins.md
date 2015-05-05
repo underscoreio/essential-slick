@@ -64,58 +64,6 @@ val q = for {
 
 Note how this time we're using `msg.senderId`, not the foreign key `sender`. This produces the same query when we joined using `sender`.
 
-Let's look add one more table to see what a more involved query looks like. You'll probably want to refer to the schema for this chapter shown in figure 4.1.
-
-![The database schema for this chapter.  Find this code in the _chat-schema.scala_ file of the example project on GitHub.](src/img/Schema.png)
-
-
-We can retrieve all messages by Dave in the Air Lock, again as an implicit join:
-
-~~~ scala
-val daveId: PK[UserTable] = ???
-val roomId: PK[RoomTable] = ???
-
-val davesMessages = for {
-  message <- messages
-  user    <- users
-  room    <- rooms
-  if message.senderId === user.id &&
-     message.roomId   === room.id &&
-     user.id          === daveId  &&
-     room.id          === airLockId
-} yield (message.content, user.name, room.title)
-~~~
-
-As we have foreign keys (`sender`, `room`) defined on our `message` table, we can use them in the query. Here we have reworked the same example to use the foreign keys:
-
-~~~ scala
-val daveId: PK[UserTable] = ???
-val roomId: PK[RoomTable] = ???
-
-val davesMessages = for {
-  message <- messages
-  user    <- message.sender
-  room    <- message.room
-  if user.id        === daveId &&
-     room.id        === airLockId
-} yield (message.content, user.name, room.title)
-~~~
-
-Both cases will produce SQL something like this:
-
-~~~ sql
-select
-  m."content", u."name", r."title"
-from
-  "message" m, "user" u, "room" r
-where (
-  (u."id" = m."sender") and
-  (r."id" = m."room")
-) and (
-  (u."id" = 1) and
-  (r."id" = 1)
-)
-~~~
 
 ## Explicit Joins
 
@@ -145,7 +93,12 @@ val q = messages innerJoin users on ( (m: MessageTable, u: UserTable) => m.sende
 
 ...but it reads well without this.
 
-In the rest of this section we'll work through a variety of more involved joins.
+In the rest of this section we'll work through a variety of more involved joins.  You may find it useful to refer to figure 5.1, which sketches the schema we're using in this chapter.
+
+
+![The database schema for this chapter.  Find this code in the _chat-schema.scala_ file of the example project on GitHub.](src/img/Schema.png)
+
+
 
 ### Inner Join
 
