@@ -7,7 +7,7 @@ In this chapter we will:
 - understand how to structure an application;
 - look at alternatives to modelling rows as case classes;
 - expand on our knowledge of modelling tables to introduce optional values and foreign keys; and
-- use more custom types to avoid working with just low-level database values.
+- use custom types to avoid working with just low-level database values.
 
 To do this, we'll expand chat application schema to support more than just messages.
 
@@ -35,9 +35,9 @@ import scala.slick.driver.H2Driver.simple._
 
 ...that gave us an H2-specific JDBC driver. That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
 
-### Example
+### Working with a Profile
 
-Re-working the example from chapter 1, we have the schema in a trait:
+Re-working the example from previous chapters, we have the schema in a trait:
 
 ~~~ scala
 trait Profile {
@@ -89,7 +89,8 @@ If you recognise this as a problem, it's time to split your code more finely and
 
 ## Representations for Rows
 
-In chapter 1 we introduced rows as being represented by case classes.
+In previous chapters we modelled rows as case classes.  That's a great choice, and the one we recommend, but you should be aware that Slick is more flexible that that.
+
 There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
 
 ### Case Classes and `<>`
@@ -301,8 +302,8 @@ users +=
   "Dr. Dave Bowman" :: 43 :: 'M' :: 1.7f :: 74.2f :: 11 ::
   "dave@example.org" :: "+1555740122" :: true :: true ::
   "123 Some Street" :: "Any Town" :: "USA" ::
-  "Black" :: "Ice Cream" :: "Coffee" :: "Sky at Night" :: "Silent Running" :: "Bicycle made for Two" ::
-  "Acme Space Helmet" :: 10 :: true ::
+  "Black" :: "Ice Cream" :: "Coffee" :: "Sky at Night" :: "Silent Running" ::
+  "Bicycle made for Two" :: "Acme Space Helmet" :: 10 :: true ::
   "HAL" :: "Betty" :: 0L :: HNil
 ~~~
 
@@ -328,8 +329,6 @@ Some parts of `HList` depend on Scala reflection. Modify your _build.sbt_ to inc
 ~~~ scala
 "org.scala-lang" % "scala-reflect" % scalaVersion.value
 ~~~
-
-This took one of the authors far too long to establish.
 </div>
 
 
@@ -352,7 +351,7 @@ case class Address(street: String, city: String, country: String)
 case class User(contact: EmailContact, address: Address, id: Long = 0L)
 ~~~
 
-You'll find a definition of `UserTable` that you can copy and paste in the example code in the folder _chapter-03_.
+You'll find a definition of `UserTable` that you can copy and paste in the example code in the folder _chapter-04_.
 
 <div class="solution">
 A suitable projection is:
@@ -662,7 +661,7 @@ The method `foreignKey` takes four required parameters:
  * the `TableQuery` that the foreign key belongs to; and
  * a function on the supplied `TableQuery[T]` taking the supplied column(s) as parameters and returning an instance of `T`.
 
-Lets walk through this by using foreign keys to connect a `message` to a `user`.
+We will step through this by using foreign keys to connect a `message` to a `user`.
 To do this we change the definition of `message` to reference an `id` of a `user`:
 
 ~~~ scala
@@ -858,7 +857,9 @@ The method signature is:
 def filterByEmail(email: Option[String]) = ???
 ~~~
 
-With two records in the database, we want `filterByEmail(Some("dave@example.org")).run` to produce one row,
+Assume we only have two user records: one with an email address of "dave@example.org", and one with no email address.
+
+We want `filterByEmail(Some("dave@example.org")).run` to produce one row,
 and `filterByEmail(None).run` to produce two rows.
 
 <div class="solution">
@@ -869,6 +870,8 @@ def filterByEmail(email: Option[String]) =
   if (email.isEmpty) users
   else users.filter(_.email === email)
 ~~~
+
+You don't always have to do everything at the SQL level.
 </div>
 
 
@@ -916,17 +919,19 @@ def filterByEmail(email: Option[String]) =
 
 #### Enforcement
 
-What happens if you try adding a message with a user id of `3`?
+What happens if you try adding a message for a user ID of `3000`?
 
 For example:
 
 ~~~ scala
-messages += Message(3L, "Hello HAl!", DateTime.now)
+messages += Message(3000L, "Hello HAL!")
 ~~~
+
+Note that there is no user in our example with an ID of 3000.
 
 <div class="solution">
 We get a runtime exception as we have violated referential integrity.
-There is no row in the `user` table with a primary id of `3`.
+There is no row in the `user` table with a primary id of `3000`.
 </div>
 
 
