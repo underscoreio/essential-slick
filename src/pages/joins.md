@@ -44,7 +44,7 @@ That's the implicit style of query, using foreign key relations.
 
 You'll find the example queries for this section in the file _joins.sql_ over at [the associated GitHub repository][link-example].
 
-From the _chapter-05_ folder, start SBT and at the SBT `>`` prompt run:
+From the _chapter-05_ folder, start SBT and at the SBT `>` prompt run:
 
 ~~~
 runMain chapter05.JoinsExample
@@ -102,9 +102,7 @@ In the rest of this section we'll work through a variety of more involved joins.
 
 ### Inner Join
 
-Let's rework the implicit examples from above using explicit `innerJoin` methods. It will produce the same results as the implicit join.
-
-An inner join is where we select records from multiple tables, where those records exist (in some sense) in all tables. For the chat example this will be messages that have a sender in the user table, and a room in the rooms table:
+An inner join is where we select records from multiple tables, where those records exist (in some sense) in all tables. We'll lok at a chat example where we expect messages that have a sender in the user table, and a room in the rooms table:
 
 ```scala
 val inner =
@@ -133,14 +131,16 @@ val inner =
   innerJoin(rooms).on(_._1.roomId === _.id)
 ```
 
-Either way, when it comes to the `query` itself we're using pattern matching again to unpick the results of `inner`, and adding additional guard conditions (which will be a `WHERE` clause in SQL), and mapping to the columns we want.
+Either way, when it comes to the `query` itself we're using pattern matching again to unpick the results of `inner`, and adding additional guard conditions (which will be a `WHERE` clause in SQL).
+
+Finally, we mapping to the columns we want: content, user name, and room title.
 
 
 ### Left Join
 
 A left join (a.k.a. left outer join), adds an extra twist. Now we are selecting all the records from a table, and matching records from another table _if they exist_, and if not we will have `NULL` values in the query result.
 
-For an example of from our chat schema, observe that messages can optionally be sent privately to another user. So let's say we want a list of all the messages and who they were sent to.  Visually the left outer join is as shown in figure 4.2.
+For an example of from our chat schema, observe that messages can optionally be sent privately to another user. So let's say we want a list of all the messages and who they were sent to.  Visually the left outer join is as shown in figure 5.2.
 
 ![A visualization of the left outer join example. Selecting messages and associated recipients (users). For similar diagrams, see [A Visual Explanation of SQL Joins][link-visual-joins], _Coding Horror_, 11 Oct 2007.](src/img/left-outer.png)
 
@@ -156,7 +156,7 @@ left.run.foreach(result => println(result))
 
 We're producing a list of messages and the name of user they were sent to (if any). Note the `u.name.?` expression is required to turn the potentially null result from the query into an `Option` value.  You need to deal with this on a column-by-column basis.
 
-The result of the query, using the test data in _joins.sql_ over at GitHub, is:
+The sample data we have in _joins.sql_ in the _chapter05_ folder contains just two private messages (between Frank and Dave).  The rest are public. So our query results are:
 
 ```
 (Hello, HAL. Do you read me, HAL?,             None)
@@ -169,7 +169,6 @@ The result of the query, using the test data in _joins.sql_ over at GitHub, is:
 (Maybe,                                        Some(Frank))
 ```
 
-Only the last two are private messages, sent to Dave and Frank. The rest were public, and have no user in the `toId` column.
 
 <div class="callout callout-info">
 **NULLs in Joins**
@@ -189,14 +188,15 @@ we'll get a `SlickException` with the following message:
 
 `Read NULL value (null) for ResultSet column Path s2._2`.
 
-This is due to one user (Elena) not having been assigned to any rooms.
+This is due to users not having to be in a room. And in our test data, one user has not been assigned to any room.
 
 It's a limitation in Slick 2.x. even for non nullable columns.
 
 The fix is to manually add `.?` to the selected column:
 
 ``` scala
-yield usrs.name -> occ.roomId.?
+...
+} yield usrs.name -> occ.roomId.?
 ```
 </div>
 
@@ -207,7 +207,7 @@ In the left join we selected all the records from one side of the join, with pos
 
 We can switch the example for left join and ask for all users, what private messages have they received:
 
-```
+``` scala
 val right = for {
   (msg, user) <- messages.rightJoin(users).on(_.toId === _.id)
 } yield (user.name, msg.content.?)
@@ -239,7 +239,7 @@ That would be title of all room and messages in those rooms. Either side could b
 
 ## Zip Joins
 
-Zip joins are equivalent to `zip` on a Scala collection.  Recall that the `zip` in the collections library takes a pair of lists and returns a list of pairs:
+Zip joins are equivalent to `zip` on a Scala collection.  Recall that the `zip` in the collections library operates on two lists and returns a list of pairs:
 
 ``` scala
 scala> val xs = List(1,2,3)
@@ -250,7 +250,7 @@ scala> xs zip xs.drop(1)
 
 Slick provides the equivalent for queries, plus two variations. Let's say we want to pair up adjacent messages into what we'll call a "conversation":
 
-```
+```scala
 // Select messages, ordered by the date the messages were sent
 val msgs = messages.sortBy(_.ts asc)
 
@@ -308,9 +308,9 @@ e.g. `_1`. We would recommend using a case statement as it easier to read than w
 
 The examples above show a join and each time we've used an `on` to constrain the join.  This is optional.  If you omit the `on` call, you end up with an implicit cross join (every row from the left table with every row from the right table).  For example:
 
-```scala
+~~~ scala
 (messages leftJoin users).run.foreach(println)
-```
+~~~
 
 Finally, we have shown examples of building queries using either for comprehension or maps and filters. You get to pick which style you prefer.
 
@@ -319,7 +319,7 @@ Finally, we have shown examples of building queries using either for comprehensi
 
 If you've been following along and running the example joins, you might have noticed large and unusual queries being generated.
 
-For example:
+An example is looking up the user's name and message content for each message:
 
 ~~~ scala
 users.join(messages).on(_.id === _.senderId).map{ case (u,m) => u.name -> m.content }
@@ -350,13 +350,13 @@ If Slick generates such verbose queries are they are going to be slow? Yes, some
 
 Here's the key concept: the SQL generated by Slick is fed to the database optimizer. That optimizer has far better knowledge about your database, indexes, query paths, than anything else.  It will optimize the SQL from Slick into something that works well.
 
-Unfortunately, some optimizers don't manage this very well. Postgres does a good job. MySQL is, at the time of writing, pretty bad at this. You know the lesson here: measure, use your database tools to EXPLAIN the query plan, and adjust queries as necessary.  The ultimate adjustment of a query is to re-write it using _Plain SQL_. We will introduce Plain SQL in [chapter 6](#PlainSQL).
+Unfortunately, some optimizers don't manage this very well. Postgres does a good job. MySQL is, at the time of writing, pretty bad at this. You know the lesson here: measure, use your database tools to EXPLAIN the query plan, and adjust queries as necessary.  The ultimate adjustment of a query is to re-write it using _Plain SQL_. We will introduce Plain SQL in [Chapter 6](#PlainSQL).
 
 
 
 ## Aggregation
 
-Aggregate functions are all about computing a single value from some set of rows. A simple example is `count`. we will also look at grouping rows, and computing values on those groups.
+Aggregate functions are all about computing a single value from some set of rows. A simple example is `count`. This section looks at aggregation, and also at grouping rows, and computing values on those groups.
 
 ### Functions
 
@@ -391,7 +391,7 @@ val numSenders: Int = messages.map(_.senderId).countDistinct.run
 val firstSent: Option[DateTime] = messages.map(_.ts).min.run
 ```
 
-While `length` and `countDistinct` return an `Int`, the rest of the other functions is an `Option`. This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
+While `length` and `countDistinct` return an `Int`, the other functions return an `Option`. This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
 
 
 ### Grouping
@@ -423,9 +423,8 @@ Vector((Frank,2), (HAL,2), (Dave,4))
 
 So what's happened here? What `groupBy` has given us is a way to place rows into groups, according to some function we supply. In this example, the function is to group rows based on the user's name. It doesn't have to be a `String`, it could be any type in the table.
 
-When it comes to mapping, we now have the key to the group (user's name in our case), and the corresponding group rows as a query.  Because we've joined messages and users, our group is a query of those two tables.  In this example we don't care what the query is because we're just counting the number of rows.  But sometimes we will need to know more about the query.
+When it comes to mapping, we now have the key to the group (the user's name in our case), and the corresponding group rows as a query.  Because we've joined messages and users, our group is a query of those two tables.  In this example we don't care what the query is because we're just counting the number of rows.  But sometimes we will need to know more about the query.
 
-#### A More Complex Example
 
 Let's look at a more involved example, by collecting some statistics about our messages. We want to find, for each user, how many messages they sent, and the date of their first message.  We want a result something like this:
 
@@ -467,7 +466,7 @@ Convince yourself the Slick and SQL queries are equivalent, by comparing:
 
 If you do that you'll see the Slick expression makes sense. But when seeing these kinds of queries in code it may help to simplify by introducing intermediate functions with meaningful names.
 
-There are a few ways to go at simplifying this, but the lowest hanging fruit is that `min` expression inside the `map`.  The issue here is that the `group` pattern is a `Query` of `(MessageTable, UserTable)` as that's our join, which leads to us having to split it further to access the message's timestamp field.
+There are a few ways to go at simplifying this, but the lowest hanging fruit is that `min` expression inside the `map`.  The issue here is that the `group` pattern is a `Query` of `(MessageTable, UserTable)` as that's our join. That leads to us having to split it further to access the message's timestamp field.
 
 Let's pull that part out as a method:
 
@@ -478,7 +477,9 @@ def timestampOf[S[_]](group: Query[(MessageTable,UserTable), (Message,User), S])
   group.map { case (msg, user) => msg.ts }
 ```
 
-What we've done here is introduced a method to work on the group query, using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.  The query is parameterized by the join, the mapped values, and the container for the results. By container we mean something like `Vector[T]` (from `run`-ing the query) or `List[T]` (if we `list` the query).  We don't really care what our results go into, but we do care we're working with messages and users.
+What we've done here is introduced a method to work on the group query, using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.  
+
+The query (`group`) is parameterized by the join, the unpacked values, and the container for the results. By container we mean something like `Vector[T]` (from `run`-ing the query) or `List[T]` (if we `list` the query).  We don't really care what our results go into, but we do care we're working with messages and users.
 
 With this little piece of domain specific language in place, the query becomes:
 
@@ -548,10 +549,10 @@ val msgsPerRoomPerUser =
 
 Hopefully you're now in a position where you can unpick this:
 
-* We join on messages, room and user to be able to display the room and and user name.
+* We join on messages, room and user to be able to display the room title and user name.
 * The value passed into the `groupBy` will be determined by the join.
 * The result of the `groupBy` is the columns for the grouping, which is a tuple of the room title and the user's name.
-* We select just the columns we want: room, user and the number of rows
+* We select just the columns we want: room, user and the number of rows.
 * For fun we've thrown in a `sortBy` to get the results in room order.
 
 
