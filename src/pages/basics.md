@@ -232,7 +232,7 @@ db.withSession { implicit session =>
 }
 ~~~
 
-The `session` object provides methods for starting, commiting, and rolling back transactions (see [TODO: TRANSACTION CHAPTER](#Transactions)), and is passed an implicit parameter to methods that actually run queries against the database.
+The `session` object provides methods for starting, committing, and rolling back transactions (see [Chapter 3](#Modifying)), and is passed an implicit parameter to methods that actually run queries against the database.
 
 <div class="callout callout-info">
 **JDBC**
