@@ -277,7 +277,7 @@ messages.
 Let's now turn to more interesting updates. How about converting every message to be all capitals? Or adding an exclamation mark to the end of each message? Both of these queries involve expressing the desired result in terms of the current value in the database. In SQL we might write something like:
 
 ~~~ sql
-update "message" set "content" = "content" || '!'
+update "message" set "content" = CONCAT("content", '!')
 ~~~
 
 This is not currently supported by `update` in Slick, but there are ways to achieve the same result. One such way is to use plain SQL queries, which we cover in [Chapter 6](#PlainSQL). Another is to perform a *client side update* by defining a Scala function to capture the change to each row:
