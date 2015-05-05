@@ -85,7 +85,7 @@ If you get output similar to the above, congratulations! You're all set up and r
 
 The first time you run SBT, it will download a lot of library dependencies from the Internet and cache them on your hard drive. This means two things:
 
- - you need a working Internet connection to get started;
+ - you need a working Internet connection to get started; and
  - the first `compile` command you issue could take a while to complete.
 
 If you haven't used SBT before, you may find the [SBT Tutorial](link-sbt-tutorial) useful.
