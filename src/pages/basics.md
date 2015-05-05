@@ -131,13 +131,13 @@ If we were using a separate database like MySQL or PostgreSQL, we would substitu
 
 ### Importing Library Code
 
-Database management systems are not all created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *driver*. For example, we access most of the Slick API for H2 via the following `import`:
+Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *driver*. For example, we access most of the Slick API for H2 via the following `import`:
 
 ~~~ scala
 import scala.slick.driver.H2Driver.simple._
 ~~~
 
-Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 6](#altdbs) covers some of the differences between different drivers and provides tips for working with multiple DBMSs.
+Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 4](#Modelling) looks at working with different drivers.
 
 ### Defining our Schema
 
