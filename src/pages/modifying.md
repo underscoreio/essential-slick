@@ -6,7 +6,7 @@ SQL veterans will know that update and delete queries, in particular, share many
 
 ## Inserting Data
 
-As we saw in [Chapter 1](#Basics}, adding new data a table looks like a destuctive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
+As we saw in [Chapter 1](#Basics), adding new data a table looks like a destructive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
 
 ### Inserting Single Rows
 
