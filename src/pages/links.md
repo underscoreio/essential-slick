@@ -32,8 +32,11 @@
 [link-twitter-noel]:         http://twitter.com/noelwelsh
 [link-twitter-dave]:         http://twitter.com/davegurnell
 [link-twitter-richard]:      http://twitter.com/d6y
+[link-twitter-underscore]:   https://twitter.com/underscoreio
 [link-underscore-gitter]:    https://gitter.im/underscoreio/scala
 [link-underscore]:           http://underscore.io
+[link-email-underscore]:     mailto:hello@underscore.io?subject=Essential%20Slick
+[link-newsletter]:           http://underscore.io/blog/newsletters/
 [link-visual-joins]:         http://blog.codinghorror.com/a-visual-explanation-of-sql-joins/
 [link-wartremover]:          https://github.com/puffnfresh/wartremover
 [link-wikipedia-joins]:      http://en.wikipedia.org/wiki/Join_(SQL)
