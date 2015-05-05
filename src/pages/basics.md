@@ -14,8 +14,8 @@ This book provides a compact, no-nonsense guide to everything you need to know t
  - Chapter 2 covers basic select queries, introducing Slick's query language and delving into some of the details of type inference and type checking.
  - Chapter 3 covers queries for inserting, updating, and deleting data.
  - Chapter 4 discusses data modelling, including defining custom column and table types.
- - Chapter 5 discusses advanced select queries, including joins and agregates.
- - Chapter 6 provides a brief overview of an experimental feature of Slick---*plain SQL* queries.
+ - Chapter 5 explores advanced select queries, including joins and aggregates.
+ - Chapter 6 provides a brief overview of _Plain SQL_ queries---a useful tool when you need fine control over the SQL sent to your database.
 
 <div class="callout callout-info">
 **Slick isn't an ORM**
