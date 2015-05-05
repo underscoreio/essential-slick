@@ -254,7 +254,7 @@ This gives us two benefits: the compiler will point out typos in variables names
 
 All the techniques described for selects applies for composing plain SQL updates.
 
-As an example, we can start with an uncoditional update...
+As an example, we can start with an unconditional update...
 
 ~~~ scala
 val query = sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
@@ -284,7 +284,7 @@ implicit val SetDateTime = SetParameter[DateTime](
  )
 ```
 
-The value `pp` is a `PositionedParameters`. This is an implementation detail of Slick, wrapping a SQL statement and a place holder for a value.  Effectively we're saying how to treat a `DateTime` regardless of where it appears in the update statement.
+The value `pp` is a `PositionedParameters`. This is an implementation detail of Slick, wrapping a SQL statement and a placeholder for a value.  Effectively we're saying how to treat a `DateTime` regardless of where it appears in the update statement.
 
 In addition to a `Timestamp` (via `setTimestamp`), you can set: `Boolean`, `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `BigDecimal`, `Array[Byte]`, `Blob`, `Clob`, `Date`, `Time`, as well as `Object` and `null`.  There are _setXXX_ methods on `PositionedParameters` for `Option` types, too.
 
