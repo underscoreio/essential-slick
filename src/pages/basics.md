@@ -51,7 +51,7 @@ Each chapter of the book is associated with a separate SBT project that provides
 
 We'll be using a running example of a chat application, *Slack*, *Flowdock*, or an *IRC* application. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
 
-For now, we will start with a simple conversation between two famous celebritiries. Change to the `chapter-01` directory now, use the `sbt.sh` script to start SBT, and compile and run the example to see what happens:
+For now, we will start with a simple conversation between two famous celebrities. Change to the `chapter-01` directory now, use the `sbt.sh` script to start SBT, and compile and run the example to see what happens:
 
 ~~~ bash
 bash$ cd chapter-01
