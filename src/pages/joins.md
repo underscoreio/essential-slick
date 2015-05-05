@@ -44,10 +44,10 @@ That's the implicit style of query, using foreign key relations.
 
 You'll find the example queries for this section in the file _joins.sql_ over at [the associated GitHub repository][link-example].
 
-From the _chapter-04_ folder, start SBT and at the SBT '>' prompt run:
+From the _chapter-05_ folder, start SBT and at the SBT `>`` prompt run:
 
 ~~~
-runMain chapter04.JoinsExample
+runMain chapter05.JoinsExample
 ~~~
 </div>
 
