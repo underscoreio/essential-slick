@@ -28,9 +28,9 @@ We need to import `interpolation` to enable the use of the `sql` interpolator.
 
 Once we've done that, running a plain SQL looks similar to other queries we've seen in this book: just call `list` (or `first` etc). You need an implicit `session` in scope, as you do for all queries.
 
-The big difference is with the construction of the query. We supply both the SQL we want to run and specify the expected result type using `as`.
+The big difference is with the construction of the query. We supply both the SQL we want to run and specify the expected result type using `as[T]`.
 
-`as[T]` is pretty flexible.  Let's get back the room ID and room title:
+The `as[T]` method is pretty flexible.  Let's get back the room ID and room title:
 
 ~~~ scala
 val roomInfoQuery = sql""" select "id", "title" from "room" """.as[(Long,String)]
@@ -38,6 +38,8 @@ val roomInfo = roomInfoQuery.list
 println(roomInfo)
 // List((1,Air Lock), (2,Pod), (3,Brain Room))
 ~~~
+
+Notice we specified a tuple of `(Long, String)` as the result type.  This matches the columns in our SQL `SELECT` statement.
 
 Using `as[T]` we can build up arbitrary result types.  Later we'll see how we can use our own application case classes too.
 
@@ -54,7 +56,7 @@ Notice how `$t` is used to reference a Scala value `t`. This value is incorporat
 <div class="callout callout-warning">
 **The Danger of Strings**
 
-The SQL interpolators are essential for situations where you need full control over the SQL to be run. Be aware there there is some loss of safety. For example:
+The SQL interpolators are essential for situations where you need full control over the SQL to be run. Be aware there there is some loss compile-time of safety. For example:
 
 ~~~ scala
 val t = 42
@@ -72,7 +74,7 @@ val table = "message"
 val query = sql""" select "id" from "#$table" """.as[Long]
 ~~~
 
-In this situation we do not want the value of `table` to be treated as a String. That would give you the invalid query: `select "id" from "'message'""`.  However, using this construct means you can produce dangerous SQL. The golden rule is to never use `#$` with input supplied by a user.
+In this situation we do not want the value of `table` to be treated as a String. That would give you the invalid query: `select "id" from "'message'"`.  However, using this construct means you can produce dangerous SQL. The golden rule is to never use `#$` with input supplied by a user.
 </div>
 
 
@@ -108,7 +110,7 @@ The result of this is a new `StaticQuery` which we can execute.
 
 Out of the box Slick knows how to convert many data types to and from SQL data types. The examples we've seen so far include turning a Scala `String` into a SQL string, and a SQL BIGINT to a Scala `Long`.
 
-These conversions are available to `as[T]` and `+?`.  If we want to work with a type that Slick doesn't know about, we need to provide the information to go from our type to SQL types.  That's the role of the `GetResult` type class.
+These conversions are available to `as[T]` and `+?`.  If we want to work with a type that Slick doesn't know about, we need to provide a conversion.  That's the role of the `GetResult` type class.
 
 As an example, we can fetch the timestamp on our messages using JodaTime's `DateTime`:
 
@@ -159,7 +161,7 @@ case class Message(
   id:       Id[MessageTable]      = Id(0L) )
 ~~~
 
-To provide a `GetResult[Message]` we need all the types inside the `Message` to have `GetResult` instances.  We've already tacked `DateTime`.  That leaves  `Id[MessageTable]`, `Id[UserTable]`, `Option[Id[UserTable]`, and `Option[Id[RoomTable]`.
+To provide a `GetResult[Message]` we need all the types inside the `Message` to have `GetResult` instances.  We've already tackled `DateTime`.  That leaves  `Id[MessageTable]`, `Id[UserTable]`, `Option[Id[UserTable]`, and `Option[Id[RoomTable]`.
 
 Dealing with the two non-option IDs is straight-forward:
 
@@ -214,61 +216,6 @@ An example: if, outside of Slick, a table is modified to add a column, the resul
 </div>
 
 
-### Exercises
-
-The examples for this section are in the _chatper-06_ folder, in the source file _selects.scala_.
-
-You can run the code example with:
-
-```
-$ sbt
-> runMain chapter06.PlainSelectExample
-```
-
-
-
-#### Robert Tables
-
-We're building a web site that allows searching for users by their email address:
-
-~~~ scala
-def lookup(email: String) =
-  sql"""select id from "user" where "user"."email" = '#${email}'"""
-
-// Example use:
-lookup("dave@example.org").as[Long].firstOption
-~~~
-
-What the problem with this code?
-
-<div class="solution">
-If you are familiar with [xkcd's Little Bobby Tables](http://xkcd.com/327/),
-the title of the exercise has probably tipped you off:  `#$` does not escape input.
-
-This means a user could use a carefully crafted email address to do evil:
-
-~~~ scala
-lookup("""';DROP TABLE "user";--- """).as[Long].list
-~~~
-
-This "email address" turns into two queries:
-
-~~~ sql
-SELECT * FROM "user" WHERE "user"."email" = '';
-~~~
-
-and
-
-~~~ sql
-DROP TABLE "user";
-~~~
-
-Trying to access the users table after this will produce:
-
-~~~
-org.h2.jdbc.JdbcSQLException: Table "user" not found
-~~~
-</div>
 
 
 ## Updates
@@ -375,18 +322,69 @@ For now, you'll have to live with the warning.
 </div>
 
 
-### Exercises
 
-The examples for this section are in the _chatper-06_ folder, in the source file _updates.scala_.
+## Take Home Points
 
-You can run the code example with:
+Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  Two string interpolators for SQL are provided: `sql` and `sqlu`.
 
-```
-$ sbt
-> runMain chapter06.PlainUpdatesExample
-```
+Values can be safely substituted into Plain SQL queries using `${expression}`.
 
-#### String Interpolation Mistake
+Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
+
+The tools for composing these kinds of queries is limited. Use `+`, `+?`, and `$#`, but do so with care. End-user supplied information should always be escaped before being used in a query.
+
+
+## Exercises
+
+The examples for this section are in the _chatper-06_ folder, in the source files _selects.scala_ and _updates.scala_.
+
+### Robert Tables
+
+We're building a web site that allows searching for users by their email address:
+
+~~~ scala
+def lookup(email: String) =
+  sql"""select id from "user" where "user"."email" = '#${email}'"""
+
+// Example use:
+lookup("dave@example.org").as[Long].firstOption
+~~~
+
+What the problem with this code?
+
+<div class="solution">
+If you are familiar with [xkcd's Little Bobby Tables](http://xkcd.com/327/),
+the title of the exercise has probably tipped you off:  `#$` does not escape input.
+
+This means a user could use a carefully crafted email address to do evil:
+
+~~~ scala
+lookup("""';DROP TABLE "user";--- """).as[Long].list
+~~~
+
+This "email address" turns into two queries:
+
+~~~ sql
+SELECT * FROM "user" WHERE "user"."email" = '';
+~~~
+
+and
+
+~~~ sql
+DROP TABLE "user";
+~~~
+
+Trying to access the users table after this will produce:
+
+~~~
+org.h2.jdbc.JdbcSQLException: Table "user" not found
+~~~
+
+Yes, the table was dropped by the query.
+</div>
+
+
+### String Interpolation Mistake
 
 When we constructed our `sensitive` query, we used `+?` to include a `String` in our query.
 
@@ -405,7 +403,7 @@ In contrast, Slick's `sql` and `sqlu` interpolators do understand SQL and do the
 </div>
 
 
-#### Unsafe Composition
+### Unsafe Composition
 
 Here's a utility method that takes any string, and return a query to append the string to all messages.
 
@@ -428,14 +426,3 @@ val halOnly = append("!") + """ WHERE "sender" = 'HAL' """
 
 It is very easy to get this query wrong and only find out at run-time. Notice, for example, we had to include a space before "WHERE" and use the correct single quoting around "HAL".
 </div>
-
-
-## Take Home Points
-
-Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  Two string interpolators for SQL are provided: `sql` and `sqlu`.
-
-Values can be safely substituted into Plain SQL queries using `${expression}`.
-
-Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
-
-The tools for composing these kinds of queries is limited. Use `+`, `+?`, and `$#`, but do so with care. End-user supplied information should always be escaped before being used in a query. Never forget the story of Little Bobby Tables.
