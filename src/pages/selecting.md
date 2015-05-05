@@ -463,6 +463,10 @@ Starting with a `TableQuery` we can construct a wide range of queries with `filt
 
 The expressions we use in queries are defined in extension methods, and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Column`.  Comparisons to `Option` types are made easy for us as Slick will compare `Column[T]` and `Column[Option[T]]` automatically.
 
+Finally, we introduced some new terminology:
+
+* _unpacked_ type, which is the regular Scala types we work with, such as `String`; and
+* _mixed_ type, which is Slick's column representation, such as `Column[String]`.
 
 ## Exercises
 
