@@ -459,48 +459,39 @@ users.filter(_.email === none).list
 ~~~
 
 We have one row in the database without an email address, but the query will produce no results.
-If you're familiar with SQL, you'll maybe see the problem.
-This query is equivalent to:
+
+Veterans of database administration will be familiar with this interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `true`, whereas the expression `'Dave' = null` evaluates to `null`.
+
+The Slick query amounts to:
 
 ~~~ sql
 SELECT * FROM "user" WHERE "email" = NULL
 ~~~
 
-You might want that to match NULL email addresses, but that's not the behaviour of SQL.
-What you need instead is:
+Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Column[Option[A]]`:
 
-~~~ sql
-SELECT * FROM "user" WHERE "email" IS NULL
-~~~
+--------------------------------------------------------------------------------------------------------
+Scala Code              Operand Column Types               Result Type        SQL Equivalent
+----------------------- ---------------------------------- ------------------ --------------------------
+`col1.?`                `A`                                `A`                `col1`
 
-In Slick that is:
+`col1.isEmpty`          `Option[A]`                        `Boolean`          `col1 is null`
+
+`col1.isDefined`        `Option[A]`                        `Boolean`          `col1 is not null`
+
+--------------------------------------------------------------------------------------------------------
+
+: Optional column methods.
+  Operand and result types should be interpreted as parameters to `Column[_]`.
+
+
+We fix our query with `isEmpty`:
 
 ~~~ scala
 users.filter(_.email.isEmpty).list
-// results in: List(User(HAL,None,2))
+// result: List(User(HAL,None,2))
 ~~~
 
-There's also `isDefined` for `IS NOT NULL`.
-
-Another possible surprise is that matching on a specific non-null value works with a `String` or an `Option[String]`:
-
-~~~ scala
-val oe: Option[String] = Some("dave@example.org")
-val e:  String         = "dave@example.org"
-
-// True:
-users.filter(_.email === oe).list == users.filter(_.email === e).list
-~~~
-
-To understand what's going on here, we need to review the types involved in the query:
-
-![Column Types in the Query](src/img/query-types.png)
-
-Although the values being tested for are `String` and `Option[String]`,
-Slick implicitly lifts these values into `Column[T]` types for comparison.
-From there, Slick will compare the `Column[Option[String]]` we defined in the table
-with either the `Column[String]` or `Column[Option[String]]` in the query.
-This is not specific to `String` types---it is a pattern for all the optional columns.
 
 That rounds off what you need to know to model optional columns with Slick.
 However, we will meet the subject again when

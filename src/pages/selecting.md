@@ -403,9 +403,9 @@ Scala Code              Operand Column Types               Result Type        SQ
 : Boolean column methods.
   Operand and result types should be interpreted as parameters to `Column[_]`.
 
-### Option Methods
+### Option Methods and Type Equivalence
 
-Slick models nullable columns in SQL as `Columns` with `Option` types. If we have a nullable column in our database, we should always declare it as optional in our `Table`:
+Slick models nullable columns in SQL as `Columns` with `Option` types.  We'll discuss this in some depth in [Chapter 4]{#Modelling}. However, as a preview, know that if we have a nullable column in our database, we declare it as optional in our `Table`:
 
 ~~~ scala
 final class PersonTable(tag: Tag) /* ... */ {
@@ -415,50 +415,9 @@ final class PersonTable(tag: Tag) /* ... */ {
 }
 ~~~
 
-Sometimes it's necessary to convert from a non-nullable column to a nullable one in a query. For example, if we're performing an outer join on two tables, it is always possible that columns in one table will contain `null` values. In these circumstances, we can convert a non-`Optional` column into an `Optional` one using the `?` operator:
+When it comes to querying on optional values, Slick is pretty smart about type equivalence.
 
-~~~ scala
-messages.map(_.sender.?)
-// res19: scala.slick.lifted.Query[
-//   scala.slick.lifted.Column[Option[String]],
-//   Option[String],
-//   Seq
-// ] = scala.slick.lifted.WrappingQuery@38e47d45
-~~~
-
-Veterans of database administration will be familiar with an interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `true`, whereas the expression `'Dave' = null` evaluates to `null`.
-
-Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Column[Option[A]]`:
-
-~~~ scala
-messages.filter(_.sender.?.isEmpty).selectStatement
-// res20: String = select ... where x2."sender" is null
-
-messages.filter(_.sender.?.isDefined).selectStatement
-// res21: String = select ... where x2."sender" is not null
-~~~
-
---------------------------------------------------------------------------------------------------------
-Scala Code              Operand Column Types               Result Type        SQL Equivalent
------------------------ ---------------------------------- ------------------ --------------------------
-`col1.?`                `A`                                `A`                `col1`
-
-`col1.isEmpty`          `Option[A]`                        `Boolean`          `col1 is null`
-
-`col1.isDefined`        `Option[A]`                        `Boolean`          `col1 is not null`
-
---------------------------------------------------------------------------------------------------------
-
-: Optional column methods.
-  Operand and result types should be interpreted as parameters to `Column[_]`.
-
-<div class="callout callout-danger">
-TODO: The examples for `isEmpty` and `isDefined` above aren't great. We should have a table with a nullable column in it so we can use that instead of `_.sender.?`.
-</div>
-
-### Type Equivalence in Column Expressions
-
-Slick type-checks our column expressions to make sure the operands are of compatible types. For example, we can compare `Strings` for equality but we can't compare a `String` and an `Int`:
+What do we mean by type equivalence? Slick type-checks our column expressions to make sure the operands are of compatible types. For example, we can compare `Strings` for equality but we can't compare a `String` and an `Int`:
 
 ~~~ scala
 messages.filter(_.id === "foo")
