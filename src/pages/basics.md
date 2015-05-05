@@ -124,7 +124,7 @@ libraryDependencies ++= Seq(
 This file declares the minimum library dependencies for a Slick project:
 
 - Slick itself;
-- the H2 database;
+- the H2 database; and
 - a logging library.
 
 If we were using a separate database like MySQL or PostgreSQL, we would substitute the H2 dependency for the JDBC driver for that database. We may also bring in a connection pooling library such as [C3P0][link-c3p0] or [DBCP][link-dbcp]. Slick is based on JDBC under the hood, so many of the same low-level configuration options exist.
