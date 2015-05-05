@@ -88,7 +88,7 @@ The first time you run SBT, it will download a lot of library dependencies from 
  - you need a working Internet connection to get started;
  - the first `compile` command you issue could take a while to complete.
 
-If you haven't used SBT before, you may find the primer in [TODO: SBT PRIMER APPENDIX NUMBER](#SBT) useful.
+If you haven't used SBT before, you may find the [SBT Tutorial](link-sbt-tutorial) useful.
 </div>
 
 ## Example: A Sequel Oddysey
