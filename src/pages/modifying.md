@@ -285,7 +285,7 @@ This is not currently supported by `update` in Slick, but there are ways to achi
 ~~~ scala
 def exclaim(msg: Message): Message =
   msg.copy(content = msg.content + "!")
-exclaim: Message => Message = <function1>
+// exclaim: Message => Message = <function1>
 ~~~
 
 We can update rows by selecting the relevant data from the database, applying this function, and writing the results back individually. Note that approach can be quite inefficient for large datasets---it takes `N + 1` queries to apply an update to `N` results:
@@ -310,7 +310,7 @@ messages.filter(_.sender === "HAL").delete
 As usual, the return value is the number of rows affected, and as usual, Slick provides a method that allows us to view the generated SQL:
 
 ~~~ scala
-messages.filter(_.sender === "HAL").delete
+messages.filter(_.sender === "HAL").deleteStatement
 // res7: String =
 //   delete from "message"
 //   where "message"."sender" = 'HAL'
