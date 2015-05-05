@@ -183,11 +183,13 @@ messages.map(t => t.id * 1000L).selectStatement
 // res7: String = select x2."id" * 1000 ...
 ~~~
 
+<!--
 <div class="callout callout-info">
 **Query's *flatMap* method**
 
 `Query` also has a `flatMap` method with similar monadic semantics to that of `Option` or `Future`. `flatMap` is mostly used for joins, so we'll cover it in [Chapter 5](#joins).
 </div>
+-->
 
 ## Query Invokers
 
