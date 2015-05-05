@@ -556,7 +556,20 @@ Hopefully you're now in a position where you can unpick this:
 * For fun we've thrown in a `sortBy` to get the results in room order.
 
 
-### Exercises
+## Take Home Points
+
+Slick supports `innerJoin`, `leftJoin`, `rightJoin`, `outerJoin` and a `zipJoin`. You can map and filter over these queries as you would other queries with Slick.  Using pattern matching on the query tuples can be more readable than accessing tuples via `._1`, `._2` and so on.
+
+Aggregation methods, such as `length` and `sum`, produce a value from a set of rows.
+
+Rows can be grouped based on an expression supplied to `groupBy`. The result of a grouping expression is a group key and a query defining the group. Use `map`, `filter`, `sortBy` as you would with any query in Slick.  
+
+The SQL produced by Slick might not be the SQL you would write.
+Slick expects the database query engine to perform optimisation. If you find slow queries, take a look at _Plain SQL_, discussed in the next chapter.
+
+
+
+## Exercises
 
 ### `HAVING` Many Messages
 
@@ -588,11 +601,10 @@ Running this on the data in _aggregates.scala_ produces:
 ~~~ scala
 Vector((Dave,4))
 ~~~
-
 </div>
 
 
-#### User Rooms
+### User Rooms
 
 In this chapter we saw this query:
 
@@ -616,15 +628,3 @@ val usersRooms = for {
 } yield usrs.name -> occ.roomId
 ~~~
 </div>
-
-
-## Take Home Points
-
-TODO:
-
-
-The SQL produced by Slick might not be the SQL you would write.
-Slick expects the database query engine to optimise the query.
-
-
-
