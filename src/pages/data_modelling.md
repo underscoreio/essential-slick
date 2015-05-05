@@ -1,4 +1,4 @@
-# Data Modelling
+# Data Modelling {#Modelling}
 
 We can do the basics of connecting to a database, running queries, and changing data. We turn now to richer models of data and how our application hangs together.
 
@@ -835,7 +835,7 @@ Remember it's the DDL commands from `users.ddl` that instruct the database to pr
 
 You may or may not care if a `String` is represented as a `VARCHAR` or `CHAR`. If you're storing strings that are the same length, it can be more efficient to use `CHAR`. But check with the documentation for the relational database you're using.
 
-On the `avatar` column we've used `O.DBType` to control the exact type used by the database.  
+On the `avatar` column we've used `O.DBType` to control the exact type used by the database.
 Again, the values you use here will depend on the database product in use.
 
 Finally, we can add an index to the table:
