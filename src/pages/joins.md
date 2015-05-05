@@ -9,7 +9,7 @@ Wrangling data with [joins][link-wikipedia-joins] and aggregates can be painful.
 
 ## Implicit Joins
 
-The SQL standards recognize two styles of join: implicit and explicit. Implicit joins have been deprecated, but they're common enough to deserve a brief investigation.
+The SQL standards recognises two styles of join: implicit and explicit. Implicit joins have been deprecated, but they're common enough to deserve a brief investigation.
 
 We have seen an example of implicit joins in the last chapter:
 
