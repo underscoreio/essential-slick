@@ -438,25 +438,17 @@ SI.result - \--------+----------------------+----------------------+----/
 
 ## Take Home Points
 
-<div class="callout callout-danger">
-TODO: Take home points
-</div>
-
-<!--
 For modifying the rows in the database we have seen that:
 
-* deletes are via a `delete` call to a query;
-* updates are via an `update` call on a query, but are somewhat limited; and
 * inserts are via an `insert` (or `+=`) call on a table.
+* updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
+* deletes are via a `delete` call to a query;
 
-Auto-incrementing values are not inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
+Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
 
 Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
-Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is no advantage.
-
 The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
--->
 
 ## Exercises
 
