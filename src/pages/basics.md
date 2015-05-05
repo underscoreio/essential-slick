@@ -141,7 +141,7 @@ Slick makes heavy use of implicit conversions and extension methods, so we gener
 
 ### Defining our Schema
 
-Our first job is to tell Slick what tables we have in our database and how to map them onto Scala values and types. The most common representation of data in Scala is a `case class`, so we start by defining a `Message` class representing a row in our single example table:
+Our first job is to tell Slick what tables we have in our database and how to map them onto Scala values and types. The most common representation of data in Scala is a case class, so we start by defining a `Message` class representing a row in our single example table:
 
 ~~~ scala
 final case class Message(
