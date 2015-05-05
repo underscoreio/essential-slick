@@ -49,7 +49,7 @@ import scala.slick.driver.H2Driver.simple._
 ~~~
 </div>
 
-## Filtering the results: the *filter* Method
+## Filtering Results: The *filter* Method
 
 We can create a query for a subset of rows using the `filter` method:
 
@@ -108,7 +108,7 @@ messages.filter(_.sender === 123)
 //                                        ^
 ~~~
 
-## Transforming the results: the *map* Method
+## Transforming Results: The *map* Method
 
 Sometimes we don't want to select all of the data in a `Table`. We can use the `map` method on a `Query` to select specific columns for inclusion in the results. This changes both the mixed type and the unpacked type of the query:
 
@@ -496,7 +496,7 @@ messages.filter(_.id === Some(123L)).selectStatement
 //                                            ^
 ~~~
 
-## Counting results: the *length* method and column queries
+## Counting Results: the *length* method and column queries
 
 We can create a `Column` expression representing the length of any `Query` by calling its `length` method:
 
