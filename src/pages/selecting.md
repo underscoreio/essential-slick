@@ -457,6 +457,63 @@ messages.filter(_.id === Some(123L)).selectStatement
 //                                            ^
 ~~~
 
+
+## Controlling Queries: Sort, Take, and Drop
+
+There are a trio of functions used to control the order and number of results returned from a query. This is great for pagination of a result set, but the methods listed in the table below can be used independently.
+
+-------------------------------------------
+Scala Code             SQL Equivalent
+---------------- --------------------------
+`sortBy`         `ORDER BY`
+
+`take`           `LIMIT`
+
+`drop`           `OFFSET`
+
+-------------------------------------------------
+
+:  Methods for ordering, skipping, and limiting the results of a query.
+
+We'll look at each in term, starting with an example of `sortBy`:
+
+~~~ scala
+messages.sortBy(_.sender).run
+// res17: Seq[Example.MessageTable#TableElementType] =
+//  Vector(Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//  Message(Dave,Open the pod bay doors, HAL.,3),
+//  Message(HAL,Affirmative, Dave. I read you.,2),
+//  Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+~~~
+
+To sort by multiple columns, return a tuple of columns:
+
+~~~ scala
+messages.sortBy(m => (m.sender, m.content)).selectStatement
+// res18: String =
+//  select x2."sender", x2."content", x2."id" from "message" x2
+/     order by x2."sender", x2."content"
+~~~
+
+Now we know how to sort results, perhaps we want to show only the first five rows:
+
+~~~ scala
+messages.sortBy(_.sender).take(5)
+~~~
+
+If we are presenting information in pages, we'd need a way to show the next page (rows 6 to 10):
+
+~~~ scala
+messages.sortBy(_.sender).drop(5).take(5)
+~~~
+
+This is equivalent to:
+
+~~~ sql
+select "sender", "content", "id" from "message" order by "sender" limit 5 offset 5
+~~~~
+
+
 ## Take Home Points
 
 Starting with a `TableQuery` we can construct a wide range of queries with `filter` and `map`.  As we compose these queries, the types of the `Query` follow along to give type-safety throughout our application.
@@ -467,6 +524,7 @@ Finally, we introduced some new terminology:
 
 * _unpacked_ type, which is the regular Scala types we work with, such as `String`; and
 * _mixed_ type, which is Slick's column representation, such as `Column[String]`.
+
 
 ## Exercises
 
