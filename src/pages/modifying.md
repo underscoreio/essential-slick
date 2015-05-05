@@ -452,17 +452,12 @@ The SQL statements executed and the result returned from the database can be mon
 
 ## Exercises
 
-<div class="callout callout-danger">
-TODO: Fix up these exercises
-</div>
+The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
 
-<!--
-Experiment with the queries we discuss before trying the exercises in this chapter. The code for this chapter is in the [GitHub repository][link-example] in the _chapter-02_ folder.  As with chapter 1, you can use the `run` command in SBT to execute the code against a H2 database.
--->
 
 ### Insert New Messages Only
 
-Messages sent over a network might fail, and might be resent.  Write a method that will insert a message for someone, but only if the message content hasn't already been stored. We want the `id` of the message as a result.
+Messages sent to our application might fail, and might be resent to us.  Write a method that will insert a message for someone, but only if the message content hasn't already been stored. We want the `id` of the message as a result.
 
 The signature of the method is:
 
