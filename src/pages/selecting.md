@@ -459,9 +459,10 @@ messages.filter(_.id === Some(123L)).selectStatement
 
 ## Take Home Points
 
-<div class="callout callout-danger">
-TODO: Take Home Points
-</div>
+Starting with a `TableQuery` we can construct a wide range of queries with `filter` and `map`.  As we compose these queries, the types of the `Query` follow along to give type-safety throughout our application.
+
+The expressions we use in queries are defined in extension methods, and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Column`.  Comparisons to `Option` types are made easy for us as Slick will compare `Column[T]` and `Column[Option[T]]` automatically.
+
 
 ## Exercises
 
