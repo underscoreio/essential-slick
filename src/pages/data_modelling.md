@@ -1258,44 +1258,7 @@ implicit val userRoleMapper =
 ~~~
 </div>
 
-#### Boilerplate Free Primary Keys
 
-Modify the definition of `Occupant` to use type parameter definition of table primary keys, assume `User` and `Room` are already implement this way.
-
-~~~ scala
-case class Occupant(roomId: Long, userId: Long)
-
-class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
-  def roomId = column[Long]("room")
-  def userId = column[Long]("user")
-
-  def pk = primaryKey("room_user_pk", (roomId, userId))
-
-  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
-}
-
-lazy val occupants = TableQuery[OccupantTable]
-~~~
-
-<div class="solution">
-We need to update the existing definition of `roomId` and `userId` from `Long` to `PK[TableName]`:
-
-~~~ scala
-case class Occupant(roomId: PK[RoomTable], userId: PK[UserTable])
-
-class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
-  def roomId = column[PK[RoomTable]]("room")
-  def userId = column[PK[UserTable]]("user")
-
-  def pk = primaryKey("room_user_pk", (roomId, userId))
-
-  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
-}
-
-lazy val occupants = TableQuery[OccupantTable]
-~~~
-
-</div>
 
 
 ## Sum Types
