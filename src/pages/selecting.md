@@ -465,12 +465,12 @@ TODO: Take Home Points
 
 ## Exercises
 
-We want to make sure you have your environment set up, and can experiment with Slick.  If you've not already done so, try out the above code.  In the [example project][link-example] the code is in _main.scala_ in the folder _chapter-01_.
+If you've not already done so, try out the above code.  In the [example project][link-example] the code is in _main.scala_ in the folder _chapter-02_.
 
 Once you've done that, work through the exercises below.  An easy way to try things out is to use  _triggered execution_ with SBT:
 
 ~~~ bash
-$ cd example-01
+$ cd example-02
 $ sbt
 > ~run
 ~~~
