@@ -30,6 +30,7 @@
 [link-source-extmeth]:       https://github.com/slick/slick/blob/master/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
 [link-twitter-jono]:         http://twitter.com/jonoabroad
 [link-twitter-noel]:         http://twitter.com/noelwelsh
+[link-twitter-dave]:         http://twitter.com/davegurnell
 [link-twitter-richard]:      http://twitter.com/d6y
 [link-underscore-gitter]:    https://gitter.im/underscoreio/scala
 [link-underscore]:           http://underscore.io
