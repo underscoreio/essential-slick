@@ -410,7 +410,7 @@ db.withSession { session =>
 ~~~
 </div>
 
-Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to connect to the database again using `db.withSession`, build the appropriate query using `messages.filter`, and execute it using its `run` method. Again, we've included some common pitfalls in the solution.
+Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to build the appropriate query using `messages.filter`, connect to the database again using `db.withSession`, and execute it using its `run` method. Again, we've included some common pitfalls in the solution.
 
 <div class="solution">
 Here's the code:
