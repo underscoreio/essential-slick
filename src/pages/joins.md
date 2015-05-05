@@ -558,29 +558,70 @@ Hopefully you're now in a position where you can unpick this:
 
 ### Exercises
 
+### `HAVING` Many Messages
 
-TODO: Exercise idea: HAVING a lot of msgs.  modify msgsPerUser to return the counts for just those uses with more than 2 messages. (Slick doesn't distinguish WHERE and HAVING, so just filter as normal).
+Modify the `msgsPerUser` query...
 
-
-#### User rooms
-
-Return a list of users names and the rooms they belong to using an explicit join.
-Make sure there are no `null` columns in the result set!
-
-<div class="solution">
-Simple right?
-Just replace the `leftJoin` with a rightJoin from the query above!
 
 ~~~ scala
-lazy val usersRooms = for {
+val msgsPerUser =
+   messages.join(users).on(_.senderId === _.id).
+   groupBy { case (msg, user)  => user.name }.
+   map     { case (name, group) => name -> group.length }
+~~~
+
+...to return the counts for just those users with more than 2 messages.
+
+<div class="solution">
+SQL distinguishes between `WHERE` and `HAVING`. In Slick, you just use `filter`:
+
+~~~ scala
+val msgsPerUser =
+   messages.join(users).on(_.senderId === _.id).
+   groupBy { case (msg, user)  => user.name }.
+   map     { case (name, group) => name -> group.length }.
+   filter  { case (name, count) => count > 2 }
+~~~
+
+Running this on the data in _aggregates.scala_ produces:
+
+~~~ scala
+Vector((Dave,4))
+~~~
+
+</div>
+
+
+#### User Rooms
+
+In this chapter we saw this query:
+
+~~~ scala
+val outer = for {
+  (usrs, occ) <- users leftJoin occupants on (_.id === _.userId)
+} yield usrs.name -> occ.roomId
+~~~
+
+It causes us a problem because not every user occupies a room.
+
+Can you find another way to express this that doesn't cause this problem?
+
+<div class="solution">
+A right join between users and occupants can help us here.
+For a row to exist in the occupant table it must have a room:
+
+~~~ scala
+val usersRooms = for {
   (usrs,occ) <- users rightJoin occupants on (_.id === _.userId)
 } yield usrs.name -> occ.roomId
-
 ~~~
 </div>
 
 
 ## Take Home Points
+
+TODO:
+
 
 The SQL produced by Slick might not be the SQL you would write.
 Slick expects the database query engine to optimise the query.
