@@ -210,36 +210,7 @@ If you're a fan of terminology, know that what we have discussed so far is calle
  Slick provides other querying models, but lifted embedding is the standard, non-experimental, way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
  </div>
 
-<!--
-### Custom Column Mappings
 
-We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
-
-At a level down from that, we can also control how our types are converted into column values.  For example, we're using [JodaTime][link-jodatime]'s `DateTime` class. Support for this is not built-in to Slick, but we want to show it here to illustrate how painless it is to map types to the database.
-
-The mapping for JodaTime's `DateTime` is:
-
-~~~ scala
-import java.sql.Timestamp
-import org.joda.time.DateTime
-import org.joda.time.DateTimeZone.UTC
-
-implicit val jodaDateTimeType =
-  MappedColumnType.base[DateTime, Timestamp](
-    dt => new Timestamp(dt.getMillis),
-    ts => new DateTime(ts.getTime, UTC)
-  )
-~~~
-
-What we're providing here is two functions:
-
-- one that takes a `DateTime` and turns it into a database-friend value, namely a `java.sql.Timestamp`; and
-- another that does the reverse, taking a database value and turning it into a `DataTime`.
-
-Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime`.
-
-This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
--->
 
 ### Connecting to the Database
 
