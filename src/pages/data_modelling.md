@@ -1004,6 +1004,35 @@ val hasNot = for {
 </div>
 
 
+## Custom Column Mappings
+
+We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
+
+At a level down from that, we can also control how our types are converted into column values.  For example, we'd like to use [JodaTime][link-jodatime]'s `DateTime` class for anything data and time related. Support for this is not built-in to Slick, but it's painless to map custom types to the database.
+
+The mapping for JodaTime's `DateTime` is:
+
+~~~ scala
+import java.sql.Timestamp
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone.UTC
+
+implicit val jodaDateTimeType =
+  MappedColumnType.base[DateTime, Timestamp](
+    dt => new Timestamp(dt.getMillis),
+    ts => new DateTime(ts.getTime, UTC)
+  )
+~~~
+
+What we're providing here is two functions:
+
+- one that takes a `DateTime` and turns it into a database-friendly value, namely a `java.sql.Timestamp`; and
+- another that does the reverse, taking a database value and turning it into a `DataTime`.
+
+Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime`.
+
+This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
+
 
 ## Value Classes {#value-classes}
 
@@ -1024,16 +1053,16 @@ val rubbish = messages.filter(_.senderId === id)
 ~~~
 
 Do you see the problem here? We've looked up a _message_ `id`,
-and then used it to search for a _user_ (senders) with that `id`.
+and then used it to search for a _user_ (via `senderId`) with that `id`.
 It compiles, it runs, and produces nonsense. We can prevent these kinds of problems using Scala's type system.
 
-Before showing how, here's another downside of using `Long` as a primary key:
+Before showing how, here's another downside of using `Long` as a primary key. You may find yourself writing small helper methods such as:
 
 ~~~ scala
 def lookupByUserId(id: Long) = users.filter(_.id === id)
 ~~~
 
-It would be much clearer to use the types of the method, and write:
+It would be much clearer to document this method using the types, rather than the method name:
 
 ~~~ scala
 def lookup(id: UserPK) = users.filter(_.id === id)
@@ -1126,7 +1155,7 @@ or by generalising our definition of a primary key, so we only need to define it
 
 
 <div class="callout callout-info">
-**An `Id[T]` class**
+**An `Id[T]` Class**
 
 Rather than providing a value class definition for each table...
 
@@ -1157,6 +1186,7 @@ lazy val users = TableQuery[UserTable]
 ~~~
 
 We now get type safety without having to define the boiler plate of individual primary key case classes per table.
+Depending on the nature of your application, that might be convenient for you.
 </div>
 
 
