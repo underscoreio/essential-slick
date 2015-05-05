@@ -44,6 +44,7 @@ chapter-02
 chapter-03
 chapter-04
 chapter-05
+chapter-06
 ~~~
 
 Each chapter of the book is associated with a separate SBT project that provides a combination of examples and exercises. We've bundled everything you need to run SBT in the directory for each chapter.
