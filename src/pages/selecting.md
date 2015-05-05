@@ -242,19 +242,19 @@ db.withSession { implicit session =>
 
 Finally, we can use the `execute` invoker to run a query and discard all of the results. This will come in useful in the next chapter when we cover insert, update, and delete queries.
 
----------------------------------------------------------------------------------------------------------------------------
-Method                Return Type   Description
---------------------- ------------- ---------------------------------------------------------------------------------------
-`query.run`           `C[U]`        Return a collection of results. The collection type is determined by the query.
+---------------------------------------------------------------------------------------------------------------------
+Method          Return Type   Description
+--------------- ------------- ---------------------------------------------------------------------------------------
+`run`           `C[U]`        Return a collection of results. The collection type is determined by the
 
-`query.list`          `List[U]`     Run the query, return a `List` of results. Ignore the query's collection type.
+`list`          `List[U]`     Run the query, return a `List` of results. Ignore the query's collection type.
 
-`query.iterator`      `Iterator[U]` Run the query, return an `Iterator` of results.
-                                    Results must be retrieved from the iterator before the session is closed.
+`iterator`      `Iterator[U]` Run the query, return an `Iterator` of results.
+                              Results must be retrieved from the iterator before the session is closed.
 
-`query.firstOption`   `Option[U]`   Return the first result wrapped in an `Option`; return `None` if there are no results.
+`firstOption`   `Option[U]`   Return the first result wrapped in an `Option`; return `None` if there are no results.
 
-`query.execute`       `Unit`        Run the query, ignore the result. Useful for updating the database---see [Chapter 3](#Modifying).
+`execute`       `Unit`        Run the query, ignore the result. Useful for updating the database---see [Chapter 3](#Modifying).
 
 ---------------------------------------------------------------------------------------------------------------------------
 
