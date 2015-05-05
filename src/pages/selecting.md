@@ -321,7 +321,7 @@ messages.filter(m => m.sender ++ "> " + m.content).selectStatement
 and the `like` method for SQL's classic string pattern matching:
 
 ~~~ scala
-messages.filter(_.content like "%bay doors%").selectStatement
+messages.filter(_.content like "%Pretty%").selectStatement
 // res10: String = ... where x2."content" like '%Pretty%'
 ~~~
 
