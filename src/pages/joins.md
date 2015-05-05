@@ -525,7 +525,7 @@ def timestampOf[S[_]](group: Query[(MessageTable,UserTable), (Message,User), S])
   group.map { case (msg, user) => msg.ts }
 ```
 
-What we've done here is introduced a method to work on the group query.  The query is parameterized by the join, the mapped values, and the container for the results. By container we mean something like `Vector[T]` (from `run`-ing the query) or `List[T]` (if we `list` the query).  We don't really care what our results go into, but we do care we're working with messages and users.
+What we've done here is introduced a method to work on the group query, using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.  The query is parameterized by the join, the mapped values, and the container for the results. By container we mean something like `Vector[T]` (from `run`-ing the query) or `List[T]` (if we `list` the query).  We don't really care what our results go into, but we do care we're working with messages and users.
 
 With this little piece of domain specific language in place, the query becomes:
 

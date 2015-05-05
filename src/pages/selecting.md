@@ -71,7 +71,7 @@ messages.filter(_.sender === "HAL").selectStatement
 
 Slick uses the `Column` type to represent expressions over columns as well as individual columns. A `Column[Boolean]` can either be a `Boolean`-valued column in a table, or a `Boolean` expression involving multiple columns. Slick can automatically promote a value of type `A` to a constant `Column[A]`, and provides a suite of methods for building expressions as we shall see below.
 
-## The Query and TableQuery Types
+## The Query and TableQuery Types {#queryTypes}
 
 The types in our `filter` expression deserve some deeper explanation. Slick represents all queries using a trait `Query[M, U, C]` that has three type parameters:
 
