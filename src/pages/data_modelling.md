@@ -789,7 +789,10 @@ Notice that we modelled the `Message` row using a `Long` `sender`,
 rather than a `User`:
 
 ~~~ scala
-case class Message(senderId: Long, content: String, ts: DateTime, id: Long = 0L)
+case class Message(senderId: Long,
+                   content: String,
+                   ts: DateTime,
+                   id: Long = 0L)
 ~~~
 
 That's the design approach to take with Slick.
