@@ -818,7 +818,8 @@ case class User(name: String, avatar: Option[Array[Byte]] = None, id: Long = 0L)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
-  def name   = column[String]("name", O.Length(64, true), O.Default("Anonymous Coward"))
+  def name   = column[String]("name", O.Length(64, true), ↩
+                                                O.Default("Anonymous Coward"))
   def avatar = column[Option[Array[Byte]]]("avatar", O.DBType("BINARY(2048)"))
 
   def * = (name, avatar, id) <> (User.tupled, User.unapply)
