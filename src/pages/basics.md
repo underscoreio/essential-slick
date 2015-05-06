@@ -91,7 +91,7 @@ The first time you run SBT, it will download a lot of library dependencies from 
 If you haven't used SBT before, you may find the [SBT Tutorial](link-sbt-tutorial) useful.
 </div>
 
-## Example: A Sequel Oddysey
+## Example: A Sequel Odyssey
 
 The test application we saw above creates an in-memory database using [H2][link-h2-home], creates a single table, populates it with test data, and then runs some example queries. The rest of this section will walk you through the code and provide an overview of things to come. We'll reproduce the essential parts of the code in the text, but you can follow along in the codebase for the exercises as well.
 
