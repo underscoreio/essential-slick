@@ -62,7 +62,8 @@ The SQL interpolators are essential for situations where you need full control o
 ~~~ scala
 val t = 42
 sql""" select "id" from "room" where "title" = $t """.as[Long].firstOption
-// JdbcSQLException: Data conversion error converting "Air Lock"; SQL statement:
+// JdbcSQLException: Data conversion error converting "Air Lock"; ↩
+//                                                   SQL statement:
 // [error]  select "id" from "room" where "title" = ?
 ~~~
 
