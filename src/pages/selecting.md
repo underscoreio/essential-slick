@@ -405,7 +405,7 @@ Scala Code              Operand Column Types               Result Type        SQ
 
 ### Option Methods and Type Equivalence
 
-Slick models nullable columns in SQL as `Columns` with `Option` types.  We'll discuss this in some depth in [Chapter 4]{#Modelling}. However, as a preview, know that if we have a nullable column in our database, we declare it as optional in our `Table`:
+Slick models nullable columns in SQL as `Columns` with `Option` types.  We'll discuss this in some depth in [Chapter 4](#Modelling). However, as a preview, know that if we have a nullable column in our database, we declare it as optional in our `Table`:
 
 ~~~ scala
 final class PersonTable(tag: Tag) /* ... */ {
