@@ -720,7 +720,8 @@ We could do that in our application, but it's something the database can provide
 
 ~~~ scala
 def sender =
-  foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+  foreignKey("sender_fk", senderId, users) ↩
+  (_.id, onDelete=ForeignKeyAction.Cascade)
 ~~~
 
 Providing Slicks DDL command has been run for the table,
