@@ -513,8 +513,10 @@ It also means the message "Surprised?" will be printed.
 Rewrite the update statement below to use a for comprehension.
 
 ~~~ scala
-val rowsAffected =
-  messages.filter(_.sender === "HAL").map(msg => (msg.sender, msg.ts)).update("HAL 9000", DateTime.now)
+val rowsAffected = messages.
+                    filter(_.sender === "HAL").
+                    map(msg => (msg.sender, msg.ts)).
+                    update("HAL 9000", DateTime.now)
 ~~~
 
 Which style do you prefer?
