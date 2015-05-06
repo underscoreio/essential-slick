@@ -324,7 +324,10 @@ If you've been following along and running the example joins, you might have not
 An example is looking up the user's name and message content for each message:
 
 ~~~ scala
-users.join(messages).on(_.id === _.senderId).map{ case (u,m) => u.name -> m.content }
+users.
+  join(messages).
+  on(_.id === _.senderId).
+  map{ case (u,m) => u.name -> m.content }
 ~~~
 
 The query we'd write by hand for this is:
@@ -344,7 +347,8 @@ select
 from
   (select x6."name" as x3, x6."id" as x7 from "user" x6) x2
   inner join
-  (select x8."content" as x5, x8."sender" as x9 from "message" x8) x4 on x2.x7 = x4.x9
+  (select x8."content" as x5, x8."sender" as x9 from "message" x8) x4 on  ↩
+                                                                x2.x7 = x4.x9
 ```
 
 That's not so bad, but it is a little strange. For more involved queries they can look much worse.
@@ -479,7 +483,7 @@ def timestampOf[S[_]](group: Query[(MessageTable,UserTable), (Message,User), S])
   group.map { case (msg, user) => msg.ts }
 ```
 
-What we've done here is introduced a method to work on the group query, using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.  
+What we've done here is introduced a method to work on the group query, using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.
 
 The query (`group`) is parameterized by the join, the unpacked values, and the container for the results. By container we mean something like `Vector[T]` (from `run`-ing the query) or `List[T]` (if we `list` the query).  We don't really care what our results go into, but we do care we're working with messages and users.
 
@@ -564,7 +568,7 @@ Slick supports `innerJoin`, `leftJoin`, `rightJoin`, `outerJoin` and a `zipJoin`
 
 Aggregation methods, such as `length` and `sum`, produce a value from a set of rows.
 
-Rows can be grouped based on an expression supplied to `groupBy`. The result of a grouping expression is a group key and a query defining the group. Use `map`, `filter`, `sortBy` as you would with any query in Slick.  
+Rows can be grouped based on an expression supplied to `groupBy`. The result of a grouping expression is a group key and a query defining the group. Use `map`, `filter`, `sortBy` as you would with any query in Slick.
 
 The SQL produced by Slick might not be the SQL you would write.
 Slick expects the database query engine to perform optimisation. If you find slow queries, take a look at _Plain SQL_, discussed in the next chapter.
