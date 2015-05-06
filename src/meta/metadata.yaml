@@ -4,8 +4,9 @@ author: Richard Dallaway and Jonathan Ferguson
 date: "Early Access, May  2015"
 filenameStem: "essential-slick"
 # Used by Pandoc to generate the PDF cover...
-# see src/css/book.css for HTML/ePub covers:
+# see src/css/book.less for HTML/ePub covers:
 coverColor: "F58B40"
+copyright: "2015"
 tocDepth: 3
 pages:
   - src/pages/preface.md
@@ -15,6 +16,14 @@ pages:
   - src/pages/data_modelling.md
   - src/pages/joins.md
   - src/pages/plain_sql.md
+  - src/pages/links.md
+  - src/pages/start-of-appendix.md
+  - src/pages/databases.md
+  - src/pages/solutions.md
+previewPages:
+  - src/pages/preface.md
+  - src/pages/basics.md
+  - src/pages/selecting.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md
   - src/pages/databases.md

@@ -19,6 +19,7 @@
 [link-ref-h2driver]:         http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.driver.H2Driver
 [link-ref-orm]:              http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
 [link-sbt]:                  http://scala-sbt.org
+[link-sbt-tutorial]:         http://www.scala-sbt.org/0.13/tutorial/index.html
 [link-scala-interpolation]:  http://docs.scala-lang.org/overviews/core/string-interpolation.html
 [link-scala-option]:         http://www.scala-lang.org/api/current/#scala.Option
 [link-scala-value-classes]:  http://docs.scala-lang.org/overviews/core/value-classes.html
@@ -27,12 +28,16 @@
 [link-slick-column-options]: http://slick.typesafe.com/doc/2.1.0/api/index.html#scala.slick.ast.ColumnOption
 [link-slick-hlist]:          http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList
 [link-slick]:                http://slick.typesafe.com/
-[link-source-extmeth]:       https://github.com/slick/slick/blob/master/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
+[link-source-extmeth]:       https://github.com/slick/slick/blob/2.1/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
 [link-twitter-jono]:         http://twitter.com/jonoabroad
 [link-twitter-noel]:         http://twitter.com/noelwelsh
+[link-twitter-dave]:         http://twitter.com/davegurnell
 [link-twitter-richard]:      http://twitter.com/d6y
+[link-twitter-underscore]:   https://twitter.com/underscoreio
 [link-underscore-gitter]:    https://gitter.im/underscoreio/scala
 [link-underscore]:           http://underscore.io
+[link-email-underscore]:     mailto:hello@underscore.io?subject=Essential%20Slick
+[link-newsletter]:           http://underscore.io/blog/newsletters/
 [link-visual-joins]:         http://blog.codinghorror.com/a-visual-explanation-of-sql-joins/
 [link-wartremover]:          https://github.com/puffnfresh/wartremover
 [link-wikipedia-joins]:      http://en.wikipedia.org/wiki/Join_(SQL)
