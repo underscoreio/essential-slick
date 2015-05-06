@@ -1345,10 +1345,12 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def flag     = column[Option[Flag]]("flag")
   def ts       = column[DateTime]("ts")
 
-  def * = (senderId, content, ts, flag, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, ts, flag, id) <>  ↩
+                                    (Message.tupled, Message.unapply)
 
   def sender =
-    foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+    foreignKey("sender_fk", senderId, users)  ↩
+                            (_.id, onDelete=ForeignKeyAction.Cascade)
 }
 
 lazy val messages = TableQuery[MessageTable]
