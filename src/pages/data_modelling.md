@@ -366,7 +366,8 @@ def pack(row: (String, String, String, String, String, Long)): User =
     row._6
   )
 
-def unpack(user: User): Option[(String, String, String, String, String, Long)] =
+def unpack(user: User): Option[(String, String, String, String, ↩
+                                                String, Long)] =
   Some((user.contact.name, user.contact.email,
         user.address.street, user.address.city, user.address.country,
         user.id))
