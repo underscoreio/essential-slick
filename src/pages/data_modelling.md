@@ -669,7 +669,10 @@ We will step through this by using foreign keys to connect a `message` to a `use
 To do this we change the definition of `message` to reference an `id` of a `user`:
 
 ~~~ scala
-case class Message(senderId: Long, content: String, ts: DateTime, id: Long = 0L)
+case class Message(senderId: Long,
+                   content: String,
+                   ts: DateTime,
+                   id: Long = 0L)
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
