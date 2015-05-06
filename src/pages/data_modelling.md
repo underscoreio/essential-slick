@@ -1100,8 +1100,10 @@ This is just the same as we've previously added for JodaTime:
 
 ~~~ scala
 import PKs._
-implicit val messagePKMapper = MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
-implicit val userPKMapper    = MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
+implicit val messagePKMapper = MappedColumnType.base[MessagePK, Long]  ↩
+                                                    (_.value, MessagePK(_))
+implicit val userPKMapper    = MappedColumnType.base[UserPK, Long]  ↩
+                                                    (_.value, UserPK(_))
 ~~~
 
 Recall that `MappedColumnType.base` is how we define the functions to convert between our classes (`MessagePK`, `UserPK`)
