@@ -63,7 +63,8 @@ If you are using an IDE, don't forget to regenerate any IDE project files.
 Replace `Database.forURL` parameters with:
 
 ~~~ scala
-"jdbc:postgresql:chapter-01", user="essential", password="trustno1", driver="org.postgresql.Driver"
+"jdbc:postgresql:chapter-01", user="essential", password="trustno1",  ↩
+                                                driver="org.postgresql.Driver"
 ~~~
 
 ### Update Slick Driver
@@ -124,8 +125,9 @@ If you are using an IDE, don't forget to regenerate any IDE project files.
 Replace `Database.forURL` parameters with:
 
 ~~~ scala
-"jdbc:mysql://localhost:3306/chapter-01&useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true",
-user="essential", password="trustno1", driver="com.mysql.jdbc.Driver"
+"jdbc:mysql://localhost:3306/chapter-01&useUnicode=true&amp;       ↩
+ characterEncoding=UTF-8&amp;autoReconnect=true",user="essential", ↩
+ password="trustno1",driver="com.mysql.jdbc.Driver"
 ~~~
 
 ### Update Slick Driver
