@@ -268,7 +268,8 @@ This will turn into an inner join, producing output like:
 ```
 (Hello, HAL. Do you read me, HAL?, Affirmative, Dave. I read you.),
 (Affirmative, Dave. I read you.  , Open the pod bay doors, HAL.),
-(Open the pod bay doors, HAL.    , I'm sorry, Dave. I'm afraid I can't do that.)
+(Open the pod bay doors, HAL.    , I'm sorry, Dave. I'm afraid I can't  ↩
+                                                                    do that.)
 ```
 
 A second variation, `zipWith`, allows you to give a mapping function along with the join. We could have written the above as:
