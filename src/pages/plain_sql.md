@@ -33,8 +33,8 @@ The big difference is with the construction of the query. We supply both the SQL
 The `as[T]` method is pretty flexible.  Let's get back the room ID and room title:
 
 ~~~ scala
-val roomInfoQuery = sql""" select "id", "title" from "room" """.as[(Long,String)]
-val roomInfo = roomInfoQuery.list
+val roomInfoQ = sql""" select "id", "title" from "room" """.as[(Long,String)]
+val roomInfo = roomInfoQ.list
 println(roomInfo)
 // List((1,Air Lock), (2,Pod), (3,Brain Room))
 ~~~
@@ -47,7 +47,8 @@ One of the most useful features of the SQL interpolators is being able to refere
 
 ~~~ scala
 val t = "Pod"
-sql""" select "id", "title" from "room" where "title" = $t """.as[(Long,String)].firstOption
+sql""" select "id", "title" from "room" where "title" = $t """. ↩
+                                                as[(Long,String)].firstOption
 // Some((2,Pod))
 ~~~
 
