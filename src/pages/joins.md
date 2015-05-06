@@ -88,7 +88,8 @@ val q = messages innerJoin users on (_.senderId === _.id)
 This will be a query of `(MessageTable, UserTable)`. If we wanted to, we could be more explicit about the values used in the `on` part:
 
 ``` scala
-val q = messages innerJoin users on ( (m: MessageTable, u: UserTable) => m.senderId === u.id)
+val q = messages innerJoin users on ( (m: MessageTable, u: UserTable) =>  ↩
+                                                           m.senderId === u.id)
 ```
 
 ...but it reads well without this.
