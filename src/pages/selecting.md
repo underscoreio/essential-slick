@@ -655,7 +655,8 @@ messages.filter(_.content startsWith "Open")
 The query is implemented in terms of `LIKE`:
 
 ~~~ SQL
-select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where x2."content" like 'Open%' escape '^'
+select x2."id", x2."sender", x2."content", x2."ts" from "message" x2  ↩
+where x2."content" like 'Open%' escape '^'
 ~~~
 </div>
 
