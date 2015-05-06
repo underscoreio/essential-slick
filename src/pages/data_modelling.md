@@ -1192,7 +1192,9 @@ final case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
 We can then define primary keys in terms of `PK[Table]`:
 
 ~~~ scala
-case class User(id: Option[PK[UserTable]], name: String, email: Option[String] = None)
+case class User(id: Option[PK[UserTable]],
+                name: String,
+                email: Option[String] = None)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id    = column[PK[UserTable]]("id", O.AutoInc, O.PrimaryKey)
