@@ -771,7 +771,8 @@ val q = for {
 This is equivalent the the query:
 
 ~~~ sql
-SELECT u."name", m."content" FROM "message" m, "user" u WHERE u."id" = m."sender"
+SELECT u."name", m."content" FROM "message" m, "user" u ↩
+WHERE u."id" = m."sender"
 ~~~
 
 ...and will produce:
