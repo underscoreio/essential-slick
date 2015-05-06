@@ -1,6 +1,6 @@
 # Preface {-}
 
-*Essential Slick* is aimed at beginner-to-intermediate Scala developers who want to get started using the [Slick][link-slick] framework.
+*Essential Slick* is aimed at beginner-to-intermediate Scala developers who want to get started using [Slick][link-slick].
 
 Slick is a Scala library for working with databases: querying, inserting data, updating data, and representing a schema.  Queries are written in Scala and type checked by the compiler. Slick aims to make working with a database similar to working with regular Scala collections.
 
