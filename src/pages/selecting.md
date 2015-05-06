@@ -595,7 +595,8 @@ println(sql)
 The result will be something like:
 
 ~~~ SQL
-select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where x2."id" = 1
+select x2."id", x2."sender", x2."content", x2."ts" from "message" x2  ↩
+where x2."id" = 1
 ~~~
 
 From this we see how `filter` corresponds to a SQL `where` clause.
