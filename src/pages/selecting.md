@@ -674,7 +674,8 @@ messages.filter(_.content.toLowerCase like "%do%")
 The SQL will turn out as:
 
 ~~~ SQL
-select x2."id", x2."sender", x2."content", x2."ts" from "message" x2 where lower(x2."content") like '%do%'
+select x2."id", x2."sender", x2."content", x2."ts" from "message" x2  ↩
+where lower(x2."content") like '%do%'
 ~~~
 
 There are three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".
