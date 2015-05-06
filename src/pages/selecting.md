@@ -2,9 +2,9 @@
 
 The last chapter provided a shallow end-to-end overview of Slick. We saw how to model data, create queries, connect to a database, and run those queries. In the next two chapters we will look in more detail at the various types of query we can perform in Slick.
 
-This chapter covers *selecting* data using Slick's rich type-safe Scala reflection of SQL. [Chapter 3](#Modifying) covers *modifying* data by inserting, updating, and deleting records. Later on, in [Chapter 4](#joins), we cover advanced select queries such as joins and aggregates.
+This chapter covers *selecting* data using Slick's rich type-safe Scala reflection of SQL. [Chapter 3](#Modifying) covers *modifying* data by inserting, updating, and deleting records.
 
-Select queries are our main means of retrieving data. In this section we'll look at simple select queries that operate on a single table. In [Chapter 5](#joins) we'll look at more complex queries involving joins, agregates, and grouping clauses.
+Select queries are our main means of retrieving data. In this chapter we'll limit ourselves to simple select queries that operate on a single table. In [Chapter 5](#joins) we'll look at more complex queries involving joins, aggregates, and grouping clauses
 
 ## Select All The Rows!
 
@@ -49,7 +49,7 @@ import scala.slick.driver.H2Driver.simple._
 ~~~
 </div>
 
-## Filtering the results: the *filter* Method
+## Filtering Results: The *filter* Method
 
 We can create a query for a subset of rows using the `filter` method:
 
@@ -71,7 +71,7 @@ messages.filter(_.sender === "HAL").selectStatement
 
 Slick uses the `Column` type to represent expressions over columns as well as individual columns. A `Column[Boolean]` can either be a `Boolean`-valued column in a table, or a `Boolean` expression involving multiple columns. Slick can automatically promote a value of type `A` to a constant `Column[A]`, and provides a suite of methods for building expressions as we shall see below.
 
-## The Query and TableQuery Types
+## The Query and TableQuery Types {#queryTypes}
 
 The types in our `filter` expression deserve some deeper explanation. Slick represents all queries using a trait `Query[M, U, C]` that has three type parameters:
 
@@ -108,7 +108,7 @@ messages.filter(_.sender === 123)
 //                                        ^
 ~~~
 
-## Transforming the results: the *map* Method
+## Transforming Results: The *map* Method
 
 Sometimes we don't want to select all of the data in a `Table`. We can use the `map` method on a `Query` to select specific columns for inclusion in the results. This changes both the mixed type and the unpacked type of the query:
 
@@ -183,11 +183,13 @@ messages.map(t => t.id * 1000L).selectStatement
 // res7: String = select x2."id" * 1000 ...
 ~~~
 
+<!--
 <div class="callout callout-info">
 **Query's *flatMap* method**
 
 `Query` also has a `flatMap` method with similar monadic semantics to that of `Option` or `Future`. `flatMap` is mostly used for joins, so we'll cover it in [Chapter 5](#joins).
 </div>
+-->
 
 ## Query Invokers
 
@@ -240,19 +242,19 @@ db.withSession { implicit session =>
 
 Finally, we can use the `execute` invoker to run a query and discard all of the results. This will come in useful in the next chapter when we cover insert, update, and delete queries.
 
----------------------------------------------------------------------------------------------------------------------------
-Method                Return Type   Description
---------------------- ------------- ---------------------------------------------------------------------------------------
-`query.run`           `C[U]`        Return a collection of results. The collection type is determined by the query.
+---------------------------------------------------------------------------------------------------------------------
+Method          Return Type   Description
+--------------- ------------- ---------------------------------------------------------------------------------------
+`run`           `C[U]`        Return a collection of results. The collection type is determined by the
 
-`query.list`          `List[U]`     Run the query, return a `List` of results. Ignore the query's collection type.
+`list`          `List[U]`     Run the query, return a `List` of results. Ignore the query's collection type.
 
-`query.iterator`      `Iterator[U]` Run the query, return an `Iterator` of results.
-                                    Results must be retrieved from the iterator before the session is closed.
+`iterator`      `Iterator[U]` Run the query, return an `Iterator` of results.
+                              Results must be retrieved from the iterator before the session is closed.
 
-`query.firstOption`   `Option[U]`   Return the first result wrapped in an `Option`; return `None` if there are no results.
+`firstOption`   `Option[U]`   Return the first result wrapped in an `Option`; return `None` if there are no results.
 
-`query.execute`       `Unit`        Run the query, ignore the result. Useful for updating the database---see [Chapter 3](#Modifying).
+`execute`       `Unit`        Run the query, ignore the result. Useful for updating the database---see [Chapter 3](#Modifying).
 
 ---------------------------------------------------------------------------------------------------------------------------
 
@@ -319,7 +321,7 @@ messages.filter(m => m.sender ++ "> " + m.content).selectStatement
 and the `like` method for SQL's classic string pattern matching:
 
 ~~~ scala
-messages.filter(_.content like "%bay doors%").selectStatement
+messages.filter(_.content like "%Pretty%").selectStatement
 // res10: String = ... where x2."content" like '%Pretty%'
 ~~~
 
@@ -401,9 +403,9 @@ Scala Code              Operand Column Types               Result Type        SQ
 : Boolean column methods.
   Operand and result types should be interpreted as parameters to `Column[_]`.
 
-### Option Methods
+### Option Methods and Type Equivalence
 
-Slick models nullable columns in SQL as `Columns` with `Option` types. If we have a nullable column in our database, we should always declare it as optional in our `Table`:
+Slick models nullable columns in SQL as `Columns` with `Option` types.  We'll discuss this in some depth in [Chapter 4]{#Modelling}. However, as a preview, know that if we have a nullable column in our database, we declare it as optional in our `Table`:
 
 ~~~ scala
 final class PersonTable(tag: Tag) /* ... */ {
@@ -413,50 +415,9 @@ final class PersonTable(tag: Tag) /* ... */ {
 }
 ~~~
 
-Sometimes it's necessary to convert from a non-nullable column to a nullable one in a query. For example, if we're performing an outer join on two tables, it is always possible that columns in one table will contain `null` values. In these circumstances, we can convert a non-`Optional` column into an `Optional` one using the `?` operator:
+When it comes to querying on optional values, Slick is pretty smart about type equivalence.
 
-~~~ scala
-messages.map(_.sender.?)
-// res19: scala.slick.lifted.Query[
-//   scala.slick.lifted.Column[Option[String]],
-//   Option[String],
-//   Seq
-// ] = scala.slick.lifted.WrappingQuery@38e47d45
-~~~
-
-Veterans of database administration will be familiar with an interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `true`, whereas the expression `'Dave' = null` evaluates to `null`.
-
-Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Column[Option[A]]`:
-
-~~~ scala
-messages.filter(_.sender.?.isEmpty).selectStatement
-// res20: String = select ... where x2."sender" is null
-
-messages.filter(_.sender.?.isDefined).selectStatement
-// res21: String = select ... where x2."sender" is not null
-~~~
-
---------------------------------------------------------------------------------------------------------
-Scala Code              Operand Column Types               Result Type        SQL Equivalent
------------------------ ---------------------------------- ------------------ --------------------------
-`col1.?`                `A`                                `A`                `col1`
-
-`col1.isEmpty`          `Option[A]`                        `Boolean`          `col1 is null`
-
-`col1.isDefined`        `Option[A]`                        `Boolean`          `col1 is not null`
-
---------------------------------------------------------------------------------------------------------
-
-: Optional column methods.
-  Operand and result types should be interpreted as parameters to `Column[_]`.
-
-<div class="callout callout-danger">
-TODO: The examples for `isEmpty` and `isDefined` above aren't great. We should have a table with a nullable column in it so we can use that instead of `_.sender.?`.
-</div>
-
-### Type Equivalence in Column Expressions
-
-Slick type-checks our column expressions to make sure the operands are of compatible types. For example, we can compare `Strings` for equality but we can't compare a `String` and an `Int`:
+What do we mean by type equivalence? Slick type-checks our column expressions to make sure the operands are of compatible types. For example, we can compare `Strings` for equality but we can't compare a `String` and an `Int`:
 
 ~~~ scala
 messages.filter(_.id === "foo")
@@ -496,87 +457,83 @@ messages.filter(_.id === Some(123L)).selectStatement
 //                                            ^
 ~~~
 
-## Counting results: the *length* method and column queries
 
-We can create a `Column` expression representing the length of any `Query` by calling its `length` method:
+## Controlling Queries: Sort, Take, and Drop
 
-~~~ scala
-messages.length
-// res8: scala.slick.lifted.Column[Int] =
-//   Column(Apply Function count(*))
-~~~
+There are a trio of functions used to control the order and number of results returned from a query. This is great for pagination of a result set, but the methods listed in the table below can be used independently.
 
-We can either use this in larger expressions or, interestingly, invoke it directly:
+-------------------------------------------
+Scala Code             SQL Equivalent
+---------------- --------------------------
+`sortBy`         `ORDER BY`
 
-~~~ scala
-messages.length.run
-// res9: Int = 4
-~~~
+`take`           `LIMIT`
 
-But how does this work? A `Column` isn't a `Query` so how can we invoke it?
+`drop`           `OFFSET`
 
-Slick provides limited support for running column expressions directly against the database. We can't use all of the invoker methods described in the last section, but we can use `run` and `selectStatement`. Here's a simple example:
+-------------------------------------------------
 
-~~~ scala
-((10 : Column[Int]) + 20).run
-// res10: Int = 30
-~~~
+:  Methods for ordering, skipping, and limiting the results of a query.
 
-Here we create a constant `Column[Int]` of value `10`, and use the `+` method described in the [Numeric Column Methods](#NumericColumnMethods) section to create a simple SQL expression `10 + 20`. We use the `run` method to execute this against the database and retrieve the value `30`. If we use the `selectStatement` method we'll see that the database is actually doing all of the math:
+We'll look at each in term, starting with an example of `sortBy`:
 
 ~~~ scala
-((10 : Column[Int]) + 20).selectStatement
-// res11: String = select 10 + 20
+messages.sortBy(_.sender).run
+// res17: Seq[Example.MessageTable#TableElementType] =
+//  Vector(Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//  Message(Dave,Open the pod bay doors, HAL.,3),
+//  Message(HAL,Affirmative, Dave. I read you.,2),
+//  Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-It's this same process that allows us to call `messages.length.run`. Let's look at the SQL:
+To sort by multiple columns, return a tuple of columns:
 
 ~~~ scala
-messages.length.selectStatement
-// res9: String =
-//   select x2.x3 from (
-//     select count(1) as x3 from (
-//       select x4."sender" as x5, x4."content" as x6, x4."id" as x7
-//       from "message" x4
-//     ) x8
-//   ) x2
+messages.sortBy(m => (m.sender, m.content)).selectStatement
+// res18: String =
+//  select x2."sender", x2."content", x2."id" from "message" x2
+/     order by x2."sender", x2."content"
 ~~~
 
-Slick generates an overly complicated query here. There are two issues:
-
- 1. the query contains three nested `SELECT` statements instead of one;
- 2. the query counts distinct values of the tuple `(sender, content, id)`, instead of simply counting `ids`.
-
-These issues cause varying amounts of trouble depending on the quality of the query planner in our database. PostgreSQL, for example, has an excellent query planner that will optimise the nested selects away, although your mileage may vary with other database engines.
-
-We can help our database out by being slightly cleverer in our choice of query. For example, counting values of a single indexed primary key is considerably faster than counting entire rows:
+Now we know how to sort results, perhaps we want to show only the first five rows:
 
 ~~~ scala
-messages.map(_.id).length.selectStatement
-// res10: String =
-//   select x2.x3 from (
-//     select count(1) as x3 from (
-//       select x4."id" as x5 from "message" x4
-//     ) x6
-//   ) x2
+messages.sortBy(_.sender).take(5)
 ~~~
 
-When using Slick, or indeed any database library that generates SQL from a DSL, it's important to keep one eye on the performance characteristics of the queries we're generating. Knowing SQL and the query planning capabilities of the database server is as important as knowing the query DSL itself.
+If we are presenting information in pages, we'd need a way to show the next page (rows 6 to 10):
+
+~~~ scala
+messages.sortBy(_.sender).drop(5).take(5)
+~~~
+
+This is equivalent to:
+
+~~~ sql
+select "sender", "content", "id" from "message" order by "sender" limit 5 offset 5
+~~~~
+
 
 ## Take Home Points
 
-<div class="callout callout-danger">
-TODO: Take Home Points
-</div>
+Starting with a `TableQuery` we can construct a wide range of queries with `filter` and `map`.  As we compose these queries, the types of the `Query` follow along to give type-safety throughout our application.
+
+The expressions we use in queries are defined in extension methods, and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Column`.  Comparisons to `Option` types are made easy for us as Slick will compare `Column[T]` and `Column[Option[T]]` automatically.
+
+Finally, we introduced some new terminology:
+
+* _unpacked_ type, which is the regular Scala types we work with, such as `String`; and
+* _mixed_ type, which is Slick's column representation, such as `Column[String]`.
+
 
 ## Exercises
 
-We want to make sure you have your environment set up, and can experiment with Slick.  If you've not already done so, try out the above code.  In the [example project][link-example] the code is in _main.scala_ in the folder _chapter-01_.
+If you've not already done so, try out the above code.  In the [example project][link-example] the code is in _main.scala_ in the folder _chapter-02_.
 
 Once you've done that, work through the exercises below.  An easy way to try things out is to use  _triggered execution_ with SBT:
 
 ~~~ bash
-$ cd example-01
+$ cd example-02
 $ sbt
 > ~run
 ~~~

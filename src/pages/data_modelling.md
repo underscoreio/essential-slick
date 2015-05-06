@@ -7,7 +7,7 @@ In this chapter we will:
 - understand how to structure an application;
 - look at alternatives to modelling rows as case classes;
 - expand on our knowledge of modelling tables to introduce optional values and foreign keys; and
-- use more custom types to avoid working with just low-level database values.
+- use custom types to avoid working with just low-level database values.
 
 To do this, we'll expand chat application schema to support more than just messages.
 
@@ -35,9 +35,9 @@ import scala.slick.driver.H2Driver.simple._
 
 ...that gave us an H2-specific JDBC driver. That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
 
-### Example
+### Working with a Profile
 
-Re-working the example from chapter 1, we have the schema in a trait:
+Re-working the example from previous chapters, we have the schema in a trait:
 
 ~~~ scala
 trait Profile {
@@ -89,7 +89,8 @@ If you recognise this as a problem, it's time to split your code more finely and
 
 ## Representations for Rows
 
-In chapter 1 we introduced rows as being represented by case classes.
+In previous chapters we modelled rows as case classes.  That's a great choice, and the one we recommend, but you should be aware that Slick is more flexible that that.
+
 There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
 
 ### Case Classes and `<>`
@@ -301,8 +302,8 @@ users +=
   "Dr. Dave Bowman" :: 43 :: 'M' :: 1.7f :: 74.2f :: 11 ::
   "dave@example.org" :: "+1555740122" :: true :: true ::
   "123 Some Street" :: "Any Town" :: "USA" ::
-  "Black" :: "Ice Cream" :: "Coffee" :: "Sky at Night" :: "Silent Running" :: "Bicycle made for Two" ::
-  "Acme Space Helmet" :: 10 :: true ::
+  "Black" :: "Ice Cream" :: "Coffee" :: "Sky at Night" :: "Silent Running" ::
+  "Bicycle made for Two" :: "Acme Space Helmet" :: 10 :: true ::
   "HAL" :: "Betty" :: 0L :: HNil
 ~~~
 
@@ -328,8 +329,6 @@ Some parts of `HList` depend on Scala reflection. Modify your _build.sbt_ to inc
 ~~~ scala
 "org.scala-lang" % "scala-reflect" % scalaVersion.value
 ~~~
-
-This took one of the authors far too long to establish.
 </div>
 
 
@@ -352,7 +351,7 @@ case class Address(street: String, city: String, country: String)
 case class User(contact: EmailContact, address: Address, id: Long = 0L)
 ~~~
 
-You'll find a definition of `UserTable` that you can copy and paste in the example code in the folder _chapter-03_.
+You'll find a definition of `UserTable` that you can copy and paste in the example code in the folder _chapter-04_.
 
 <div class="solution">
 A suitable projection is:
@@ -459,48 +458,39 @@ users.filter(_.email === none).list
 ~~~
 
 We have one row in the database without an email address, but the query will produce no results.
-If you're familiar with SQL, you'll maybe see the problem.
-This query is equivalent to:
+
+Veterans of database administration will be familiar with this interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `true`, whereas the expression `'Dave' = null` evaluates to `null`.
+
+The Slick query amounts to:
 
 ~~~ sql
 SELECT * FROM "user" WHERE "email" = NULL
 ~~~
 
-You might want that to match NULL email addresses, but that's not the behaviour of SQL.
-What you need instead is:
+Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Column[Option[A]]`:
 
-~~~ sql
-SELECT * FROM "user" WHERE "email" IS NULL
-~~~
+--------------------------------------------------------------------------------------------------------
+Scala Code              Operand Column Types               Result Type        SQL Equivalent
+----------------------- ---------------------------------- ------------------ --------------------------
+`col1.?`                `A`                                `A`                `col1`
 
-In Slick that is:
+`col1.isEmpty`          `Option[A]`                        `Boolean`          `col1 is null`
+
+`col1.isDefined`        `Option[A]`                        `Boolean`          `col1 is not null`
+
+--------------------------------------------------------------------------------------------------------
+
+: Optional column methods.
+  Operand and result types should be interpreted as parameters to `Column[_]`.
+
+
+We fix our query with `isEmpty`:
 
 ~~~ scala
 users.filter(_.email.isEmpty).list
-// results in: List(User(HAL,None,2))
+// result: List(User(HAL,None,2))
 ~~~
 
-There's also `isDefined` for `IS NOT NULL`.
-
-Another possible surprise is that matching on a specific non-null value works with a `String` or an `Option[String]`:
-
-~~~ scala
-val oe: Option[String] = Some("dave@example.org")
-val e:  String         = "dave@example.org"
-
-// True:
-users.filter(_.email === oe).list == users.filter(_.email === e).list
-~~~
-
-To understand what's going on here, we need to review the types involved in the query:
-
-![Column Types in the Query](src/img/query-types.png)
-
-Although the values being tested for are `String` and `Option[String]`,
-Slick implicitly lifts these values into `Column[T]` types for comparison.
-From there, Slick will compare the `Column[Option[String]]` we defined in the table
-with either the `Column[String]` or `Column[Option[String]]` in the query.
-This is not specific to `String` types---it is a pattern for all the optional columns.
 
 That rounds off what you need to know to model optional columns with Slick.
 However, we will meet the subject again when
@@ -671,7 +661,7 @@ The method `foreignKey` takes four required parameters:
  * the `TableQuery` that the foreign key belongs to; and
  * a function on the supplied `TableQuery[T]` taking the supplied column(s) as parameters and returning an instance of `T`.
 
-Lets walk through this by using foreign keys to connect a `message` to a `user`.
+We will step through this by using foreign keys to connect a `message` to a `user`.
 To do this we change the definition of `message` to reference an `id` of a `user`:
 
 ~~~ scala
@@ -867,7 +857,9 @@ The method signature is:
 def filterByEmail(email: Option[String]) = ???
 ~~~
 
-With two records in the database, we want `filterByEmail(Some("dave@example.org")).run` to produce one row,
+Assume we only have two user records: one with an email address of "dave@example.org", and one with no email address.
+
+We want `filterByEmail(Some("dave@example.org")).run` to produce one row,
 and `filterByEmail(None).run` to produce two rows.
 
 <div class="solution">
@@ -878,6 +870,8 @@ def filterByEmail(email: Option[String]) =
   if (email.isEmpty) users
   else users.filter(_.email === email)
 ~~~
+
+You don't always have to do everything at the SQL level.
 </div>
 
 
@@ -925,17 +919,19 @@ def filterByEmail(email: Option[String]) =
 
 #### Enforcement
 
-What happens if you try adding a message with a user id of `3`?
+What happens if you try adding a message for a user ID of `3000`?
 
 For example:
 
 ~~~ scala
-messages += Message(3L, "Hello HAl!", DateTime.now)
+messages += Message(3000L, "Hello HAL!")
 ~~~
+
+Note that there is no user in our example with an ID of 3000.
 
 <div class="solution">
 We get a runtime exception as we have violated referential integrity.
-There is no row in the `user` table with a primary id of `3`.
+There is no row in the `user` table with a primary id of `3000`.
 </div>
 
 
@@ -1008,6 +1004,35 @@ val hasNot = for {
 </div>
 
 
+## Custom Column Mappings
+
+We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
+
+At a level down from that, we can also control how our types are converted into column values.  For example, we'd like to use [JodaTime][link-jodatime]'s `DateTime` class for anything data and time related. Support for this is not built-in to Slick, but it's painless to map custom types to the database.
+
+The mapping for JodaTime's `DateTime` is:
+
+~~~ scala
+import java.sql.Timestamp
+import org.joda.time.DateTime
+import org.joda.time.DateTimeZone.UTC
+
+implicit val jodaDateTimeType =
+  MappedColumnType.base[DateTime, Timestamp](
+    dt => new Timestamp(dt.getMillis),
+    ts => new DateTime(ts.getTime, UTC)
+  )
+~~~
+
+What we're providing here is two functions:
+
+- one that takes a `DateTime` and turns it into a database-friendly value, namely a `java.sql.Timestamp`; and
+- another that does the reverse, taking a database value and turning it into a `DataTime`.
+
+Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime`.
+
+This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
+
 
 ## Value Classes {#value-classes}
 
@@ -1028,16 +1053,16 @@ val rubbish = messages.filter(_.senderId === id)
 ~~~
 
 Do you see the problem here? We've looked up a _message_ `id`,
-and then used it to search for a _user_ (senders) with that `id`.
+and then used it to search for a _user_ (via `senderId`) with that `id`.
 It compiles, it runs, and produces nonsense. We can prevent these kinds of problems using Scala's type system.
 
-Before showing how, here's another downside of using `Long` as a primary key:
+Before showing how, here's another downside of using `Long` as a primary key. You may find yourself writing small helper methods such as:
 
 ~~~ scala
 def lookupByUserId(id: Long) = users.filter(_.id === id)
 ~~~
 
-It would be much clearer to use the types of the method, and write:
+It would be much clearer to document this method using the types, rather than the method name:
 
 ~~~ scala
 def lookup(id: UserPK) = users.filter(_.id === id)
@@ -1130,7 +1155,7 @@ or by generalising our definition of a primary key, so we only need to define it
 
 
 <div class="callout callout-info">
-**An `Id[T]` class**
+**An `Id[T]` Class**
 
 Rather than providing a value class definition for each table...
 
@@ -1161,6 +1186,7 @@ lazy val users = TableQuery[UserTable]
 ~~~
 
 We now get type safety without having to define the boiler plate of individual primary key case classes per table.
+Depending on the nature of your application, that might be convenient for you.
 </div>
 
 
@@ -1232,44 +1258,7 @@ implicit val userRoleMapper =
 ~~~
 </div>
 
-#### Boilerplate Free Primary Keys
 
-Modify the definition of `Occupant` to use type parameter definition of table primary keys, assume `User` and `Room` are already implement this way.
-
-~~~ scala
-case class Occupant(roomId: Long, userId: Long)
-
-class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
-  def roomId = column[Long]("room")
-  def userId = column[Long]("user")
-
-  def pk = primaryKey("room_user_pk", (roomId, userId))
-
-  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
-}
-
-lazy val occupants = TableQuery[OccupantTable]
-~~~
-
-<div class="solution">
-We need to update the existing definition of `roomId` and `userId` from `Long` to `PK[TableName]`:
-
-~~~ scala
-case class Occupant(roomId: PK[RoomTable], userId: PK[UserTable])
-
-class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
-  def roomId = column[PK[RoomTable]]("room")
-  def userId = column[PK[UserTable]]("user")
-
-  def pk = primaryKey("room_user_pk", (roomId, userId))
-
-  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
-}
-
-lazy val occupants = TableQuery[OccupantTable]
-~~~
-
-</div>
 
 
 ## Sum Types
@@ -1280,8 +1269,7 @@ The other half is known as _sum types_, which we will look at now.
 
 As an example we will add a flag to messages.
 Perhaps an administrator of the chat will be able to mark messages as important, offensive, or spam.
-In the database we'll store these as characters: `!`, `X`, and `$`.
-We don't want to use those symbols in source code, so instead we will establish a sealed trait
+The natural way to do this is establish a sealed trait
 and a set of case objects:
 
 ~~~ scala
@@ -1291,7 +1279,7 @@ case object Offensive extends Flag
 case object Spam extends Flag
 ~~~
 
-As with other custom types, we define a mapping to the database values:
+How we store them in the database depends on the mapping. Maybe we want to store them as characters: `!`, `X`, and `$`:
 
 ~~~ scala
 implicit val flagType =
@@ -1310,7 +1298,7 @@ implicit val flagType =
 
 This is similar to the enumeration pattern from the last set of exercises.
 There is a difference, though, in that sealed traits can be checked by the compiler to
-ensure we have covered all the cases.  That is, is we add a new flag (`OffTopic`),
+ensure we have covered all the cases.  That is, if we add a new flag (`OffTopic` perhaps),
 but forget to add it to our `Flag => Char` function,
 the compiler will warn us that we have missed a case.
 (By enabling the Scala compiler's `-Xfatal-warnings` option,
@@ -1335,7 +1323,8 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
   def * = (senderId, content, ts, flag, id) <> (Message.tupled, Message.unapply)
 
-  def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+  def sender =
+    foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
 }
 
 lazy val messages = TableQuery[MessageTable]
@@ -1345,17 +1334,17 @@ And we can add a message with a flag set:
 
 ~~~ scala
 messages +=
-  Message(halId,  "I'm sorry, Dave. I'm afraid I can't do that.", start plusSeconds 6, Some(Important))
+  Message(halId, "Just kidding. LOL.", start plusSeconds 20, Some(Important))
 ~~~
 
-When we execute a query, we can express ourselves in terms of our meaningful type.
+When we execute a query, we can work in terms of our meaningful type.
 However, we need to give the compiler a little help:
 
 ~~~ scala
 messages.filter(_.flag === (Important : Flag)).run
 ~~~
 
-Notice the _type annotation_ added to the `Important` value.
+Notice the _type ascription added to the `Important` value.
 If you find yourself writing that kind of query often, be aware that extension methods allow you to package code like this into `messages.isImportant`  or similar.
 
 

@@ -1,12 +1,12 @@
 {
-  "name": "essential-play",
-  "description": "The essential guide to Play Framework",
-  "version": "0.0.1",
+  "name": "essential-slick",
+  "description": "The essential guide to Slick",
+  "version": "0.1.0",
   "devDependencies": {
-    "underscore-ebook-template": "git+https://github.com/underscoreio/underscore-ebook-template.git#0.0.15"
+    "underscore-ebook-template": "git+https://github.com/underscoreio/underscore-ebook-template.git#0.0.17"
   },
   "scripts": {
-    "test": "echo \"Error: no test specificed\" && exit 1"      
+    "test": "echo \"Error: no test specificed\" && exit 1"
   },
-  "author": "Dave Gurnell and Noel Welsh"
+  "author": "Underscore Consulting LLP"
 }

@@ -28,9 +28,9 @@ We need to import `interpolation` to enable the use of the `sql` interpolator.
 
 Once we've done that, running a plain SQL looks similar to other queries we've seen in this book: just call `list` (or `first` etc). You need an implicit `session` in scope, as you do for all queries.
 
-The big difference is with the construction of the query. We supply both the SQL we want to run and specify the expected result type using `as`.
+The big difference is with the construction of the query. We supply both the SQL we want to run and specify the expected result type using `as[T]`.
 
-`as[T]` is pretty flexible.  Let's get back the room ID and room title:
+The `as[T]` method is pretty flexible.  Let's get back the room ID and room title:
 
 ~~~ scala
 val roomInfoQuery = sql""" select "id", "title" from "room" """.as[(Long,String)]
@@ -38,6 +38,8 @@ val roomInfo = roomInfoQuery.list
 println(roomInfo)
 // List((1,Air Lock), (2,Pod), (3,Brain Room))
 ~~~
+
+Notice we specified a tuple of `(Long, String)` as the result type.  This matches the columns in our SQL `SELECT` statement.
 
 Using `as[T]` we can build up arbitrary result types.  Later we'll see how we can use our own application case classes too.
 
@@ -54,7 +56,7 @@ Notice how `$t` is used to reference a Scala value `t`. This value is incorporat
 <div class="callout callout-warning">
 **The Danger of Strings**
 
-The SQL interpolators are essential for situations where you need full control over the SQL to be run. Be aware there there is some loss of safety. For example:
+The SQL interpolators are essential for situations where you need full control over the SQL to be run. Be aware there there is some loss compile-time of safety. For example:
 
 ~~~ scala
 val t = 42
@@ -72,7 +74,7 @@ val table = "message"
 val query = sql""" select "id" from "#$table" """.as[Long]
 ~~~
 
-In this situation we do not want the value of `table` to be treated as a String. That would give you the invalid query: `select "id" from "'message'""`.  However, using this construct means you can produce dangerous SQL. The golden rule is to never use `#$` with input supplied by a user.
+In this situation we do not want the value of `table` to be treated as a String. That would give you the invalid query: `select "id" from "'message'"`.  However, using this construct means you can produce dangerous SQL. The golden rule is to never use `#$` with input supplied by a user.
 </div>
 
 
@@ -108,7 +110,7 @@ The result of this is a new `StaticQuery` which we can execute.
 
 Out of the box Slick knows how to convert many data types to and from SQL data types. The examples we've seen so far include turning a Scala `String` into a SQL string, and a SQL BIGINT to a Scala `Long`.
 
-These conversions are available to `as[T]` and `+?`.  If we want to work with a type that Slick doesn't know about, we need to provide the information to go from our type to SQL types.  That's the role of the `GetResult` type class.
+These conversions are available to `as[T]` and `+?`.  If we want to work with a type that Slick doesn't know about, we need to provide a conversion.  That's the role of the `GetResult` type class.
 
 As an example, we can fetch the timestamp on our messages using JodaTime's `DateTime`:
 
@@ -136,7 +138,14 @@ could not find implicit value for parameter rconv:
 
 ### Case Classes
 
-As you've probably guessed, to return a case class from a Plain SQL query means providing a `GetResult` for the case class.  Let's work through an example for the messages table.
+As you've probably guessed, returning a case class from a Plain SQL query means providing a `GetResult` for the case class.  Let's work through an example for the messages table.
+
+<div class="callout callout-info">
+**Run the Code**
+
+You'll find the example queries for this section in the file _select.sql_ over at [the associated GitHub repository][link-example].
+</div>
+
 
 Recall that a message contains: an ID, some content, the sender ID, a timestamp, an optional room ID, and an optional recipient for private messages.  We'll model this as we did in Chapter 4, by wrapping the `Long` primary keys in the type `Id[Table]`.
 
@@ -152,7 +161,7 @@ case class Message(
   id:       Id[MessageTable]      = Id(0L) )
 ~~~
 
-To provide a `GetResult[Message]` we need all the types inside the `Message` to have `GetResult` instances.  We've already tacked `DateTime`.  That leaves  `Id[MessageTable]`, `Id[UserTable]`, `Option[Id[UserTable]`, and `Option[Id[RoomTable]`.
+To provide a `GetResult[Message]` we need all the types inside the `Message` to have `GetResult` instances.  We've already tackled `DateTime`.  That leaves  `Id[MessageTable]`, `Id[UserTable]`, `Option[Id[UserTable]`, and `Option[Id[RoomTable]`.
 
 Dealing with the two non-option IDs is straight-forward:
 
@@ -207,20 +216,129 @@ An example: if, outside of Slick, a table is modified to add a column, the resul
 </div>
 
 
-### Exercises
 
-The examples for this section are in the _chatper-06_ folder, in the source file _selects.scala_.
 
-You can run the code example with:
+## Updates
+
+Back in [Chapter 4](#Querying) we saw how to modify rows with the `update` method. We noted that batch updates where challenging when we wanted to use the row's current value. The example we used was appending an exclamation mark to a message's content:
+
+``` sql
+UPDATE "message" SET "content" = CONCAT("content", '!')
+```
+
+Plain SQL updates will allow us to do this. The interpolator is `sqlu`:
+
+~~~ scala
+import scala.slick.jdbc.StaticQuery.interpolation
+
+val query =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')"""
+
+val numRowsModified = query.first
+~~~
+
+The `query` we have constructed, just like other queries, is not run until we evaluate it in the context of a session.
+
+We also have access to `$` for binding to variables, just as we did for `sql`:
+
+~~~ scala
+val char = "!"
+val query =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
+~~~
+
+This gives us two benefits: the compiler will point out typos in variables names, but also the input is sanitized against SQL injection attacks.
+
+
+### Composing Updates
+
+All the techniques described for selects applies for composing plain SQL updates.
+
+As an example, we can start with an unconditional update...
+
+~~~ scala
+val query = sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
+~~~
+
+...and then create an alternative query using the `+` method defined on `StaticQuery`:
+
+~~~ scala
+val pattern = "%!"
+val sensitive =  query + """ WHERE "content" NOT LIKE """ +? pattern
+~~~
+
+The resulting query would append an `!` only to rows that don't already end with that character.
+
+
+### Updating with Custom Types
+
+Working with basic types like `String` and `Int` is fine, but sometimes you want to update using a richer type. We saw the `GetResult` type class for mapping select results, and for updates this is mirrored with the `SetParameter` type class.
+
+What happens if you want to set a parameter of a type not automatically handled by Slick? You need to provide an instance of `SetParameter` for the type.
+
+For example, JodaTime's `DateTime` is not known to Slick by default. We can teach Slick how to set `DataTime` parameters like this:
+
+``` scala
+implicit val SetDateTime = SetParameter[DateTime](
+  (dt, pp) => pp.setTimestamp(new Timestamp(dt.getMillis))
+ )
+```
+
+The value `pp` is a `PositionedParameters`. This is an implementation detail of Slick, wrapping a SQL statement and a placeholder for a value.  Effectively we're saying how to treat a `DateTime` regardless of where it appears in the update statement.
+
+In addition to a `Timestamp` (via `setTimestamp`), you can set: `Boolean`, `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `BigDecimal`, `Array[Byte]`, `Blob`, `Clob`, `Date`, `Time`, as well as `Object` and `null`.  There are _setXXX_ methods on `PositionedParameters` for `Option` types, too.
+
+There's further symmetry with `GetResuts` in that we could have used `>>` in our `SetParameter`:
+
+~~~ scala
+(dt, pp) => pp >> new Timestamp(dt.getMillis)
+~~~
+
+
+With this in place we can construct plain SQL updates using `DateTime` instances:
+
+``` scala
+sqlu"""UPDATE message SET "ts" = """ +? DateTime.now
+```
+
+Without the `SetParameter[DateTime]` instance the compiler would tell you:
 
 ```
-$ sbt
-> runMain chapter06.PlainSelectExample
+could not find implicit SetParameter[DateTime]
 ```
 
+<div class="callout callout-warning">
+**Compile Warnings**
+
+The code we've written in this chapter produces the following warning:
+
+```
+Adaptation of argument list by inserting () has been deprecated:
+  this is unlikely to be what you want.
+```
+
+This is a limitation of the Slick 2.1 implementation, and is being resoled for Slick 3.0.
+For now, you'll have to live with the warning.
+</div>
 
 
-#### Robert Tables
+
+## Take Home Points
+
+Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  Two string interpolators for SQL are provided: `sql` and `sqlu`.
+
+Values can be safely substituted into Plain SQL queries using `${expression}`.
+
+Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
+
+The tools for composing these kinds of queries is limited. Use `+`, `+?`, and `$#`, but do so with care. End-user supplied information should always be escaped before being used in a query.
+
+
+## Exercises
+
+The examples for this section are in the _chatper-06_ folder, in the source files _selects.scala_ and _updates.scala_.
+
+### Robert Tables
 
 We're building a web site that allows searching for users by their email address:
 
@@ -261,125 +379,12 @@ Trying to access the users table after this will produce:
 ~~~
 org.h2.jdbc.JdbcSQLException: Table "user" not found
 ~~~
+
+Yes, the table was dropped by the query.
 </div>
 
 
-## Updates
-
-Back in [Chapter 4](#Querying) we saw how to modify rows with the `update` method. We noted that batch updates where challenging when we wanted to use the row's current value. The example we used was appending an exclamation mark to a message's content:
-
-``` sql
-UPDATE "message" SET "content" = CONCAT("content", '!')
-```
-
-Plain SQL updates will allow us to do this. The interpolator is `sqlu`:
-
-~~~ scala
-import scala.slick.jdbc.StaticQuery.interpolation
-
-val query =
-  sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')"""
-
-val numRowsModified = query.first
-~~~
-
-The `query` we have constructed, just like other queries, is not run until we evaluate it in the context of a session.
-
-We also have access to `$` for binding to variables, just as we did for `sql`:
-
-~~~ scala
-val char = "!"
-val query =
-  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
-~~~
-
-This gives us two benefits: the compiler will point out typos in variables names, but also the input is sanitized against SQL injection attacks.
-
-
-### Composing Updates
-
-All the techniques described for selects applies for composing plain SQL updates.
-
-As an example, we can start with an uncoditional update...
-
-~~~ scala
-val query = sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
-~~~
-
-...and then create an alternative query using the `+` method defined on `StaticQuery`:
-
-~~~ scala
-val pattern = "%!"
-val sensitive =  query + """ WHERE "content" NOT LIKE """ +? pattern
-~~~
-
-The resulting query would append an `!` only to rows that don't already end with that character.
-
-
-### Updating with Custom Types
-
-Working with basic types like `String` and `Int` is fine, but sometimes you want to update using a richer type. We saw the `GetResult` type class for mapping select results, and for updates this is mirrored with the `SetParameter` type class.
-
-What happens if you want to set a parameter of a type not automatically handled by Slick? You need to provide an instance of `SetParameter` for the type.
-
-For example, JodaTime's `DateTime` is not known to Slick by default. We can teach Slick how to set `DataTime` parameters like this:
-
-``` scala
-implicit val SetDateTime = SetParameter[DateTime](
-  (dt, pp) => pp.setTimestamp(new Timestamp(dt.getMillis))
- )
-```
-
-The value `pp` is a `PositionedParameters`. This is an implementation detail of Slick, wrapping a SQL statement and a place holder for a value.  Effectively we're saying how to treat a `DateTime` regardless of where it appears in the update statement.
-
-In addition to a `Timestamp` (via `setTimestamp`), you can set: `Boolean`, `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `BigDecimal`, `Array[Byte]`, `Blob`, `Clob`, `Date`, `Time`, as well as `Object` and `null`.  There are _setXXX_ methods on `PositionedParameters` for `Option` types, too.
-
-There's further symmetry with `GetResuts` in that we could have used `>>` in our `SetParameter`:
-
-~~~ scala
-(dt, pp) => pp >> new Timestamp(dt.getMillis)
-~~~
-
-
-With this in place we can construct plain SQL updates using `DateTime` instances:
-
-``` scala
-sqlu"""UPDATE message SET "ts" = """ +? DateTime.now
-```
-
-Without the `SetParameter[DateTime]` instance the compiler would tell you:
-
-```
-could not find implicit SetParameter[DateTime]
-```
-
-<div class="callout callout-warning">
-**Compile Warnings**
-
-The code we've written in this chapter produces the following warning:
-
-```
-Adaptation of argument list by inserting () has been deprecated:
-  this is unlikely to be what you want.
-```
-
-This is a limitation of the Slick 2.1 implementation, and is being resoled for Slick 3.0.
-For now, you'll have to live with the warning.
-</div>
-
-
-### Exercises
-
-The examples for this section are in the _chatper-06_ folder, in the source file _updates.scala_.
-
-You can run the code example with:
-
-```
-$ sbt
-> runMain chapter06.PlainUpdatesExample
-```
-
-#### String Interpolation Mistake
+### String Interpolation Mistake
 
 When we constructed our `sensitive` query, we used `+?` to include a `String` in our query.
 
@@ -398,7 +403,7 @@ In contrast, Slick's `sql` and `sqlu` interpolators do understand SQL and do the
 </div>
 
 
-#### Unsafe Composition
+### Unsafe Composition
 
 Here's a utility method that takes any string, and return a query to append the string to all messages.
 
@@ -421,14 +426,3 @@ val halOnly = append("!") + """ WHERE "sender" = 'HAL' """
 
 It is very easy to get this query wrong and only find out at run-time. Notice, for example, we had to include a space before "WHERE" and use the correct single quoting around "HAL".
 </div>
-
-
-## Take Home Points
-
-Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  Two string interpolators for SQL are provided: `sql` and `sqlu`.
-
-Values can be safely substituted into Plain SQL queries using `${expression}`.
-
-Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
-
-The tools for composing these kinds of queries is limited. Use `+`, `+?`, and `$#`, but do so with care. End-user supplied information should always be escaped before being used in a query. Never forget the story of Little Bobby Tables.

@@ -1,12 +1,12 @@
 # Creating and Modifying Data {#Modifying}
 
-In the last chapter we saw how to retrieve data from the database using select queries. In this chapter we will look at three other main types that modify the stored data: insert, update, and delete queries.
+In the last chapter we saw how to retrieve data from the database using select queries. In this chapter we will look modifying stored data using insert, update, and delete queries.
 
-SQL veterans will know that update and delete queries, in particular, share many similarities with select queries. The same is in Slick, where we use the same `Query` monad and combinators to build all four kinds of query. Ensure you are familiar with the content of [Chapter 3]{#Selecting} before proceeding.
+SQL veterans will know that update and delete queries, in particular, share many similarities with select queries. The same is true in Slick, where we use the `Query` monad and combinators to build the different kinds of query. Ensure you are familiar with the content of [Chapter 3](#Selecting) before proceeding.
 
 ## Inserting Data
 
-As we saw in [Chapter 1](#Basics}, adding new data a table looks like a destuctive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
+As we saw in [Chapter 1](#Basics), adding new data a table looks like a destructive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
 
 ### Inserting Single Rows
 
@@ -67,7 +67,7 @@ messages.map(_.sender).insertStatement
 //   values (?)
 ~~~
 
-The parameter type of the `+=` method is matched to the *unpacked* type of the query, so we execute thisquery by passing it a `String` for the `sender`:
+The parameter type of the `+=` method is matched to the *unpacked* type of the query, so we execute this query by passing it a `String` for the `sender`:
 
 ~~~ scala
 messages.map(_.sender) += "HAL"
@@ -89,7 +89,7 @@ Let's modify the insert to give us back the primary key generated:
 // res5: Long = 7
 ~~~
 
-The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense here. We can provide that the return value is a primary key by looking up the record we just inserted:
+The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense here. We can show that the return value is a primary key by looking up the record we just inserted:
 
 ~~~ scala
 messages.filter(_.id === 7L).firstOption
@@ -177,7 +177,7 @@ messages ++= testMessages
 
 This code prepares one SQL statement and uses it for each row in the `Seq`. This can result in a significant boost in performance when inserting many records.
 
-As we saw earlier this chapter, the default return value of a single insert is the number of rows inserted. The multi-row insert above is also returning the number of rows, except this time the type is `Option[Int]`. The reason for this is that the JDBC specification permits the underlying database driver to return to indicate that the number of rows inserted is unknown.
+As we saw earlier this chapter, the default return value of a single insert is the number of rows inserted. The multi-row insert above is also returning the number of rows, except this time the type is `Option[Int]`. The reason for this is that the JDBC specification permits the underlying database driver to indicate that the number of rows inserted is unknown.
 
 Slick also provides a batch version of `messages returning...`, including the `into` method. We can use the `messagesInsertWithId` query we defined last section and write:
 
@@ -277,7 +277,7 @@ messages.
 Let's now turn to more interesting updates. How about converting every message to be all capitals? Or adding an exclamation mark to the end of each message? Both of these queries involve expressing the desired result in terms of the current value in the database. In SQL we might write something like:
 
 ~~~ sql
-update "message" set "content" = "content" || '!'
+update "message" set "content" = CONCAT("content", '!')
 ~~~
 
 This is not currently supported by `update` in Slick, but there are ways to achieve the same result. One such way is to use plain SQL queries, which we cover in [Chapter 6](#PlainSQL). Another is to perform a *client side update* by defining a Scala function to capture the change to each row:
@@ -285,7 +285,7 @@ This is not currently supported by `update` in Slick, but there are ways to achi
 ~~~ scala
 def exclaim(msg: Message): Message =
   msg.copy(content = msg.content + "!")
-exclaim: Message => Message = <function1>
+// exclaim: Message => Message = <function1>
 ~~~
 
 We can update rows by selecting the relevant data from the database, applying this function, and writing the results back individually. Note that approach can be quite inefficient for large datasets---it takes `N + 1` queries to apply an update to `N` results:
@@ -310,7 +310,7 @@ messages.filter(_.sender === "HAL").delete
 As usual, the return value is the number of rows affected, and as usual, Slick provides a method that allows us to view the generated SQL:
 
 ~~~ scala
-messages.filter(_.sender === "HAL").delete
+messages.filter(_.sender === "HAL").deleteStatement
 // res7: String =
 //   delete from "message"
 //   where "message"."sender" = 'HAL'
@@ -328,7 +328,7 @@ messages.map(_.content).delete
 
 ## Transactions
 
-So far, each of the changes we've made to the database has run independently of the others. That is, each insert, update, or delete query, we run can succeed or fail independently of the rest.
+So far, each of the changes we've made to the database have run independently of the others. That is, each insert, update, or delete query, we run can succeed or fail independently of the rest.
 
 We often want to tie sets of modifications together in a *transaction* so that they either *all* succeed or *all* fail. We can do this in Slick using the `session.withTransaction` method:
 
@@ -408,20 +408,20 @@ DEBUG s.slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
   delete from "message" where "message"."sender" = 'HAL'
 ~~~
 
-We can modify the level of various loggers to log additional information:
+We can modify the level of various loggers, as shown in table 3.1.
 
--------------------------------------------------------------------------------------------------------------
-Logger                                     Level   Effect
------------------------------------------- ------- ----------------------------------------------------------
-`scala.slick.jdbc.JdbcBackend.statement`   `DEBUG` Logs SQL sent to the database as described above.
+-------------------------------------------------------------------------------------------------------------------
+Logger                                                   Effect
+----------------------------------------------------     ----------------------------------------------------------
+`scala.slick.jdbc.JdbcBackend.statement`                 Logs SQL sent to the database as described above.
 
-`scala.slick.jdbc.StatementInvoker.result` `DEBUG` Logs the results of each query.
+`scala.slick.jdbc.StatementInvoker.result`               Logs the results of each query.
 
-`scala.slick.session`                      `DEBUG` Logs session events such as opening/closing connections.
+`scala.slick.session`                                    Logs session events such as opening/closing connections.
 
-`scala.slick`                              `DEBUG` Logs everything! Equivalent to changing all of the above.
+`scala.slick`                                            Logs everything! Equivalent to changing all of the above.
 
------------------------------------------- ------- ----------------------------------------------------------
+------------------------------------------               ----------------------------------------------------------
 
 : Slick loggers and their effects.
 
@@ -438,39 +438,26 @@ SI.result - \--------+----------------------+----------------------+----/
 
 ## Take Home Points
 
-<div class="callout callout-danger">
-TODO: Take home points
-</div>
-
-<!--
 For modifying the rows in the database we have seen that:
 
-* deletes are via a `delete` call to a query;
-* updates are via an `update` call on a query, but are somewhat limited; and
 * inserts are via an `insert` (or `+=`) call on a table.
+* updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
+* deletes are via a `delete` call to a query;
 
-Auto-incrementing values are not inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
+Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
 
 Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
-Rows can be inserted in batch. For simple situations this gives performance gains. However when additional information is required back (such as primary keys), there is no advantage.
-
 The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
--->
 
 ## Exercises
 
-<div class="callout callout-danger">
-TODO: Fix up these exercises
-</div>
+The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
 
-<!--
-Experiment with the queries we discuss before trying the exercises in this chapter. The code for this chapter is in the [GitHub repository][link-example] in the _chapter-02_ folder.  As with chapter 1, you can use the `run` command in SBT to execute the code against a H2 database.
--->
 
 ### Insert New Messages Only
 
-Messages sent over a network might fail, and might be resent.  Write a method that will insert a message for someone, but only if the message content hasn't already been stored. We want the `id` of the message as a result.
+Messages sent to our application might fail, and might be resent to us.  Write a method that will insert a message for someone, but only if the message content hasn't already been stored. We want the `id` of the message as a result.
 
 The signature of the method is:
 
