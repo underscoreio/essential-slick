@@ -636,7 +636,8 @@ CREATE TABLE "occupant" (
   "user" BIGINT NOT NULL
 )
 
-ALTER TABLE "occupant" ADD CONSTRAINT "room_user_pk" PRIMARY KEY("room", "user")
+ALTER TABLE "occupant" ADD CONSTRAINT "room_user_pk" ↩
+PRIMARY KEY("room", "user")
 ~~~
 
 Using the `occupant` table is no different from any other table:
