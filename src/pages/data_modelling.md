@@ -1249,7 +1249,9 @@ implicit val userRoleMapper =
 Then we can use the `UserRole` in the table definition:
 
 ~~~ scala
-case class User(name: String, userRole: UserRole = Regular, id: UserPK = UserPK(0L))
+case class User(name: String,
+                userRole: UserRole = Regular,
+                id: UserPK = UserPK(0L))
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
