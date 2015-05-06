@@ -534,7 +534,7 @@ Once you've done that, work through the exercises below.  An easy way to try thi
 
 ~~~ bash
 $ cd example-02
-$ sbt
+$ ./sbt.sh
 > ~run
 ~~~
 
