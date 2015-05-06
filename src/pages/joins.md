@@ -479,7 +479,8 @@ Let's pull that part out as a method:
 ```scala
 import scala.language.higherKinds
 
-def timestampOf[S[_]](group: Query[(MessageTable,UserTable), (Message,User), S]) =
+def timestampOf[S[_]](group: Query[(MessageTable,UserTable), ↩
+                                                (Message,User), S]) =
   group.map { case (msg, user) => msg.ts }
 ```
 
