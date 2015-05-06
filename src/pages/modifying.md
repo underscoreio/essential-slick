@@ -471,12 +471,15 @@ def insertOnce(sender: String, message: String): Long = ???
 
 <div class="solution">
 ~~~ scala
-def insertOnce(sender: String, text: String)(implicit session: Session): Long = {
+def insertOnce(sender: String, text: String) ↩
+              (implicit session: Session): Long = {
   val query =
-    messages.filter(m => m.content === text && m.sender === sender).map(_.id)
+    messages.filter(m => m.content === text &&  ↩
+                         m.sender === sender).map(_.id)
 
   query.firstOption getOrElse {
-    (messages returning messages.map(_.id)) += Message(sender, text, DateTime.now)
+    (messages returning messages.map(_.id)) +=  ↩
+              Message(sender, text, DateTime.now)
   }
 }
 ~~~
