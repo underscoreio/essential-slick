@@ -1136,7 +1136,10 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def * = (name, id) <> (User.tupled, User.unapply)
 }
 
-case class Message(senderId: UserPK, content: String,ts: DateTime, id: MessagePK = MessagePK(0L))
+case class Message(senderId: UserPK,
+                   content: String,
+                   ts: DateTime,
+                   id: MessagePK = MessagePK(0L))
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
@@ -1144,7 +1147,8 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def content  = column[String]("content")
   def ts       = column[DateTime]("ts")
   def * = (senderId, content, ts, id) <> (Message.tupled, Message.unapply)
-  def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+  def sender = foreignKey("sender_fk", senderId, users)  ↩
+                                 (_.id, onDelete=ForeignKeyAction.Cascade)
 }
 ~~~
 
