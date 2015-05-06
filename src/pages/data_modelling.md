@@ -244,7 +244,8 @@ final class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def * = name :: age :: gender :: height :: weight :: shoeSize ::
           email :: phone :: accepted :: sendNews ::
           street :: city :: country ::
-          faveColor :: faveFood :: faveDrink :: faveTvShow :: faveMovie :: faveSong ::
+          faveColor :: faveFood :: faveDrink ::
+          faveTvShow :: faveMovie :: faveSong ::
           lastPurchase :: lastRating :: tellFriends ::
           petName :: partnerName :: id :: HNil
 }
@@ -266,7 +267,8 @@ This `HList` projection needs to match with the definition of `User` in `Table[U
 type User =
   String :: Int :: Char :: Float :: Float :: Int ::
   String :: String :: Boolean :: Boolean ::
-  String :: String :: String :: String :: String :: String :: String :: String :: String ::
+  String :: String :: String :: String :: String :: String ::
+  String :: String :: String ::
   String :: Int :: Boolean ::
   String :: String  :: Long :: HNil
 ~~~
