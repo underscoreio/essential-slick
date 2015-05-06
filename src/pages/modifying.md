@@ -27,13 +27,17 @@ In each case the return value is the number of rows inserted. However, it is oft
 If we recall the definition of `Message`, we put the `id` field at the end of the case class and gave it a default value of `0L`:
 
 ~~~ scala
-final case class Message(sender: String, content: String, ts: DateTime, id: Long = 0L)
+final case class Message(sender: String,
+                         content: String,
+                         ts: DateTime,
+                         id: Long = 0L)
 ~~~
 
 Giving the `id` parameter a default value allows us to omit it when creating a new object. Placing the `id` at the end of the constructor allows us to omit it without having to pass the remaining arguments using keyword parameters:
 
 ~~~ scala
-Message("HAL", "I'm a computer, Dave, what would I do with a Christmas card anyway?")
+Message("HAL",
+        "I'm a computer, Dave, what would I do with a Christmas card anyway?")
 ~~~
 
 There's nothing special about our default value of `0L`---it's not a magic value meaning "this record has no `id`". In our running example the `id` field of `Message` is mapped to an auto-incrementing primary key (using the `O.AutoInc` option), causing Slick to ignore the value of the field when generating an insert query and allows the database to step in an generate the value for us. We can see the SQL we're executing using the `insertStatement` method:
