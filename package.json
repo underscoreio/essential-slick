@@ -1,7 +1,7 @@
 {
   "name": "essential-slick",
   "description": "The essential guide to Slick",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "devDependencies": {
     "underscore-ebook-template": "git+https://github.com/underscoreio/underscore-ebook-template.git#0.0.17"
   },
