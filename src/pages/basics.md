@@ -110,12 +110,12 @@ Before diving into Scala code, let's look at the SBT configuration. You'll find 
 ~~~ scala
 name := "essential-slick-chapter-01"
 
-version := "1.0"
+version := "3.0"
 
 scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "2.1.0",
+  "com.typesafe.slick" %% "slick"           % "3.0.0",
   "com.h2database"      % "h2"              % "1.4.185",
   "ch.qos.logback"      % "logback-classic" % "1.1.2"
 )
@@ -134,7 +134,7 @@ If we were using a separate database like MySQL or PostgreSQL, we would substitu
 Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *driver*. For example, we access most of the Slick API for H2 via the following `import`:
 
 ~~~ scala
-import scala.slick.driver.H2Driver.simple._
+import slick.driver.H2Driver.api._
 ~~~
 
 Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 4](#Modelling) looks at working with different drivers.
@@ -217,12 +217,24 @@ If you're a fan of terminology, know that what we have discussed so far is calle
 We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for opening connections and starting transactions:
 
 ~~~ scala
-def db = Database.forURL(
-  url    = "jdbc:h2:mem:chat-database;DB_CLOSE_DELAY=-1",
-  driver = "org.h2.Driver")
+def db = Database.forConfig("chapter01")
 ~~~
 
-The `Database.forURL` method is part of Slick, but the parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chat-database"` and configuring H2 to keep the data around indefinitely when no connections are open. H2-specific JDBC URLs are discussed in detail in the [H2 documentation][link-h2-jdbc-url].
+The `Database.forConfig` method is part of Slick,
+the parameter determines with configuration to use from the `application.conf` file,which can be found in `src/main/resources`.
+Slick uses the [link-config](Typesafe config) library to manage database configuration,
+this is also used by Akka and the Play framework.
+
+~~~ conf
+chapter01 = {
+  connectionPool = disabled
+  url    = "jdbc:h2:mem:chapter01"
+  driver = "org.h2.Driver"
+  keepAliveConnection = true
+}
+~~~
+
+The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"` and configuring H2 to keep the data around indefinitely when no connections are open. H2-specific JDBC URLs are discussed in detail in the [H2 documentation][link-h2-jdbc-url].
 
 <div class="callout callout-info">
 **JDBC**
@@ -235,30 +247,53 @@ The specification is mirrored by a library implemented for each database you wan
 JDBC works with *connection strings*, which are URLs like the one above that tell the driver where your database is and how to connect to it (e.g. by providing login credentials).
 </div>
 
-We can use the `db` object to open a `Session` with our database, which wraps a JDBC-level `Connection` and provides a context in which we can execute a sequence of queries.
+Slick manages database connections and transactions using auto-commit,
+to see how to manually manage starting, committing, and rolling back transactions (see [Chapter 3](#Modifying)).
+We create programs and pass them to the `db` object to execute,
+Slick calls these programs `Actions` and they have the following signature `DBIOAction[R, S, E]`,
+`R` is the type of the result of the executed program,
+`S` indicates whether the results are streamed `Streaming[T]` or not `NoStream`, and finally
+`E` is the effect type and will be inferred. [TODO: Say more about effects?]
+
 
 ~~~ scala
-db.withSession { implicit session =>
-  // Run queries, profit!
-}
+try {
+
+  db.run(/* Run queries, profit! */)
+
+} finally db.close()
 ~~~
 
-The `session` object provides methods for starting, committing, and rolling back transactions (see [Chapter 3](#Modifying)), and is passed an implicit parameter to methods that actually run queries against the database.
+*TODO: This seems like a dumb place to say that Slick is all asynchronous and streamy*
+
+`db.run` returns a `Future[R]` as Slick performs all database communication asynchronously,
+this is incredibly useful when building applications that you don't want to block waiting for a database call,
+but quite annoying when you are trying to explain how to use Slick.
+For this reason we'll be using a method called `exec` to tidy away the detail of working with `Future`s so you can focus on Slick.
+
+~~~ scala
+  def exec[T](program: DBIO[T]): T = Await.result(db.run(program), 2 seconds)
+~~~
+
+All the `exec` method does is run the program supplied and waits for a maximum of two seconds for the program to finish.
+
+`db.close()` -  TODO: Say why we need this
 
 
 
 ### Inserting Data
 
-Having opened a session, we can start sending SQL to the database. We start by issuing a `CREATE` statement for `MessageTable`, which we build using methods of our `TableQuery` object, `messages`:
+Let's start by issuing a `CREATE` statement for `MessageTable`, which we build using methods of our `TableQuery` object, `messages`:
 
 ~~~ scala
-messages.ddl.create
+exec(messages.schema.create)
 ~~~
 
-"DDL" in this case stands for *Data Definition Language*---the standard part of SQL used to create and modify the database schema. The Scala code above issues the following SQL to H2:
+"schema" gets the schema description or *Data Definition Language*---the standard part of SQL used to create and modify the database schema for the table.
+The Scala code above issues the following SQL to H2:
 
 ~~~ scala
-messages.ddl.createStatements.toList
+messages.schema.createStatements.toList
 // res0: List[String] = List("""
 //   create table "message" (
 //     "sender" VARCHAR NOT NULL,
@@ -272,18 +307,20 @@ messages.ddl.createStatements.toList
 Once our table is set up, we need to insert some test data:
 
 ~~~ scala
-messages ++= freshTestData
+exec(messages ++= freshTestData)
 ~~~
 
-The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query rRecall that `freshTestData` is just a regular Scala `Seq[Message]`). Our table is now populated with data.
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query recall that `freshTestData` is just a regular Scala `Seq[Message]`). Our table is now populated with data.
 
 
 ### Selecting Data
 
-Now our database is populated, we can start running queries to select it. We do this by invoking one of a number of "invoker" methods on a query object. For example, the `run` method executes the query and returns a `Seq` of results:
+Now our database is populated, we can start running queries to select it. We do this by calling one of a number of "action" methods on a query object. For example, the `result` method transforms a query object into an action object which we can then execute with `db.run`.
+
+If we executes the action it returns a `Seq` of `Message`s:
 
 ~~~ scala
-messages.run
+exec(messages.run)
 // res1: Seq[Example.MessageTable#TableElementType] = Vector( ↩
 //   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
 //   Message(HAL,Affirmative, Dave. I read you.,2), ↩
@@ -294,19 +331,19 @@ messages.run
 We can see the SQL issued to H2 using the `selectStatement` method on the query:
 
 ~~~ scala
-messages.selectStatement
+messages.result.statements
 // res2: String = select x2."sender", x2."content", x2."id" from "message" x2
 ~~~
 
 If we want to retrieve a subset of the messages in our table, we simply run a modified version of our query. For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL that retrieves the expected subset of results:
 
 ~~~ scala
-scala> messages.filter(_.sender === "HAL").selectStatement
+scala> messages.filter(_.sender === "HAL").result.statements
 // res3: String = select x2."sender", x2."content", x2."id" ↩
 //                from "message" x2 ↩
 //                where x2."sender" = 'HAL'
 
-scala> messages.filter(_.sender === "HAL").run
+scala> exec(messages.filter(_.sender === "HAL").result)
 // res4: Seq[Example.MessageTable#TableElementType] = Vector( ↩
 //   Message(HAL,Affirmative, Dave. I read you.,2), ↩
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
@@ -315,7 +352,7 @@ scala> messages.filter(_.sender === "HAL").run
 If you remember, we actually generated this query earlier and stored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
 
 ~~~ scala
-scala> halSays.run
+scala> exec(halSays.result)
 // res5: Seq[Example.MessageTable#TableElementType] = Vector( ↩
 //   Message(HAL,Affirmative, Dave. I read you.,2), ↩
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
@@ -323,13 +360,12 @@ scala> halSays.run
 
 The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of `run`:
 
+↩
 ~~~ scala
-halSays.map(_.id).selectStatement
-// res6: String = select x2."id" ↩
-//                from "message" x2 ↩
-//                where (x2."sender" = 'HAL')
+halSays.map(_.id).result.statements
+//res6:List[String] = List(select x2."id" from "message" x2 where x2."sender" = 'HAL')
 
-halSays.map(_.id).run
+exec(halSays.map(_.id).result)
 // res7: Seq[Int] = Vector(2, 4)
 ~~~
 
