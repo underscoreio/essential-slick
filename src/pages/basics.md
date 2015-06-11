@@ -221,8 +221,8 @@ def db = Database.forConfig("chapter01")
 ~~~
 
 The `Database.forConfig` method is part of Slick,
-the parameter determines with configuration to use from the `application.conf` file,which can be found in `src/main/resources`.
-Slick uses the [link-config](Typesafe config) library to manage database configuration,
+the parameter determines which configuration to use from the `application.conf` file,which can be found in `src/main/resources`.
+Slick uses the [Typesafe config](link-config) library to manage database configuration,
 this is also used by Akka and the Play framework.
 
 ~~~ conf
@@ -276,10 +276,19 @@ For this reason we'll be using a method called `exec` to tidy away the detail of
 ~~~
 
 All the `exec` method does is run the program supplied and waits for a maximum of two seconds for the program to finish.
+In practice we wouldn't use a method like `exec` rather we'd describe what to do with the result contained with in the `Future`.
 
-`db.close()` -  TODO: Say why we need this
 
 
+`db.close()`
+-  TODO: Say why we need this
+-  TODO: Explain we aren't using it in the example code - we lose the connection to the database.
+
+
+     /*
+      * Free all resources allocated by Slick for this Database, blocking the current thread until
+      * everything has been shut down.
+      */
 
 ### Inserting Data
 
@@ -289,7 +298,7 @@ Let's start by issuing a `CREATE` statement for `MessageTable`, which we build u
 exec(messages.schema.create)
 ~~~
 
-"schema" gets the schema description or *Data Definition Language*---the standard part of SQL used to create and modify the database schema for the table.
+`schema` gets the schema description or *Data Definition Language*---the standard part of SQL used to create and modify the database schema for the table.
 The Scala code above issues the following SQL to H2:
 
 ~~~ scala
@@ -315,7 +324,7 @@ The `++=` method of `message` accepts a sequence of `Message` objects and transl
 
 ### Selecting Data
 
-Now our database is populated, we can start running queries to select it. We do this by calling one of a number of "action" methods on a query object. For example, the `result` method transforms a query object into an action object which we can then execute with `db.run`.
+Now our database is populated, we can start running queries to select it. We do this by calling one of a number of "invoker" methods on a query object. For example, the `result` method transforms a query object into an action object which we can then execute with `db.run`.
 
 If we executes the action it returns a `Seq` of `Message`s:
 
@@ -328,12 +337,14 @@ exec(messages.run)
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-We can see the SQL issued to H2 using the `selectStatement` method on the query:
+We can see the SQL issued to H2 using the `statements` method on the query:
 
 ~~~ scala
 messages.result.statements
 // res2: String = select x2."sender", x2."content", x2."id" from "message" x2
 ~~~
+
+Notice that we don't need to call `exec` as we aren't communicating with the database.
 
 If we want to retrieve a subset of the messages in our table, we simply run a modified version of our query. For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL that retrieves the expected subset of results:
 
@@ -360,7 +371,8 @@ scala> exec(halSays.result)
 
 The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of `run`:
 
-↩
+<!-- ↩ -->
+
 ~~~ scala
 halSays.map(_.id).result.statements
 //res6:List[String] = List(select x2."id" from "message" x2 where x2."sender" = 'HAL')
@@ -382,7 +394,7 @@ val halSays2 = for {
 Remember that for comprehensions are simply aliases for chains of method calls. All we are doing here is building a query with a `WHERE` clause on it. We don't touch the database until we execute the query:
 
 ~~~ scala
-halSays2.run
+exec(halSays2.result)
 // res8: Seq[Message] = ...
 ~~~
 
@@ -392,7 +404,10 @@ In this chapter we've seen a broad overview of the main aspects of Slick, includ
 
 We typically model data from the database as case classes and tuples that map to rows from a table. We define the mappings between these types and the database using `Table` classes such as `MessageTable`.
 
-We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`. These transformations look like transformations on collections, but the operate on the parameters of the query rather than the results returned. We execute a query by opening a session with the database and calling an *invoker* method such as `run`.
+We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`. These transformations look like transformations on collections, but the operate on the parameters of the query rather than the results returned.
+
+<!--I have buggered this sentence up.-->
+We execute a query by calling an *invoker* method such as `result` and passing the `Action` returned to the database object to be run.
 
 The query language is the one of the richest and most significant parts of Slick. We will spend the entire next chapter discussing the various queries and transformations available.
 
@@ -423,9 +438,7 @@ You'll need to connect to the database using `db.withSession` and insert the row
 Here's the solution:
 
 ~~~ scala
-db.withSession { implicit session =>
-  messages += Message("Dave","What if I say 'Pretty please'?")
-}
+exec(messages += Message("Dave","What if I say 'Pretty please'?"))
 // res5: Int = 1
 ~~~
 
@@ -433,28 +446,26 @@ The return value indicates that `1` row was inserted. Because we're using an aut
 
 Here are some things that might go wrong:
 
-When using `db.withSession`, be sure to mark the `session` parameter as `implicit`. If you don't do this you'll get an error message saying the compiler can't find an implicit `Session` parameter for the `+=` method:
+If you don't pass the action created by `+=` to `db` to be run, you'll get back the `Action` object instead.
 
 ~~~ scala
-db.withSession { session =>
-  messages += Message("Dave","What if I say 'Pretty please'?")
-}
-// <console>:15: error: could not find implicit value ↩
-//   for parameter session: scala.slick.jdbc.JdbcBackend#SessionDef
-//                 messages += Message("Dave","What if I say 'Pretty please'?")
-//                          ^
+messages += Message("Dave","What if I say 'Pretty please'?")
+res6: slick.profile.FixedSqlAction[Int,slick.dbio.NoStream,slick.dbio.Effect.Write] = slick.driver.JdbcActionComponent$InsertActionComposerImpl$$anon$8@7e0e6d1e
 ~~~
+
 </div>
 
-Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to connect to the database again using `db.withSession`, build the appropriate query using `messages.filter`, and execute it using its `run` method. Again, we've included some common pitfalls in the solution.
+Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to build the appropriate query using `messages.filter`, and create the `Action` to be run by using its `result` method, don't forget to run the query by using the `exec` helper method we provided.
+
+
+ Again, we've included some common pitfalls in the solution.
 
 <div class="solution">
 Here's the code:
 
 ~~~ scala
-db.withSession { implicit session =>
-  messages.filter(_.sender === "Dave").run
-}
+exec(messages.filter(_.sender === "Dave").result)
+
 // res0: Seq[Example.MessageTable#TableElementType] = Vector( ↩
 //   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
 //   Message(Dave,Open the pod bay doors, HAL.,3), ↩
@@ -463,56 +474,42 @@ db.withSession { implicit session =>
 
 Here are some things that might go wrong:
 
-Again, if we omit the `implicit` keyword, we'll get an error message about a missing implicit parameter, this time on the `run` method:
-
-~~~ scala
-db.withSession { session =>
-  messages.filter(_.sender === "Dave").run
-}
-// <console>:15: error: could not find implicit value ↩
-//   for parameter session: scala.slick.jdbc.JdbcBackend#SessionDef
-//                 messages.filter(_.sender === "Dave").run
-//                                                      ^
-~~~
-
 Note that the parameter to `filter` is built using a triple-equals operator, `===`, not a regular `==`. If you use `==` you'll get an interesting compile error:
 
 ~~~ scala
-db.withSession { implicit session =>
-  messages.filter(_.sender == "Dave").run
-}
-// <console>:15: error: inferred type arguments [Boolean] ↩
-//   do not conform to method filter's type parameter bounds ↩
-//   [T <: scala.slick.lifted.Column[_]]
-//                 messages.filter(_.sender == "Dave").run
-//                          ^
-// <console>:15: error: type mismatch;
-//  found   : Example.MessageTable => Boolean
-//  required: Example.MessageTable => T
-//                 messages.filter(_.sender == "Dave").run
-//                                          ^
-// <console>:15: error: Type T cannot be a query condition ↩
-//   (only Boolean, Column[Boolean] and Column[Option[Boolean]] are allowed
-//                 messages.filter(_.sender == "Dave").run
-//                                ^
+
+exec(messages.filter(_.sender == "Dave").result)
+
+//<console>:18: error: inferred type arguments [Boolean] do not conform to method filter's type parameter bounds [T <: slick.lifted.Rep[_]]
+//              exec(messages.filter(_.sender == "Dave").result)
+//                            ^
+//<console>:18: error: type mismatch;
+// found   : Example.MessageTable => Boolean
+// required: Example.MessageTable => T
+//              exec(messages.filter(_.sender == "Dave").result)
+//                                            ^
+//<console>:18: error: Type T cannot be a query condition (only Boolean, Rep[Boolean] and Rep[Option[Boolean]] are allowed
+//              exec(messages.filter(_.sender == "Dave").result)
+//                                  ^
+
 ~~~
 
 The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`. A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Column[Boolean]`[^column-expressions]. The error message is baffling when you first see it but makes sense once you understand what's going on.
 
 [^column-expressions]: Slick uses the `Column` type to represent expressions over `Columns` as well as `Columns` themselves.
 
-Finally, if you forget to call `run`, you'll end up returning the query object itself rather than the result of executing it:
+Finally, if you forget to call `result`,
+you'll end up with a compilation error as `exec` and the call it is wrapping `db.run` both expect `Action`s:
 
 ~~~ scala
-db.withSession { implicit session =>
-  messages.filter(_.sender === "Dave")
-}
-// res1: scala.slick.lifted.Query[ ↩
-//         Example.MessageTable, ↩
-//         Example.MessageTable#TableElementType,
-//         Seq
-//       ] = ↩
-//   scala.slick.lifted.WrappingQuery@ead3be9
+exec(messages.filter(_.sender === "Dave"))
+<console>:18: error: type mismatch;
+ found   : slick.lifted.Query[Example.MessageTable,Example.MessageTable#TableElementType,Seq]
+    (which expands to)  slick.lifted.Query[Example.MessageTable,Example.Message,Seq]
+ required: slick.driver.H2Driver.api.DBIO[?]
+    (which expands to)  slick.dbio.DBIOAction[?,slick.dbio.NoStream,slick.dbio.Effect.All]
+              exec(messages.filter(_.sender === "Dave"))
+                                  ^
 ~~~
 
 `Query` types tend to be verbose, which can be distracting from the actual cause of the problem (which is that we're not expecting a `Query` object at all). We will discuss `Query` types in more detail next chapter.
