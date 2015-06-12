@@ -29,6 +29,7 @@
 [link-slick-hlist]:          http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList
 [link-slick]:                http://slick.typesafe.com/
 [link-source-extmeth]:       https://github.com/slick/slick/blob/2.1/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
+[link-source-dbPublisher]:   http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.backend.DatabasePublisher
 [link-twitter-jono]:         http://twitter.com/jonoabroad
 [link-twitter-noel]:         http://twitter.com/noelwelsh
 [link-twitter-dave]:         http://twitter.com/davegurnell
@@ -41,3 +42,6 @@
 [link-visual-joins]:         http://blog.codinghorror.com/a-visual-explanation-of-sql-joins/
 [link-wartremover]:          https://github.com/puffnfresh/wartremover
 [link-wikipedia-joins]:      http://en.wikipedia.org/wiki/Join_(SQL)
+[link-reactive-streams]:     http://http://www.reactive-streams.org/
+[]
+

@@ -24,17 +24,16 @@ final class MessageTable(tag: Tag)
 // defined class MessageTable
 
 lazy val messages = TableQuery[MessageTable]
-// messages: scala.slick.lifted.TableQuery[MessageTable] = <lazy>
+// messages: slick.lifted.TableQuery[MessageTable] = <lazy>
 ~~~
 
 The type of `messages` is `TableQuery[MessageTable]`, which is a subtype of a more general `Query` type that Slick uses to represent select, update, and delete queries. We'll discuss these types in the next section.
 
-We can see the SQL of the select query by calling the `selectStatement` method:
+We can see the SQL of the select query by calling the `result.statements` method:
 
 ~~~ scala
-messages.selectStatement
-// res11: String = select x2."sender", x2."content", x2."id"
-//                 from "message" x2
+messages.result.statements
+// res12: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2)
 ~~~
 
 Our `TableQuery` is the equivalent of the SQL `SELECT * from message`.
@@ -42,10 +41,10 @@ Our `TableQuery` is the equivalent of the SQL `SELECT * from message`.
 <div class="callout callout-warning">
 **Query Extension Methods**
 
-Like many of the "query invoker" methods discussed below, the `selectStatement` method is actually an extension method applied to `Query` via an implicit conversion. You'll need to have everything from `H2Driver.simple` in scope for this to work:
+Like many of the "query invoker" methods discussed below, the `result.statements` method is actually an extension method applied to `Query` via an implicit conversion. You'll need to have everything from `H2Driver.simple` in scope for this to work:
 
 ~~~ scala
-import scala.slick.driver.H2Driver.simple._
+import slick.driver.H2Driver.api._
 ~~~
 </div>
 
@@ -55,21 +54,22 @@ We can create a query for a subset of rows using the `filter` method:
 
 ~~~ scala
 messages.filter(_.sender === "HAL")
-// res14: scala.slick.lifted.Query[
+// res14: slick.lifted.Query[
 //   MessageTable,
 //   MessageTable#TableElementType,
 //   Seq
-// ] = scala.slick.lifted.WrappingQuery@1b4b6544
+// ] = Rep(Filter)
 ~~~
 
-The parameter to `filter` is a function from an instance of `MessageTable` to a value of type `Column[Boolean]` representing a `WHERE` clause for our query:
+
+The parameter to `filter` is a function from an instance of `MessageTable` to a value of type `Rep[Boolean]` representing a `WHERE` clause for our query:
 
 ~~~ scala
-messages.filter(_.sender === "HAL").selectStatement
-// res15: String = select ... where x2."sender" = 'HAL'
+messages.filter(_.sender === "HAL").result.statements
+// res13: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where x2."sender" = 'HAL')
 ~~~
 
-Slick uses the `Column` type to represent expressions over columns as well as individual columns. A `Column[Boolean]` can either be a `Boolean`-valued column in a table, or a `Boolean` expression involving multiple columns. Slick can automatically promote a value of type `A` to a constant `Column[A]`, and provides a suite of methods for building expressions as we shall see below.
+Slick uses the `Rep` type to represent expressions over columns as well as individual columns. A `Rep[Boolean]` can either be a `Boolean`-valued column in a table, or a `Boolean` expression involving multiple columns. Slick can automatically promote a value of type `A` to a constant `Rep[A]`, and provides a suite of methods for building expressions as we shall see below.
 
 ## The Query and TableQuery Types {#queryTypes}
 
@@ -114,17 +114,17 @@ Sometimes we don't want to select all of the data in a `Table`. We can use the `
 
 ~~~ scala
 messages.map(_.content)
-// res1: scala.slick.lifted.Query[
-//   scala.slick.lifted.Column[String],
+// res1: slick.lifted.Query[
+//   slick.lifted.Rep[String],
 //   String,
 //   Seq
-// ] = scala.slick.lifted.WrappingQuery@407beadd
+// ] = slick.lifted.Query
 ~~~
 
 Because the unpacked type has changed to `String`, we now have a query that selects `Strings` when run. If we run the query we see that only the `content` of each message is retrieved:
 
 ~~~ scala
-messages.map(_.content).run
+exec(messages.map(_.content).result)
 // res2: Seq[String] = Vector(
 //   Hello, HAL. Do you read me, HAL?,
 //   Affirmative, Dave. I read you.,
@@ -136,51 +136,53 @@ messages.map(_.content).run
 Also notice that the generated SQL has changed. The revised query isn't just selecting a single column from the query results---it is actually telling the database to restrict the results to that column in the SQL:
 
 ~~~ scala
-messages.map(_.sender).selectStatement
-// res3: String = select x2."content" from "message" x2
+messages.map(_.sender).result.statements
+// res14: Iterable[String] = List(select x2."sender" from "message" x2)
 ~~~
 
-Finally, notice that the mixed type of our new query has changed to `Column[String]`. This means we are only passed the `content` column if we `filter` or `map` over this query:
+Finally, notice that the mixed type of our new query has changed to `Rep[String]`. This means we are only passed the `content` column if we `filter` or `map` over this query:
 
 ~~~ scala
 val seekBeauty = messages.
   map(_.content).
-  filter(content: Column[String] => content like "%Pretty%")
-// seekBeauty: scala.slick.lifted.Query[
-//   scala.slick.lifted.Column[String],
+  filter{content:Rep[String] => content like "%Pretty%" }
+
+// seekBeauty: slick.lifted.Query[
+//   slick.lifted.Rep[String],
 //   String,
 //   Seq
-// ] = scala.slick.lifted.WrappingQuery@6cc2be89
+// ] = Rep(Filter)
 
-seekBeauty.run
+ exec(seekBeauty.result)
 // res4: Seq[String] = Vector(What if I say 'Pretty please'?)
 ~~~
 
+
 This change of mixed type can complicate query composition with `map`. We recommend calling `map` only as the final step in a sequence of transformations on a query, after all other operations have been applied.
 
-It is worth noting that we can `map` to anything that Slick can pass to the database as part of a `SELECT` clause. This includes individual `Columns` and `Tables`, as well as `Tuples` of the above. For example, we can use `map` to select the `id` and `content` columns of messages:
+It is worth noting that we can `map` to anything that Slick can pass to the database as part of a `SELECT` clause. This includes individual `Rep`s and `Table`s, as well as `Tuples` of the above. For example, we can use `map` to select the `id` and `content` columns of messages:
 
 ~~~ scala
 messages.map(t => (t.id, t.content))
-// res5: scala.slick.lifted.Query[
-//   (Column[Long], Column[String]),
-//   (Long, String),
-//   Seq
-// ] = scala.slick.lifted.WrappingQuery@2a1117d3
+// res10: slick.lifted.Query[
+//    (slick.lifted.Rep[Long], slick.lifted.Rep[String]),
+//    (Long, String),
+//     Seq
+// ] = Rep(Bind)
 ~~~
 
 The mixed and unpacked types change accordingly, and the SQL is modified as we might expect:
 
 ~~~ scala
-messages.map(t => (t.id, t.content)).selectStatement
-// res6: String = select x2."id", x2."content" ...
+messages.map(t => (t.id, t.content)).result.statements
+res11: Iterable[String] = List(select x2."id", x2."content" from "message" x2)
 ~~~
 
 We can also select column expressions as well as single `Columns`:
 
 ~~~ scala
-messages.map(t => t.id * 1000L).selectStatement
-// res7: String = select x2."id" * 1000 ...
+messages.map(t => t.id * 1000L).result.statements
+// res7: Iterable[String] = List(select x2."id" * 1000 from "message" x2)
 ~~~
 
 <!--
@@ -191,75 +193,22 @@ messages.map(t => t.id * 1000L).selectStatement
 </div>
 -->
 
-## Query Invokers
+## Running queries
 
-Once we've built a query, we can run it by establishing a session with the database and using one of several *query invoker* methods. We've seen one invoker---the `run` method---already. Slick has several invoker methods, each of which is added to `Query` as an extension method, and each of which accepts an implicit `Session` parameter that determines which database to use.
+<!-- This needs more work than Joan Rivers has had -->
+Once we've built a query, we need to run it.
+There are two ways to do this, we have seen the first already, Materialized.
+Materalized queries are the *normal* way of running a query, execute the query return all the results.
+The other way to run queries is by streaming back the results.
+This, as you can imagine this is great for returning huge datasets without consuming large amounts of memory.
+To stream results we call `stream` on the database object, it returns a [`DatabasePublisher`][link-source-dbPublisher].
+`DatabasePublisher` exposes 3 methods to interact with the stream.
+`subscribe` which allows integration with Akka,
+`mapResult` which creates a new `Publisher` that maps the supplied function on the result set from the original publisher.
+Finally, there is the convenience method `foreach`.
 
-If we want to return a sequence of the results of a query, we can use the `run` or `list` invokers. `list` always returns a `List` of the query's unpacked type; `run` returns the query's collection type:
 
-~~~ scala
-messages.run
-// res0: Seq[Example.MessageTable#TableElementType] = Vector(
-//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
-//   ...)
 
-messages.list
-// res1: List[Example.MessageTable#TableElementType] = List(
-//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
-//   ...)
-~~~
-
-If we only want to retrieve a single item from the results, we an use the `firstOption` invoker. Slick retrieves the first row and discards the rest of the results:
-
-~~~ scala
-messages.firstOption
-// res2: Option[Example.MessageTable#TableElementType] =
-//   Some(Message(Dave,Hello, HAL. Do you read me, HAL?,1))
-
-messages.filter(_.sender === "Nobody").firstOption
-// res3: Option[Example.MessageTable#TableElementType] =
-//   None
-~~~
-
-If we want to retrieve large numbers of records, we can use the `iterator` invoker to return an `Iterator` of results. We can extract results from the iterator one-at-a-time without consuming large amounts of memory:
-
-~~~ scala
-messages.iterator.foreach(println)
-// Message(Dave,Hello, HAL. Do you read me, HAL?,1)
-// ...
-~~~
-
-Note that the `Iterator` can only retrieve results while the session is open:
-
-~~~ scala
-db.withSession { implicit session =>
-  messages.iterator
-}.foreach(println)
-// org.h2.jdbc.JdbcSQLException: ↩
-//   The object is already closed [90007-185]
-//   at ...
-~~~
-
-Finally, we can use the `execute` invoker to run a query and discard all of the results. This will come in useful in the next chapter when we cover insert, update, and delete queries.
-
----------------------------------------------------------------------------------------------------------------------
-Method          Return Type   Description
---------------- ------------- ---------------------------------------------------------------------------------------
-`run`           `C[U]`        Return a collection of results. The collection type is determined by the
-
-`list`          `List[U]`     Run the query, return a `List` of results. Ignore the query's collection type.
-
-`iterator`      `Iterator[U]` Run the query, return an `Iterator` of results.
-                              Results must be retrieved from the iterator before the session is closed.
-
-`firstOption`   `Option[U]`   Return the first result wrapped in an `Option`; return `None` if there are no results.
-
-`execute`       `Unit`        Run the query, ignore the result. Useful for updating the database---see [Chapter 3](#Modifying).
-
----------------------------------------------------------------------------------------------------------------------------
-
-: Common query invoker methods.
-  Return types are specified for a query of type `Query[M, U, C]`.
 
 ## Column Expressions
 
