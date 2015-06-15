@@ -283,9 +283,9 @@ In practice we wouldn't use a method like `exec` rather we'd describe what to do
 
 `db.close()`
 
-** TODO: Say why we need this **
+**TODO: Say why we need this**
 
-** TODO: Explain we aren't using it in the example code - we lose the connection to the database. **
+**TODO: Explain we aren't using it in the example code - we lose the connection to the database.**
 
 
 ### Inserting Data
@@ -322,12 +322,17 @@ The `++=` method of `message` accepts a sequence of `Message` objects and transl
 
 ### Selecting Data
 
-Now our database is populated, we can start running queries to select it. We do this by calling one of a number of "invoker" methods on a query object. For example, the `result` method transforms a query object into an action object which we can then execute with `db.run`.
+Now our database is populated, we can start running queries to select it.
+We do this by calling one of a number of "executor" methods on the `db` object.
+Before we can do this however we need an `Action` object,
+as this is what the executor methods expect. <!-- That is a crap reason -->
+The `result` method creates `Action` which will run the query.
+For example, we can execute the table query on `messages` by first getting the `Action` object which we can then execute with `db.run`.
 
-If we executes the action it returns a `Seq` of `Message`s:
+If we execute the action it returns a `Seq` of `Message`s:
 
 ~~~ scala
-exec(messages.run)
+exec(messages.result)
 // res1: Seq[Example.MessageTable#TableElementType] = Vector( ↩
 //   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
 //   Message(HAL,Affirmative, Dave. I read you.,2), ↩
@@ -344,7 +349,9 @@ messages.result.statements
 
 Notice that we don't need to call `exec` as we aren't communicating with the database.
 
-If we want to retrieve a subset of the messages in our table, we simply run a modified version of our query. For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL that retrieves the expected subset of results:
+If we want to retrieve a subset of the messages in our table,
+we simply run a modified version of our query.
+For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL that retrieves the expected subset of results:
 
 ~~~ scala
 scala> messages.filter(_.sender === "HAL").result.statements
@@ -369,7 +376,6 @@ scala> exec(halSays.result)
 
 The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of `run`:
 
-<!-- ↩ -->
 
 ~~~ scala
 halSays.map(_.id).result.statements
@@ -381,7 +387,8 @@ exec(halSays.map(_.id).result)
 
 ### For Comprehensions
 
-Queries implement methods called `map`, `flatMap`, `filter`, and `withFilter`, making them compatible with Scala for comprehensions. You will often see Slick queries written in this style:
+Queries implement methods called `map`, `flatMap`, `filter`, and `withFilter`, making them compatible with Scala for comprehensions.
+You will often see Slick queries written in this style:
 
 ~~~ scala
 val halSays2 = for {
@@ -389,7 +396,9 @@ val halSays2 = for {
 } yield message
 ~~~
 
-Remember that for comprehensions are simply aliases for chains of method calls. All we are doing here is building a query with a `WHERE` clause on it. We don't touch the database until we execute the query:
+Remember that for comprehensions are simply aliases for chains of method calls.
+All we are doing here is building a query with a `WHERE` clause on it.
+We don't touch the database until we execute the query:
 
 ~~~ scala
 exec(halSays2.result)
@@ -402,16 +411,19 @@ In this chapter we've seen a broad overview of the main aspects of Slick, includ
 
 We typically model data from the database as case classes and tuples that map to rows from a table. We define the mappings between these types and the database using `Table` classes such as `MessageTable`.
 
-We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`. These transformations look like transformations on collections, but the operate on the parameters of the query rather than the results returned.
+We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`.
+These transformations look like transformations on collections, but the operate on the parameters of the query rather than the results returned.
 
-<!--I have buggered this sentence up.-->
-We execute a query by calling an *invoker* method such as `result` and passing the `Action` returned to the database object to be run.
+We run a query by creating an `Action` object via the `result` method and passing it to the `run` method of the database object to be executred.
 
 The query language is the one of the richest and most significant parts of Slick. We will spend the entire next chapter discussing the various queries and transformations available.
 
 ## Exercise: Bring Your Own Data
 
-Let's get some experience with Slick by running queries against the example database. Start SBT using `sbt.sh` and type `console` to enter the interactive Scala console. We've configured SBT to run the example application before giving you control, so you should start off with the test database set up and ready to go:
+Let's get some experience with Slick by running queries against the example database.
+Start SBT using `sbt.sh` and type `console` to enter the interactive Scala console.
+We've configured SBT to run the example application before giving you control,
+so you should start off with the test database set up and ready to go:
 
 ~~~ bash
 bash$ ./sbt.sh
@@ -424,13 +436,17 @@ bash$ ./sbt.sh
 scala>
 ~~~
 
-Start by inserting an extra line of dialog into the database. This line hit the cutting room floor late in the development of the film 2001, but we're happy to reinstate it here:
+Start by inserting an extra line of dialog into the database.
+This line hit the cutting room floor late in the development of the film 2001,
+but we're happy to reinstate it here:
 
 ~~~ scala
 Message("Dave","What if I say 'Pretty please'?")
 ~~~
 
-You'll need to connect to the database using `db.withSession` and insert the row using the `+=` method on `messages`. Alternatively you could put the message in a `Seq` and use `++=`. We've included some common pitfalls in the solution in case you get stuck.
+You'll need to insert the row using the `+=` method on `messages`.
+Alternatively you could put the message in a `Seq` and use `++=`.
+We've included some common pitfalls in the solution in case you get stuck.
 
 <div class="solution">
 Here's the solution:
@@ -440,7 +456,8 @@ exec(messages += Message("Dave","What if I say 'Pretty please'?"))
 // res5: Int = 1
 ~~~
 
-The return value indicates that `1` row was inserted. Because we're using an auto-incrementing primary key, Slick ignores the `id` field for our `Message` and asks the database to allocate an `id` for the new row. It is possible to get the insert query to return the new `id` instead of the row count, as we shall see next chapter.
+The return value indicates that `1` row was inserted. Because we're using an auto-incrementing primary key, Slick ignores the `id` field for our `Message` and asks the database to allocate an `id` for the new row.
+It is possible to get the insert query to return the new `id` instead of the row count, as we shall see next chapter.
 
 Here are some things that might go wrong:
 
