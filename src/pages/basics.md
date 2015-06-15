@@ -137,6 +137,8 @@ Database management systems are not created equal. Different systems support dif
 import slick.driver.H2Driver.api._
 ~~~
 
+**TODO: Confirm this is accurate**
+
 Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 4](#Modelling) looks at working with different drivers.
 
 ### Defining our Schema
@@ -214,7 +216,7 @@ If you're a fan of terminology, know that what we have discussed so far is calle
 
 ### Connecting to the Database
 
-We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for opening connections and starting transactions:
+We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for managing connections and transactions:
 
 ~~~ scala
 def db = Database.forConfig("chapter01")
@@ -248,7 +250,7 @@ JDBC works with *connection strings*, which are URLs like the one above that tel
 </div>
 
 Slick manages database connections and transactions using auto-commit,
-to see how to manually manage starting, committing, and rolling back transactions (see [Chapter 3](#Modifying)).
+we'll see how to manually manage starting, committing, and rolling back transactions in [Chapter 3](#Modifying).
 We create programs and pass them to the `db` object to execute,
 Slick calls these programs `Actions` and they have the following signature `DBIOAction[R, S, E]`,
 `R` is the type of the result of the executed program,
@@ -264,7 +266,7 @@ try {
 } finally db.close()
 ~~~
 
-*TODO: This seems like a dumb place to say that Slick is all asynchronous and streamy*
+**TODO: This seems like a dumb place to say that Slick is all asynchronous and streamy**
 
 `db.run` returns a `Future[R]` as Slick performs all database communication asynchronously,
 this is incredibly useful when building applications that you don't want to block waiting for a database call,
@@ -279,16 +281,12 @@ All the `exec` method does is run the program supplied and waits for a maximum o
 In practice we wouldn't use a method like `exec` rather we'd describe what to do with the result contained with in the `Future`.
 
 
-
 `db.close()`
--  TODO: Say why we need this
--  TODO: Explain we aren't using it in the example code - we lose the connection to the database.
 
+** TODO: Say why we need this **
 
-     /*
-      * Free all resources allocated by Slick for this Database, blocking the current thread until
-      * everything has been shut down.
-      */
+** TODO: Explain we aren't using it in the example code - we lose the connection to the database. **
+
 
 ### Inserting Data
 
