@@ -244,7 +244,7 @@ You can find a complete list in [ExtensionMethods.scala][link-source-extmeth] in
 
 ### Equality and Inequality Methods
 
-The `===` and `=!=` methods operate on any type of `Column` and produce a `Column[Boolean]`.
+The `===` and `=!=` methods operate on any type of `Rep` and produce a `Rep[Boolean]`.
 Here are some examples:
 
 ~~~ scala
@@ -255,7 +255,7 @@ messages.filter(_.sender =!= "Dave").result.statements
 // res4: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where not (x2."sender" = 'Dave'))
 ~~~
 
-The `<`, `>`, `<=`, and `>=` methods also operate on any type of `Column` (not just numeric columns):
+The `<`, `>`, `<=`, and `>=` methods also operate on any type of `Rep` (not just numeric columns):
 
 ~~~ scala
 messages.filter(_.sender < "HAL").result.statements
@@ -303,7 +303,8 @@ messages.filter(_.content like "%Pretty%").result.statements
 
 ~~~
 
-Slick also provides methods such as `startsWith`, `length`, `toUpperCase`, `trim`, and so on. These are implemented differently in different DBMSs---the examples below are purely for illustration:
+Slick also provides methods such as `startsWith`, `length`, `toUpperCase`, `trim`, and so on.
+These are implemented differently in different DBMSs---the examples below are purely for illustration:
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
@@ -448,7 +449,8 @@ messages.filter(_.id === Some(123L)).result.statements
 
 ## Controlling Queries: Sort, Take, and Drop
 
-There are a trio of functions used to control the order and number of results returned from a query. This is great for pagination of a result set, but the methods listed in the table below can be used independently.
+There are a trio of functions used to control the order and number of results returned from a query.
+This is great for pagination of a result set, but the methods listed in the table below can be used independently.
 
 -------------------------------------------
 Scala Code             SQL Equivalent
@@ -502,9 +504,12 @@ select "sender", "content", "id" from "message" order by "sender" limit 5 offset
 
 ## Take Home Points
 
-Starting with a `TableQuery` we can construct a wide range of queries with `filter` and `map`.  As we compose these queries, the types of the `Query` follow along to give type-safety throughout our application.
+Starting with a `TableQuery` we can construct a wide range of queries with `filter` and `map`.
+As we compose these queries, the types of the `Query` follow along to give type-safety throughout our application.
 
-The expressions we use in queries are defined in extension methods, and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Rep`.  Comparisons to `Option` types are made easy for us as Slick will compare `Rep[T]` and `Rep[Option[T]]` automatically.
+The expressions we use in queries are defined in extension methods,
+and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Rep`.
+Comparisons to `Option` types are made easy for us as Slick will compare `Rep[T]` and `Rep[Option[T]]` automatically.
 
 Finally, we introduced some new terminology:
 
@@ -514,9 +519,11 @@ Finally, we introduced some new terminology:
 
 ## Exercises
 
-If you've not already done so, try out the above code.  In the [example project][link-example] the code is in _main.scala_ in the folder _chapter-02_.
+If you've not already done so, try out the above code.
+In the [example project][link-example] the code is in _main.scala_ in the folder _chapter-02_.
 
-Once you've done that, work through the exercises below.  An easy way to try things out is to use  _triggered execution_ with SBT:
+Once you've done that, work through the exercises below.
+An easy way to try things out is to use  _triggered execution_ with SBT:
 
 ~~~ bash
 $ cd example-02
@@ -524,11 +531,15 @@ $ ./sbt.sh
 > ~run
 ~~~
 
-That `~run` will monitor the project for changes, and when a change is seen, the _main.scala_ program will be compiled and run. This means you can edit _main.scala_ and then look in your terminal window to see the output.
+That `~run` will monitor the project for changes,
+and when a change is seen,
+the _main.scala_ program will be compiled and run.
+This means you can edit _main.scala_ and then look in your terminal window to see the output.
 
 ### Count the Messages
 
-How would you count the number of messages? Hint: in the Scala collections the method `length` gives you the size of the collection.
+How would you count the number of messages?
+Hint: in the Scala collections the method `length` gives you the size of the collection.
 
 <div class="solution">
 ~~~ scala
@@ -540,9 +551,12 @@ You could also use `size`, which is an alias for `length`.
 
 ### Selecting a Message
 
-Using a for comprehension, select the message with the id of 1.  What happens if you try to find a message with an id of 999?
+Using a for comprehension,
+select the message with the id of 1.
+What happens if you try to find a message with an id of 999?
 
-Hint: our IDs are `Long`s. Adding `L` after a number in Scala, such as `99L`, makes it a long.
+Hint: our IDs are `Long`s.
+Adding `L` after a number in Scala, such as `99L`, makes it a long.
 
 <div class="solution">
 ~~~ scala
@@ -558,7 +572,8 @@ Asking for `999`, when there is no row with that ID, will give back an empty col
 
 ### One Liners
 
-Re-write the query from the last exercise to not use a for comprehension.  Which style do you prefer? Why?
+Re-write the query from the last exercise to not use a for comprehension.
+Which style do you prefer? Why?
 
 <div class="solution">
 ~~~ scala
