@@ -28,7 +28,7 @@
 [link-slick-column-options]: http://slick.typesafe.com/doc/2.1.0/api/index.html#scala.slick.ast.ColumnOption
 [link-slick-hlist]:          http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList
 [link-slick]:                http://slick.typesafe.com/
-[link-source-extmeth]:       https://github.com/slick/slick/blob/2.1/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
+[link-source-extmeth]:       https://github.com/slick/slick/blob/3.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
 [link-source-dbPublisher]:   http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.backend.DatabasePublisher
 [link-twitter-jono]:         http://twitter.com/jonoabroad
 [link-twitter-noel]:         http://twitter.com/noelwelsh
