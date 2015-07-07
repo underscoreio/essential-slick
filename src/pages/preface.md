@@ -13,7 +13,7 @@ This material is aimed at a Scala developer who has:
 * an installed JDK 7, along with a programmer's text editor or IDE
   (Scala IDE for Eclipse or IntelliJ are both good choices).
 
-The material presented focuses on Slick version 2.1.0. Examples use [H2][link-h2-home] as the relational database.
+The material presented focuses on Slick version 3.0. Examples use [H2][link-h2-home] as the relational database.
 
 Many thanks to [Dave Gurnell][link-twitter-dave], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
 
