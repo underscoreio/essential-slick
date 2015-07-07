@@ -33,7 +33,8 @@ We can see the SQL of the select query by calling `result.statements`:
 
 ~~~ scala
 messages.result.statements
-// res12: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2)
+// res12: Iterable[String] = List(select x2."sender", x2."content", x2."id" ↩
+//                                from "message" x2)
 ~~~
 
 Our `TableQuery` is the equivalent of the SQL `SELECT * from message`.
@@ -42,7 +43,7 @@ Our `TableQuery` is the equivalent of the SQL `SELECT * from message`.
 **Query Extension Methods**
 
 Like many of the methods discussed below, the `result` method is actually an extension method applied to `Query` via an implicit conversion.
-You'll need to have everything from `H2Driver.simple` in scope for this to work:
+You'll need to have everything from `H2Driver.api` in scope for this to work:
 
 ~~~ scala
 import slick.driver.H2Driver.api._
@@ -67,7 +68,7 @@ The parameter to `filter` is a function from an instance of `MessageTable` to a 
 
 ~~~ scala
 messages.filter(_.sender === "HAL").result.statements
-// res13: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where x2."sender" = 'HAL')
+// res13: Iterable[String] = List(select x2."sender", x2."content", x2."id"  ↩ //                                from "message" x2 where x2."sender" = 'HAL')
 ~~~
 
 Slick uses the `Rep` type to represent expressions over columns as well as individual columns.
@@ -103,13 +104,13 @@ messages.filter { messageTable: MessageTable =>
 }
 ~~~
 
-This makes sense. `messageTable.sender` is one of the `columns` we defined in `MessageTable` above,
+This makes sense. `messageTable.sender` is one of the columns we defined in `MessageTable` above,
 and `messageTable.sender === "HAL"` creates a Scala value representing the SQL expression `message.sender = 'HAL'`.
 
 This is the process that allows Slick to type-check our queries.
-`Queries` have access to the type of the `Table` used to create them,
-which allows us to directly reference the `Columns` on the `Table` when we're using combinators like `map` and `filter`.
-Every `Column` knows its own data type, so Slick can ensure we only compare columns of compatible types.
+`Querie`s have access to the type of the `Table` used to create them,
+which allows us to directly reference the columns on the `Table` when we're using combinators like `map` and `filter`.
+Every column knows its own data type, so Slick can ensure we only compare columns of compatible types.
 If we try to compare `sender` to an `Int`, for example, we get a type error:
 
 ~~~ scala
@@ -137,7 +138,7 @@ messages.map(_.content)
 ~~~
 
 Because the unpacked type has changed to `String`,
-we now have a query that selects `Strings` when run.
+we now have a query that selects `String`s when run.
 If we run the query we see that only the `content` of each message is retrieved:
 
 ~~~ scala
@@ -183,7 +184,7 @@ after all other operations have been applied.
 
 It is worth noting that we can `map` to anything that Slick can pass to the database as part of a `SELECT` clause.
 This includes individual `Rep`s and `Table`s,
-as well as `Tuples` of the above.
+as well as `Tuple`s of the above.
 For example, we can use `map` to select the `id` and `content` columns of messages:
 
 ~~~ scala
@@ -203,7 +204,7 @@ messages.map(t => (t.id, t.content)).result.statements
 res11: Iterable[String] = List(select x2."id", x2."content" from "message" x2)
 ~~~
 
-We can also select column expressions as well as single `Columns`:
+We can also select column expressions as well as single columns:
 
 ~~~ scala
 messages.map(t => t.id * 1000L).result.statements
@@ -223,7 +224,8 @@ messages.map(t => t.id * 1000L).result.statements
 <!-- This needs more work than Joan Rivers has had -->
 Once we've built a query, we need to run it.
 There are two ways to do this, we have seen the first already, Materialized.
-Materalized queries are the *normal* way of running a query, execute the query return all the results.
+Materalized queries are the way we are used to running a query.
+Execute the query andreturn all the results.
 The other way to run queries is by streaming back the results.
 This, as you can imagine this is great for returning huge datasets without consuming large amounts of memory.
 To stream results we call `stream` on the database object, it returns a [`DatabasePublisher`][link-source-dbPublisher].
@@ -249,21 +251,27 @@ Here are some examples:
 
 ~~~ scala
 messages.filter{_.sender === "Dave"}.result.statements
-//res1: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where x2."sender" = 'Dave')
+//res1: Iterable[String] = List(select x2."sender", x2."content", x2."id"     ↩
+//                              from "message" x2 where x2."sender" = 'Dave')
 
 messages.filter(_.sender =!= "Dave").result.statements
-// res4: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where not (x2."sender" = 'Dave'))
+// res4: Iterable[String] = List(select x2."sender", x2."content", x2."id"    ↩
+//                               from "message" x2                            ↩
+//                               where not (x2."sender" = 'Dave'))
 ~~~
 
 The `<`, `>`, `<=`, and `>=` methods also operate on any type of `Rep` (not just numeric columns):
 
 ~~~ scala
 messages.filter(_.sender < "HAL").result.statements
-// res7: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where x2."sender" < 'HAL')
+// res7: Iterable[String] = List(select x2."sender", x2."content", x2."id"    ↩
+//                               from "message" x2 where x2."sender" < 'HAL')
 
 
 messages.filter(m => m.sender >= m.content).result.statements
-// res8: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where x2."sender" >= x2."content"
+// res8: Iterable[String] = List(select x2."sender", x2."content", x2."id"    ↩
+//                               from "message" x2                            ↩
+//                               where x2."sender" >= x2."content"
 ~~~
 
 -------------------------------------------------------------------------
@@ -292,7 +300,8 @@ Slick provides the `++` method for string concatenation (SQL's `||` operator):
 
 ~~~ scala
 messages.map(m => m.sender ++ "> " + m.content).result.statements
-// res9: Iterable[String] = List(select (x2."sender"||'> ')||x2."content" from "message" x2)
+// res9: Iterable[String] = List(select (x2."sender"||'> ')||x2."content"     ↩
+//                               from "message" x2)
 ~~~
 
 and the `like` method for SQL's classic string pattern matching:
@@ -336,7 +345,7 @@ Scala Code              Operand Column Types               Result Type        SQ
 
 ### Numeric Methods {#NumericColumnMethods}
 
-Slick provides a comprehensive set of methods that operate on `Rep`s with numeric values: `Ints`, `Longs`, `Doubles`, `Floats`, `Shorts`, `Bytes`, and `BigDecimals`.
+Slick provides a comprehensive set of methods that operate on `Rep`s with numeric values: `Int`s, `Long`s, `Double`s, `Float`s, `Short`s, `Byte`s, and `BigDecimal`s.
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
@@ -400,7 +409,7 @@ Slick is pretty smart about type equivalence.
 
 What do we mean by type equivalence?
 Slick type-checks our column expressions to make sure the operands are of compatible types.
-For example, we can compare `Strings` for equality but we can't compare a `String` and an `Int`:
+For example, we can compare `String`s for equality but we can't compare a `String` and an `Int`:
 
 
 
@@ -432,7 +441,8 @@ As long as the operands are some combination of the types `A` and `Option[A]` (f
 ~~~ scala
 
 messages.filter(_.id === Option(123L)).result.statements
-// res16: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 where x2."id" = 123)
+// res16: Iterable[String] = List(select x2."sender", x2."content", x2."id"   ↩
+//                                from "message" x2 where x2."id" = 123)
 ~~~
 
 However, any `Optional` arguments must be strictly of type `Option`, not `Some` or `None`:
@@ -480,7 +490,9 @@ To sort by multiple columns, return a tuple of columns:
 
 ~~~ scala
 messages.sortBy(m => (m.sender, m.content)).result.statements
-// res18: Iterable[String] = List(select x2."sender", x2."content", x2."id" from "message" x2 order by x2."sender", x2."content")
+// res18: Iterable[String] = List(select x2."sender", x2."content", x2."id"   ↩
+//                                from "message" x2                           ↩
+//                                order by x2."sender", x2."content")
 ~~~
 
 Now we know how to sort results, perhaps we want to show only the first five rows:
@@ -498,7 +510,10 @@ messages.sortBy(_.sender).drop(5).take(5)
 This is equivalent to:
 
 ~~~ sql
-select "sender", "content", "id" from "message" order by "sender" limit 5 offset 5
+select "sender", "content", "id"
+from "message"
+order by "sender"
+limit 5 offset 5
 ~~~~
 
 
@@ -634,6 +649,7 @@ select x2."content" from "message" x2
 ~~~
 </div>
 
+<!--
 ### First Result
 
 The methods `first` and `firstOption` are useful alternatives to `run`.
@@ -650,6 +666,7 @@ You should get "Affirmative, Dave. I read you."
 
 For Alice, `first` will throw a run-time exception. Use `firstOption` instead.
 </div>
+-->
 
 ### The Start of Something
 
