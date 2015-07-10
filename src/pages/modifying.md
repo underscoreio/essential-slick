@@ -6,7 +6,7 @@ SQL veterans will know that update and delete queries, in particular, share many
 
 ## Inserting Data
 
-As we saw in [Chapter 1](#Basics), adding new data a table looks like a destructive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
+As we saw in [Chapter 1](#Basics), adding new data to a table looks like a destructive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
 
 ### Inserting Single Rows
 
@@ -62,7 +62,7 @@ messages.filter(_.id === 1000L).run
 
 ### Inserting Specific Columns
 
-If we our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by `mapping` over a query before calling `insert`:
+If our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by mapping over a query before calling `insert`:
 
 ~~~ scala
 messages.map(_.sender).insertStatement
