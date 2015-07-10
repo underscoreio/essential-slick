@@ -1,32 +1,26 @@
 # Plain SQL {#PlainSQL}
 
-Slick supports plain SQL queries as well as the lifted embedded style we've seen up to this point. Plain queries don't compose as nicely as lifted, or offer the same type safely.  But they enable you to execute essentially arbitrary SQL when you need to. If you're unhappy with a particular query produced by Slick, dropping into Plain SQL is the way to go.
+Slick supports plain SQL queries in addition to the lifted embedded style we've seen up to this point. Plain queries don't compose as nicely as lifted, or offer quite the same type safely.  But they enable you to execute essentially arbitrary SQL when you need to. If you're unhappy with a particular query produced by Slick, dropping into Plain SQL is the way to go.
 
 In this section we will see that:
 
-- the [interpolators][link-scala-interpolation] `sql` and `sqlu` (for updates) are used to create plain SQL queries;
+- the [interpolators][link-scala-interpolation] `sql` (for select) and `sqlu` (for updates) are used to create plain SQL queries;
 - values can be safely substituted into queries using a `${expresson}` syntax;
-- you can build up a query from `String`s and values using `+` and `+?`; and
-- custom types can be used in plain SQL, as long as there is a converter in scope.
-
+- custom types can be used in Plain SQL, as long as there is a converter in scope; and
+- the `tsql` interpolator can be used to check the syntax and types of a query via a database at compile time.
 
 ## Selects
 
 Let's start with a simple example of returning a list of room IDs.
 
 ~~~ scala
-import scala.slick.jdbc.StaticQuery.interpolation
-
 val query = sql""" select "id" from "room" """.as[Long]
-val result = query.list
 
-println(results)
-// List(1, 2, 3)
+Await.result(db.run(query), 2 seconds)
+// Vector(1, 2, 3)
 ~~~
 
-We need to import `interpolation` to enable the use of the `sql` interpolator.
-
-Once we've done that, running a plain SQL looks similar to other queries we've seen in this book: just call `list` (or `first` etc). You need an implicit `session` in scope, as you do for all queries.
+Running a plain SQL query looks similar to other queries we've seen in this book: just call hand it to `db.run` as usual.
 
 The big difference is with the construction of the query. We supply both the SQL we want to run and specify the expected result type using `as[T]`.
 
@@ -34,9 +28,9 @@ The `as[T]` method is pretty flexible.  Let's get back the room ID and room titl
 
 ~~~ scala
 val roomInfoQ = sql""" select "id", "title" from "room" """.as[(Long,String)]
-val roomInfo = roomInfoQ.list
-println(roomInfo)
-// List((1,Air Lock), (2,Pod), (3,Brain Room))
+
+// When executed will produce:
+// Vector((1,Air Lock), (2,Pod), (3,Brain Room))
 ~~~
 
 Notice we specified a tuple of `(Long, String)` as the result type.  This matches the columns in our SQL `SELECT` statement.
@@ -47,8 +41,14 @@ One of the most useful features of the SQL interpolators is being able to refere
 
 ~~~ scala
 val t = "Pod"
-sql""" select "id", "title" from "room" where "title" = $t """. ↩
-                                                as[(Long,String)].firstOption
+val prodRoomQuery = sql"""
+  select
+    "id", "title"
+  from
+    "room"
+  where
+    "title" = $t """.as[(Long,String)].headOption
+
 // Some((2,Pod))
 ~~~
 
@@ -61,58 +61,32 @@ The SQL interpolators are essential for situations where you need full control o
 
 ~~~ scala
 val t = 42
-sql""" select "id" from "room" where "title" = $t """.as[Long].firstOption
-// JdbcSQLException: Data conversion error converting "Air Lock"; ↩
-//                                                   SQL statement:
-// [error]  select "id" from "room" where "title" = ?
+sql""" select "id" from "room" where "title" = $t """.as[Long].headOption
+// JdbcSQLException: Data conversion error converting "Air Lock"
 ~~~
 
-That example compiles without error, but fails at runtime as the type of the `title` column is a `String` and we've provided an `Integer`.  The equivalent query using the lifted embedded style would have caught the problem at compile time.
+That example compiles without error, but fails at runtime as the type of the `title` column is a `String` and we've provided an `Int`.  The equivalent query using the lifted embedded style would have caught the problem at compile time.
 
-Another place you can unstuck is with the `#$` style of substitution.  This is used when you _don't_ want SQL escaping to apply. For example, perhaps the name of the table you want to use may change:
+The `tsql` interpolator, described later in this chapter, helps here by connecting to a database at compile time to check the query and types.
+
+Another place you can become unstuck is with the `#$` style of substitution. This is called _splicing_, and is used when you _don't_ want SQL escaping to apply. For example, perhaps the name of the table you want to use may change:
 
 ~~~ scala
 val table = "message"
 val query = sql""" select "id" from "#$table" """.as[Long]
 ~~~
 
-In this situation we do not want the value of `table` to be treated as a String. That would give you the invalid query: `select "id" from "'message'"`.  However, using this construct means you can produce dangerous SQL. The golden rule is to never use `#$` with input supplied by a user.
+In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"`.  
+
+However, this means you can produce dangerous SQL with splicing. The golden rule is to never use `#$` with input supplied by a user.
 </div>
-
-
-### Constructing Queries
-
-In addition to using `$` to reference Scala values in queries, you can build up queries incrementally.
-
-The queries produced by both and `sql` and `sqlu` (which we see later) are `StaticQuery`s. As the word "static" suggests,
-these kinds of queries do not compose, other than via a form of string concatenation.
-
-The operations available to you are:
-
-* `+` to append a string to the query, giving a new query; and
-* `+?` to add a value, and correctly escape the value for use in SQL.
-
-As an example, we can find all IDs for messages...
-
-~~~ scala
-val query = sql"""SELECT "id" from "message"""".as[Long]
-~~~
-
-...and then create a new query based on this to filter by message content:
-
-``` scala
-val pattern   = "%Dave%"
-val sensitive = query + """ WHERE "content" NOT LIKE """ +? pattern
-```
-
-The result of this is a new `StaticQuery` which we can execute.
 
 
 ### Select with Custom Types
 
 Out of the box Slick knows how to convert many data types to and from SQL data types. The examples we've seen so far include turning a Scala `String` into a SQL string, and a SQL BIGINT to a Scala `Long`.
 
-These conversions are available to `as[T]` and `+?`.  If we want to work with a type that Slick doesn't know about, we need to provide a conversion.  That's the role of the `GetResult` type class.
+These conversions are available to `as[T]`.  If we want to work with a type that Slick doesn't know about, we need to provide a conversion.  That's the role of the `GetResult` type class.
 
 As an example, we can fetch the timestamp on our messages using JodaTime's `DateTime`:
 
@@ -123,19 +97,21 @@ sql""" select "ts" from "message" """.as[DateTime]
 For this to compile we need to provide an instance of `GetResult[DateTime]`:
 
 ~~~ scala
+import slick.jdbc.GetResult
+
 implicit val GetDateTime =
   GetResult[DateTime](r => new DateTime(r.nextTimestamp(), DateTimeZone.UTC))
 ~~~
 
 `GetResult` is wrapping up a function from `r` (a `PositionedResult`) to `DateTime`.  The `PositionedResult` provides access to the database value (via `nextTimestamp`, `nextLong`, `nextBigDecimal` and so on).  We use the value from `nextTimestamp` to feed into the constructor for `DateTime`.
 
-The name of this value doesn't matter.  What's important is the type, `GetResult[DateTime]`. This allows the compiler to lookup our conversion function when we mention a `DateTime`.
+The name of this value doesn't matter.  What's important is the type, `GetResult[DateTime]`, and that it is marked as implicit. This allows the compiler to lookup our conversion function when we mention a `DateTime`.
 
 If we try to construct a query without a `GetResult[DateTime]` instance in scope, the compiler will complain:
 
 ~~~
 could not find implicit value for parameter rconv:
-  scala.slick.jdbc.GetResult[DateTime]
+  slick.jdbc.GetResult[DateTime]
 ~~~
 
 ### Case Classes
@@ -201,11 +177,11 @@ This works because we've provided implicits for the components of the case class
 Now we can select into `Message` values:
 
 ~~~ scala
-val result: List[Message] =
-  sql""" select * from "message" """.as[Message].list
+val query: DBIO[Seq[Message]] =
+  sql""" select * from "message" """.as[Message]
 ~~~
 
-In all likelihood you'll prefer `messages.list` over Plain SQL in this specific example. But if you do find yourself using Plain SQL, for performance reasons perhaps, it's useful to know how to convert database values up into meaningful domain types.
+In all likelihood you'll prefer the lifted embedded style over Plain SQL in this specific example. But if you do find yourself using Plain SQL, for performance reasons perhaps, it's useful to know how to convert database values up into meaningful domain types.
 
 
 <div class="callout callout-warning">
@@ -231,17 +207,13 @@ UPDATE "message" SET "content" = CONCAT("content", '!')
 Plain SQL updates will allow us to do this. The interpolator is `sqlu`:
 
 ~~~ scala
-import scala.slick.jdbc.StaticQuery.interpolation
-
 val query =
   sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')"""
-
-val numRowsModified = query.first
 ~~~
 
-The `query` we have constructed, just like other queries, is not run until we evaluate it in the context of a session.
+The `query` we have constructed, just like other queries, is not run until we evaluate it via `db.run`.  But when it is run, it will append the exclamation mark to each row value, which is what we couldn't do as efficiently with the lifted embedded style.
 
-We also have access to `$` for binding to variables, just as we did for `sql`:
+Just like the `sql` interpolator, we also have access to `$` for binding to variables:
 
 ~~~ scala
 val char = "!"
@@ -250,26 +222,6 @@ val query =
 ~~~
 
 This gives us two benefits: the compiler will point out typos in variables names, but also the input is sanitized against SQL injection attacks.
-
-
-### Composing Updates
-
-All the techniques described for selects applies for composing plain SQL updates.
-
-As an example, we can start with an unconditional update...
-
-~~~ scala
-val query = sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
-~~~
-
-...and then create an alternative query using the `+` method defined on `StaticQuery`:
-
-~~~ scala
-val pattern = "%!"
-val sensitive =  query + """ WHERE "content" NOT LIKE """ +? pattern
-~~~
-
-The resulting query would append an `!` only to rows that don't already end with that character.
 
 
 ### Updating with Custom Types
@@ -281,6 +233,8 @@ What happens if you want to set a parameter of a type not automatically handled 
 For example, JodaTime's `DateTime` is not known to Slick by default. We can teach Slick how to set `DataTime` parameters like this:
 
 ``` scala
+import slick.jdbc.SetParameter
+
 implicit val SetDateTime = SetParameter[DateTime](
   (dt, pp) => pp.setTimestamp(new Timestamp(dt.getMillis))
  )
@@ -296,11 +250,11 @@ There's further symmetry with `GetResuts` in that we could have used `>>` in our
 (dt, pp) => pp >> new Timestamp(dt.getMillis)
 ~~~
 
-
 With this in place we can construct plain SQL updates using `DateTime` instances:
 
 ``` scala
-sqlu"""UPDATE message SET "ts" = """ +? DateTime.now
+val now =
+  sqlu"""UPDATE "message" SET "ts" = ${DateTime.now}"""
 ```
 
 Without the `SetParameter[DateTime]` instance the compiler would tell you:
@@ -309,36 +263,144 @@ Without the `SetParameter[DateTime]` instance the compiler would tell you:
 could not find implicit SetParameter[DateTime]
 ```
 
-<div class="callout callout-warning">
-**Compile Warnings**
 
-The code we've written in this chapter produces the following warning:
+
+## Typed Checked Plain SQL
+
+We've mentioned the risks of Plain SQL, which can be summarized as not discovering a problem with your query until runtime.  The `tsql` interpolator removes some of this risk, but at the cost of requiring a connection to a database at compile time.
+
+
+### Compile Time Database Connections
+
+To get started with `tsql` we provide a database configuration information on a class:
+
+```scala
+import slick.backend.StaticDatabaseConfig
+
+@StaticDatabaseConfig("file:src/main/resources/application.conf#tsql")
+object PlainExample extends App {
+  ...
+}
+```
+
+The `@StaticDatabaseConfig` syntax is called an _annotation_. This particular `StaticDatabaseConfig` annotation is telling Slick to use the connection called "tsql" in our configuration file.  That entry will look like this:
 
 ```
-Adaptation of argument list by inserting () has been deprecated:
-  this is unlikely to be what you want.
+tsql = {
+  driver = "slick.driver.H2Driver$"
+  db {
+    connectionPool = disabled
+    url = "jdbc:h2:mem:chapter06;INIT=runscript from 'src/main/resources/integration-schema.sql'"
+    driver = "org.h2.Driver"
+    keepAliveConnection = false
+  }
+}
 ```
 
-This is a limitation of the Slick 2.1 implementation, and is being resoled for Slick 3.0.
-For now, you'll have to live with the warning.
-</div>
+Note the `$` in the driver class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of Programming in Scala][link-pins-interop].
 
+You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different formant, and combines the Slick driver ("slicker.driver.H2Driver$") and the JDBC driver ("org.h2.Drvier") in one entry.
+
+A consequence of supplying a `@StaticDatabaseConfig` is that you can define one databases configuration for your application and a different one for the compiler to use. That is, perhaps you are running an application, or test suite, against an in-memory database, but validating the queries at compile time against a full-populated production-like integration database.
+
+In the example above, and the accompanying example code, we use an in-memory database to make Slick easy to get started with.  However, an in-memory database is empty by default, and that would be no use for checking queries against. To work around that we provide an `INIT` script to populate the in-memory database.
+
+
+### Type Checked Plain SQL
+
+With the `@StaticDatabaseConfig` in place we can use `tsql`:
+
+```scala
+val program: DBIO[Seq[String]] =
+  tsql"""select "content" from "message""""
+```  
+
+You can run that query as you would `sql` or `sqlu` query. You can also use custom types via `SetParameter` type class. However, `GetResult` type classes are not supported for `tsql`.
+
+To make this interesting, let's get the query wrong and see what happens:
+
+```scala
+val program: DBIO[Seq[String]] =
+  tsql"""select "content", "id" from "message""""
+```
+
+Do you see what's wrong? If not, don't worry because the compiler will find the problem:
+
+```
+type mismatch;
+[error]  found   : SqlStreamingAction[Vector[(String, Int)],(String, Int),Effect]
+[error]  required: DBIO[Seq[String]]
+[error]     (which expands to)  DBIOAction[Seq[String],NoStream,Effect.All]
+```
+
+The compiler wants a `String` for each row, because that's what we've declared the result to be. However it is found, via the database, that the query will return `(String,Int)` rows.
+
+If we had omitted the type declaration, the program would have the inferred type of DBIO[Seq[(String,Int)]]. So if you want to catch these kinds of mismatches, it's good practice to declare the type you expect when using `tsql`.
+
+Let's see other kinds of errors the compiler will find.
+
+How about if the SQL is just wrong:
+
+~~~scala
+val program: DBIO[Seq[String]] =
+  tsql"""select "content" from "message" where"""
+~~~
+
+This is incomplete SQL, and the compiler tells us:
+
+~~~
+exception during macro expansion: ERROR: syntax error at end of input
+[error]   Position: 38
+[error]     tsql"""select "content" from "message" WHERE"""
+[error]     ^
+~~~
+
+And if we get a column name wrong...
+
+~~~scala
+val program: DBIO[Seq[String]] =
+  tsql"""select "text" from "message" where"""
+~~~
+
+...that's also a compile error too:
+
+~~~
+Exception during macro expansion: ERROR: column "text" does not exist
+[error]   Position: 8
+[error]     tsql"""select "text" from "message""""
+[error]     ^
+~~~
+
+Of course, in addition to selecting rows, you can insert:
+
+```scala
+val greeting = "Hello"
+val program: DBIO[Seq[Int]] =
+  tsql"""insert into "message" ("content") values ($greeting)"""
+```
+
+Note that at run time, when we execute the query, a new row will be inserted. At compile time, Slick uses a facility in JDBC to compile the query and retrieve the meta data without having to run the query. In other words, at compile time the database is not mutated.
 
 
 ## Take Home Points
 
-Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  Two string interpolators for SQL are provided: `sql` and `sqlu`.
+Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  
 
-Values can be safely substituted into Plain SQL queries using `${expression}`.
+Two main string interpolators for SQL are provided: `sql` and `sqlu`:
 
-Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
+- Values can be safely substituted into Plain SQL queries using `${expression}`.
 
-The tools for composing these kinds of queries is limited. Use `+`, `+?`, and `$#`, but do so with care. End-user supplied information should always be escaped before being used in a query.
+- Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
+
+- Raw values can be spliced into a query with `$#`, but do so with care. End-user supplied information should always be escaped before being used in a query.
+
+The `tsql` interpolator will check Plain SQL queries against a database at compile time.  The database connection is used to validate the query syntax, and also discover the types of the columns being selected. To make best use of this, always declare the type of the query you expect from `tsql`.
 
 
 ## Exercises
 
-The examples for this section are in the _chatper-06_ folder, in the source files _selects.scala_ and _updates.scala_.
+The examples for this section are in the _chatper-06_ folder, in the source files _selects.scala_, _updates.scala_, and `tsql.scala`.
+
 
 ### Robert Tables
 
@@ -349,7 +411,7 @@ def lookup(email: String) =
   sql"""select id from "user" where "user"."email" = '#${email}'"""
 
 // Example use:
-lookup("dave@example.org").as[Long].firstOption
+lookup("dave@example.org").as[Long].headOption
 ~~~
 
 What the problem with this code?
@@ -361,7 +423,7 @@ the title of the exercise has probably tipped you off:  `#$` does not escape inp
 This means a user could use a carefully crafted email address to do evil:
 
 ~~~ scala
-lookup("""';DROP TABLE "user";--- """).as[Long].list
+lookup("""';DROP TABLE "user";--- """).as[Long]
 ~~~
 
 This "email address" turns into two queries:
@@ -383,48 +445,4 @@ org.h2.jdbc.JdbcSQLException: Table "user" not found
 ~~~
 
 Yes, the table was dropped by the query.
-</div>
-
-
-### String Interpolation Mistake
-
-When we constructed our `sensitive` query, we used `+?` to include a `String` in our query.
-
-It looks as if we could have used regular string interpolation instead:
-
-``` scala
-val sensitive = query + s""" WHERE "content" NOT LIKE $pattern"""
-```
-
-Why didn't we do that?
-
-<div class="solution">
-The standard Scala string interpolator doesn't have any knowledge of SQL.  It doesn't know that `Strings` need to be quoted in single quotes, for example.
-
-In contrast, Slick's `sql` and `sqlu` interpolators do understand SQL and do the correct embedding of values.  When working with regular `String`s, as we were, you must use `+?` to ensure values are correctly encoded for SQL.
-</div>
-
-
-### Unsafe Composition
-
-Here's a utility method that takes any string, and return a query to append the string to all messages.
-
-~~~ scala
-def append(s: String) =
-  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $s)"""
-~~~
-
-Using, but not modifying, the method, restrict the update to messages from "HAL".
-
-Would it be possible to construct invalid SQL?
-
-<div class="solution">
-~~~ scala
-def append(s: String) =
-  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $s)"""
-
-val halOnly = append("!") + """ WHERE "sender" = 'HAL' """
-~~~
-
-It is very easy to get this query wrong and only find out at run-time. Notice, for example, we had to include a space before "WHERE" and use the correct single quoting around "HAL".
 </div>
