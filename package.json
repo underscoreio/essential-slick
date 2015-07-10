@@ -3,7 +3,7 @@
   "description": "The essential guide to Slick",
   "version": "0.1.0",
   "devDependencies": {
-    "underscore-ebook-template": "git+https://github.com/underscoreio/underscore-ebook-template.git#0.0.17"
+    "underscore-ebook-template": "git+https://github.com/underscoreio/underscore-ebook-template.git#0.0.18"
   },
   "scripts": {
     "test": "echo \"Error: no test specificed\" && exit 1"
