@@ -41,7 +41,7 @@ One of the most useful features of the SQL interpolators is being able to refere
 
 ~~~ scala
 val t = "Pod"
-val prodRoomQuery = sql"""
+val podRoomQuery = sql"""
   select
     "id", "title"
   from
