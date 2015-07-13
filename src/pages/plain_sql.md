@@ -399,7 +399,7 @@ The `tsql` interpolator will check Plain SQL queries against a database at compi
 
 ## Exercises
 
-The examples for this section are in the _chatper-06_ folder, in the source files _selects.scala_, _updates.scala_, and `tsql.scala`.
+The examples for this section are in the _chatper-06_ folder, in the source files `selects.scala`, `updates.scala`, and `tsql.scala`.
 
 
 ### Robert Tables
