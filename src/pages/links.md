@@ -21,6 +21,7 @@
 [link-ref-orm]:              http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
 [link-sbt]:                  http://scala-sbt.org
 [link-sbt-tutorial]:         http://www.scala-sbt.org/0.13/tutorial/index.html
+[link-pins-interop]:         https://www.artima.com/pins1ed/combining-scala-and-java.html#i-855208314-1
 [link-scala-interpolation]:  http://docs.scala-lang.org/overviews/core/string-interpolation.html
 [link-scala-option]:         http://www.scala-lang.org/api/current/#scala.Option
 [link-scala-value-classes]:  http://docs.scala-lang.org/overviews/core/value-classes.html
