@@ -63,17 +63,19 @@ bash$ ./sbt.sh
 # More SBT log messages...
 
 > run
-[info] Running Example
+Creating database table
+
+Inserting test data
 
 Selecting all messages:
-Message(Dave,"Hello, HAL. Do you read me, HAL?",1)
-Message(HAL,"Affirmative, Dave. I read you.",2)
-Message(Dave,"Open the pod bay doors, HAL.",3)
-Message(HAL,"I'm sorry, Dave. I'm afraid I can't do that.",4)
+Message("Dave","Hello, HAL. Do you read me, HAL?",1)
+Message("HAL","Affirmative, Dave. I read you.",2)
+Message("Dave","Open the pod bay doors", HAL.,3)
+Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
 
 Selecting only messages from HAL:
-Message(HAL,"Affirmative, Dave. I read you.",2)
-Message(HAL,"I'm sorry, Dave. I'm afraid I can't do that.",4)
+Message("HAL","Affirmative, Dave. I read you.",2)
+Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
 ~~~
 
 If you get output similar to the above, congratulations! You're all set up and ready to run with the examples and exercises throughout the rest of this book. If you encounter any errors, let us know on our [Gitter channel][link-underscore-gitter] and we'll do what we can to help out.
