@@ -63,19 +63,17 @@ bash$ ./sbt.sh
 # More SBT log messages...
 
 > run
-Creating database table
-
-Inserting test data
+[info] Running Example
 
 Selecting all messages:
-Message("Dave","Hello, HAL. Do you read me, HAL?",1)
-Message("HAL","Affirmative, Dave. I read you.",2)
-Message("Dave","Open the pod bay doors, HAL.",3)
-Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
+Message(Dave,"Hello, HAL. Do you read me, HAL?",1)
+Message(HAL,"Affirmative, Dave. I read you.",2)
+Message(Dave,"Open the pod bay doors, HAL.",3)
+Message(HAL,"I'm sorry, Dave. I'm afraid I can't do that.",4)
 
 Selecting only messages from HAL:
-Message("HAL","Affirmative, Dave. I read you.",2)
-Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
+Message(HAL,"Affirmative, Dave. I read you.",2)
+Message(HAL,"I'm sorry, Dave. I'm afraid I can't do that.",4)
 ~~~
 
 If you get output similar to the above, congratulations! You're all set up and ready to run with the examples and exercises throughout the rest of this book. If you encounter any errors, let us know on our [Gitter channel][link-underscore-gitter] and we'll do what we can to help out.
@@ -137,8 +135,6 @@ Database management systems are not created equal. Different systems support dif
 import slick.driver.H2Driver.api._
 ~~~
 
-**TODO: Confirm this is accurate**
-
 Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 4](#Modelling) looks at working with different drivers.
 
 ### Defining our Schema
@@ -182,14 +178,14 @@ final class MessageTable(tag: Tag)
 
 The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in [Chapter 4](#Modelling). For now, all you need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
 
-The `tag` is an implementation detail that allows Slick to manage multiple uses of the table in a single query. Think of it like a table alias in SQL. We don't need to provide tags in our user code---slick takes case of them automatically.
+The `tag` is an implementation detail that allows Slick to manage multiple uses of the table in a single query. Think of it like a table alias in SQL. We don't need to provide tags in our user code---Slick takes case of them automatically.
 
 ### Example Queries
 
 Slick allows us to define and compose queries in advance of running them against the database. We start by defining a `TableQuery` object that represents a simple `SELECT *` style query on our message table:
 
 ~~~ scala
-lazy val messages = TableQuery[MessageTable]
+val messages = TableQuery[MessageTable]
 ~~~
 
 Note that we're not *running* this query at the moment---we're simply defining it as a means to build other queries. For example, we can create a `SELECT * WHERE` style query using a combinator called `filter`:
@@ -222,10 +218,8 @@ We've written all of the code so far without connecting to the database. Now it'
 def db = Database.forConfig("chapter01")
 ~~~
 
-The `Database.forConfig` method is part of Slick,
-the parameter determines which configuration to use from the `application.conf` file,which can be found in `src/main/resources`.
-Slick uses the [Typesafe config](link-config) library to manage database configuration,
-this is also used by Akka and the Play framework.
+The parameter to `Database.forConfig` determines which configuration to use from the `application.conf` file.
+This file is found in `src/main/resources`. It looks like this:
 
 ~~~ conf
 chapter01 = {
@@ -236,7 +230,14 @@ chapter01 = {
 }
 ~~~
 
-The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"` and configuring H2 to keep the data around indefinitely when no connections are open. H2-specific JDBC URLs are discussed in detail in the [H2 documentation][link-h2-jdbc-url].
+This format comes from the [Typesafe Config](link-config) library, which is also used by Akka and the Play framework.
+
+The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"`.  
+
+By default the H2 in-memory database is deleted when the last connection is closed. As we will be running multiple connections in our examples, we enable `keepAliveConnection` to keep the data around until our program completes.
+
+Slick manages database connections and transactions using auto-commit.
+We'll see how to manually manage starting, committing, and rolling back transactions in [Chapter 3](#Modifying).
 
 <div class="callout callout-info">
 **JDBC**
@@ -249,95 +250,83 @@ The specification is mirrored by a library implemented for each database you wan
 JDBC works with *connection strings*, which are URLs like the one above that tell the driver where your database is and how to connect to it (e.g. by providing login credentials).
 </div>
 
-Slick manages database connections and transactions using auto-commit,
-we'll see how to manually manage starting, committing, and rolling back transactions in [Chapter 3](#Modifying).
-We create programs and pass them to the `db` object to execute,
-Slick calls these programs `Actions` and they have the following signature `DBIOAction[R, S, E]`,
-`R` is the type of the result of the executed program,
-`S` indicates whether the results are streamed `Streaming[T]` or not `NoStream`, and finally
-`E` is the effect type and will be inferred. [TODO: Say more about effects?]
+### Creating the Schema
 
+Now that we have a database configured as `db`, we can use it.
+
+Let's start with a `CREATE` statement for `MessageTable`, which we build using methods of our `TableQuery` object, `messages`. The Slick method `schema` gets the schema description. We can see what that would be via the `createStatements` method:
 
 ~~~ scala
-try {
-
-  db.run(/* Run queries, profit! */)
-
-} finally db.close()
+messages.schema.createStatements.mkString
+// res0: String =
+//  create table "message" (
+//   "sender" VARCHAR NOT NULL,
+//   "content" VARCHAR NOT NULL,
+//   "id" BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1) NOT NULL PRIMARY KEY
+// )
 ~~~
 
-**TODO: This seems like a dumb place to say that Slick is all asynchronous and streamy**
+But we've not sent this to the database yet. We've just printed the statement, to check it is what we think it should be.
 
-`db.run` returns a `Future[R]` as Slick performs all database communication asynchronously,
-this is incredibly useful when building applications that you don't want to block waiting for a database call,
-but quite annoying when you are trying to explain how to use Slick.
-For this reason we'll be using a method called `exec` to tidy away the detail of working with `Future`s so you can focus on Slick.
+In Slick, what you run against the database is an _action_. This is how we create an action for the `messages` schema:
 
 ~~~ scala
-  def exec[T](program: DBIO[T]): T = Await.result(db.run(program), 2 seconds)
+val action: DBIO[Unit] = messages.schema.create
 ~~~
 
-All the `exec` method does is run the program supplied and waits for a maximum of two seconds for the program to finish.
-In practice we wouldn't use a method like `exec` rather we'd describe what to do with the result contained with in the `Future`.
+The result of this `messages.schema.create` expression is an `DBUnit[Unit]`.
+
+<div class="callout callout-info">
+**DBIO and DBIOAction**
+
+In this chapter we will talk about actions as having the type `DBIO[T]`.
+
+This is a simplification. The more general type is `DBIOAction`, and specifically for this example, it is a `DBIOAction[Unit, NoStream, Effect.Schema]`. The details of all of this we will get to later in the book.
+
+But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
+</div>
 
 
-`db.close()`
+What's important to know is that anything you can run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally): a query, an update, you name it, they are all examples of a Database I/O Action.  
 
-**TODO: Say why we need this**
+Let's run this action:
 
-**TODO: Explain we aren't using it in the example code - we lose the connection to the database.**
+~~~ scala
+val future: Future[Unit] = db.run(action)
+~~~
 
+The result of `run` is a `Future[T]`.  As creating the schema is just a side-effect, it's a `Future[Unit]`, matching up with the `DBIO[Unit]` we started with.
+
+`Future`s are asynchronous. That's to say, it is place holder for some value that will eventually appear. We say the future _completes_ at some point. For us, this means when working with sample applications, or in the console, we will need to wait for a future to complete to the see the result:
+
+~~~ scala
+val result = Await.result(future, 2 seconds)
+~~~
+
+We will have more to say on `Future`s, what you can do with them, and how they compose in Chapter **TODO**.
 
 ### Inserting Data
 
-Let's start by issuing a `CREATE` statement for `MessageTable`, which we build using methods of our `TableQuery` object, `messages`:
+Once our table is set up, we need to insert some test data. That would also be an action:
 
 ~~~ scala
-exec(messages.schema.create)
+val insert = messages ++= freshTestData
 ~~~
 
-`schema` gets the schema description or *Data Definition Language*---the standard part of SQL used to create and modify the database schema for the table.
-The Scala code above issues the following SQL to H2:
-
-~~~ scala
-messages.schema.createStatements.toList
-// res0: List[String] = List("""
-//   create table "message" (
-//     "sender" VARCHAR NOT NULL,
-//     "content" VARCHAR NOT NULL,
-//     "id" BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1)
-//          NOT NULL PRIMARY KEY
-//   )
-// """)
-~~~
-
-Once our table is set up, we need to insert some test data:
-
-~~~ scala
-exec(messages ++= freshTestData)
-~~~
-
-The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query recall that `freshTestData` is just a regular Scala `Seq[Message]`). Our table is now populated with data.
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert via `db.run`, and when the future completes, our table will be populated with data.
 
 
 ### Selecting Data
 
-Now our database is populated, we can start running queries to select it.
-We do this by calling one of a number of "executor" methods on the `db` object.
-Before we can do this however we need an `Action` object,
-as this is what the executor methods expect. <!-- That is a crap reason -->
-The `result` method creates `Action` which will run the query.
-For example, we can execute the table query on `messages` by first getting the `Action` object which we can then execute with `db.run`.
-
-If we execute the action it returns a `Seq` of `Message`s:
+Now our database has a few rows in it, we can start running queries. We do this by taking a query, such as `messages` or `halSays`, and turning it into an action via the `result` method on a query:
 
 ~~~ scala
-exec(messages.result)
-// res1: Seq[Example.MessageTable#TableElementType] = Vector( ↩
-//   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
-//   Message(HAL,Affirmative, Dave. I read you.,2), ↩
-//   Message(Dave,Open the pod bay doors, HAL.,3), ↩
-//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+Await.result(db.run(messages.result), 2 seconds)
+// res1: Seq[Example.MessageTable#TableElementType] = Vector(
+//  Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//  Message(HAL,Affirmative, Dave. I read you.,2),
+//  Message(Dave,Open the pod bay doors, HAL.,3),
+//  Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
 We can see the SQL issued to H2 using the `statements` method on the query:
@@ -347,39 +336,62 @@ messages.result.statements
 // res2: String = select x2."sender", x2."content", x2."id" from "message" x2
 ~~~
 
-Notice that we don't need to call `exec` as we aren't communicating with the database.
+<div class="callout callout-info">
+**`Await.result` and `exec`**
+
+That `db.run` returns a `Future[R]`, and Slick performs all database communication asynchronously,
+is incredibly useful when building applications that you don't want to block waiting for a database call.
+However, it is  quite annoying when you are trying to explain how to use Slick.
+For this reason we'll be using a method called `exec` to tidy away the detail of working with `Future`s so you can focus on Slick.
+
+~~~ scala
+def exec[T](action: DBIO[T]): T =
+  Await.result(db.run(action), 2 seconds)
+~~~
+
+All the `exec` method does is run the action supplied and waits up to two seconds for the program to finish. For example, to run a query we could write:
+
+~~~ scala
+exec(messages.result)
+~~~
+
+Outside of the REPL, and outside of the simple applications we provide, you don't tend to wait on futures. In all likelihood the web framework you are using, or other technologies, will accept the future and handle it for you.
+</div>
 
 If we want to retrieve a subset of the messages in our table,
 we simply run a modified version of our query.
 For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL that retrieves the expected subset of results:
 
 ~~~ scala
-scala> messages.filter(_.sender === "HAL").result.statements
-// res3: String = select x2."sender", x2."content", x2."id" ↩
-//                from "message" x2 ↩
+messages.filter(_.sender === "HAL").result.statements
+// res3: String = select x2."sender", x2."content", x2."id"
+//                from "message" x2
 //                where x2."sender" = 'HAL'
+~~~
 
-scala> exec(messages.filter(_.sender === "HAL").result)
-// res4: Seq[Example.MessageTable#TableElementType] = Vector( ↩
-//   Message(HAL,Affirmative, Dave. I read you.,2), ↩
+To run this query, we need to hand it to `db.run` as an action:
+
+~~~ scala
+exec(messages.filter(_.sender === "HAL").result)
+// res4: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(HAL,Affirmative, Dave. I read you.,2),
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
 If you remember, we actually generated this query earlier and stored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
 
 ~~~ scala
-scala> exec(halSays.result)
-// res5: Seq[Example.MessageTable#TableElementType] = Vector( ↩
-//   Message(HAL,Affirmative, Dave. I read you.,2), ↩
+exec(halSays.result)
+// res5: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(HAL,Affirmative, Dave. I read you.,2),
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
 The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of `run`:
 
-
 ~~~ scala
 halSays.map(_.id).result.statements
-//res6:List[String] = List(select x2."id" from "message" x2 where x2."sender" = 'HAL')
+// res6:List[String] = List(select x2."id" from "message" x2 where x2."sender" = 'HAL')
 
 exec(halSays.map(_.id).result)
 // res7: Seq[Int] = Vector(2, 4)
@@ -405,6 +417,30 @@ exec(halSays2.result)
 // res8: Seq[Message] = ...
 ~~~
 
+### Actions Combine
+
+Like queries, actions can also be composed.
+
+We can combine the actions to create the schema, insert the data, and query results into one action.  We can do this before we have a database connection, and we run the action like any other:
+
+~~~ scala
+val actions =
+  messages.schema.create       andThen
+  (messages ++= freshTestData) andThen
+  messages.result
+~~~
+
+And if you want to get funky, `>>` is another name for `andThen`:
+
+~~~ scala
+val actions =
+  messages.schema.create       >>
+  (messages ++= freshTestData) >>
+  messages.result
+~~~
+
+In Chapter **TODO** we'll see that actions can also be composed with for comprehensions, just like queries.
+
 ## Take Home Points
 
 In this chapter we've seen a broad overview of the main aspects of Slick, including defining a schema, connecting to the database, and issuing queries to retrieve data.
@@ -414,7 +450,9 @@ We typically model data from the database as case classes and tuples that map to
 We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`.
 These transformations look like transformations on collections, but the operate on the parameters of the query rather than the results returned.
 
-We run a query by creating an `Action` object via the `result` method and passing it to the `run` method of the database object to be executred.
+We execute a query by creating an action object, via the `result` method of a query, and passing it to the `run` method of the database object.
+
+The result of an action is a `Future[T]`. When the future completes, the result is available.
 
 The query language is the one of the richest and most significant parts of Slick. We will spend the entire next chapter discussing the various queries and transformations available.
 
@@ -465,15 +503,21 @@ If you don't pass the action created by `+=` to `db` to be run, you'll get back 
 
 ~~~ scala
 messages += Message("Dave","What if I say 'Pretty please'?")
-res6: slick.profile.FixedSqlAction[Int,slick.dbio.NoStream,slick.dbio.Effect.Write] = slick.driver.JdbcActionComponent$InsertActionComposerImpl$$anon$8@7e0e6d1e
+res6: slick.profile.FixedSqlAction[Int,slick.dbio.NoStream,slick.dbio.Effect.Write] =
+ slick.driver.JdbcActionComponent$InsertActionComposerImpl$$anon$8@7e0e6d1e
 ~~~
 
+If you don't wait for the future to complete, you'll see just the future itself:
+
+~~~ scala
+db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
+res7: scala.concurrent.Future[Int] = scala.concurrent.impl.Promise$DefaultPromise@652a41e8
+~~~
 </div>
 
-Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to build the appropriate query using `messages.filter`, and create the `Action` to be run by using its `result` method, don't forget to run the query by using the `exec` helper method we provided.
+Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to build the appropriate query using `messages.filter`, and create the action to be run by using its `result` method. Don't forget to run the query by using the `exec` helper method we provided.
 
-
- Again, we've included some common pitfalls in the solution.
+Again, we've included some common pitfalls in the solution.
 
 <div class="solution">
 Here's the code:
@@ -481,9 +525,9 @@ Here's the code:
 ~~~ scala
 exec(messages.filter(_.sender === "Dave").result)
 
-// res0: Seq[Example.MessageTable#TableElementType] = Vector( ↩
-//   Message(Dave,Hello, HAL. Do you read me, HAL?,1), ↩
-//   Message(Dave,Open the pod bay doors, HAL.,3), ↩
+// res0: Seq[Example.MessageTable#TableElementType] = Vector(
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//   Message(Dave,Open the pod bay doors, HAL.,3),
 //   Message(Dave,What if I say 'Pretty please'?,5))
 ~~~
 
@@ -492,10 +536,10 @@ Here are some things that might go wrong:
 Note that the parameter to `filter` is built using a triple-equals operator, `===`, not a regular `==`. If you use `==` you'll get an interesting compile error:
 
 ~~~ scala
-
 exec(messages.filter(_.sender == "Dave").result)
 
-//<console>:18: error: inferred type arguments [Boolean] do not conform to method filter's type parameter bounds [T <: slick.lifted.Rep[_]]
+//<console>:18: error: inferred type arguments [Boolean] do not conform to method filter's
+//  type parameter bounds [T <: slick.lifted.Rep[_]]
 //              exec(messages.filter(_.sender == "Dave").result)
 //                            ^
 //<console>:18: error: type mismatch;
@@ -503,18 +547,17 @@ exec(messages.filter(_.sender == "Dave").result)
 // required: Example.MessageTable => T
 //              exec(messages.filter(_.sender == "Dave").result)
 //                                            ^
-//<console>:18: error: Type T cannot be a query condition (only Boolean, Rep[Boolean] and Rep[Option[Boolean]] are allowed
+//<console>:18: error: Type T cannot be a query condition
+//  (only Boolean, Rep[Boolean] and Rep[Option[Boolean]] are allowed
 //              exec(messages.filter(_.sender == "Dave").result)
 //                                  ^
 
 ~~~
 
-The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`. A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Column[Boolean]`[^column-expressions]. The error message is baffling when you first see it but makes sense once you understand what's going on.
-
-[^column-expressions]: Slick uses the `Column` type to represent expressions over `Columns` as well as `Columns` themselves.
+The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`. A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Rep[Boolean]` (Slick uses the `Rep` type to represent expressions over `Columns` as well as `Columns` themselves.). The error message is baffling when you first see it but makes sense once you understand what's going on.
 
 Finally, if you forget to call `result`,
-you'll end up with a compilation error as `exec` and the call it is wrapping `db.run` both expect `Action`s:
+you'll end up with a compilation error as `exec` and the call it is wrapping `db.run` both expect actions:
 
 ~~~ scala
 exec(messages.filter(_.sender === "Dave"))
