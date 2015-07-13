@@ -187,7 +187,7 @@ The `tag` is an implementation detail that allows Slick to manage multiple uses 
 Slick allows us to define and compose queries in advance of running them against the database. We start by defining a `TableQuery` object that represents a simple `SELECT *` style query on our message table:
 
 ~~~ scala
-lazy val messages = TableQuery[MessageTable]
+val messages = TableQuery[MessageTable]
 ~~~
 
 Note that we're not *running* this query at the moment---we're simply defining it as a means to build other queries. For example, we can create a `SELECT * WHERE` style query using a combinator called `filter`:
@@ -275,7 +275,7 @@ Once our table is set up, we need to insert some test data:
 messages ++= freshTestData
 ~~~
 
-The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query rRecall that `freshTestData` is just a regular Scala `Seq[Message]`). Our table is now populated with data.
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). Our table is now populated with data.
 
 
 ### Selecting Data
