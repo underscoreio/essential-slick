@@ -70,7 +70,7 @@ Inserting test data
 Selecting all messages:
 Message("Dave","Hello, HAL. Do you read me, HAL?",1)
 Message("HAL","Affirmative, Dave. I read you.",2)
-Message("Dave","Open the pod bay doors", HAL.,3)
+Message("Dave","Open the pod bay doors, HAL.",3)
 Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
 
 Selecting only messages from HAL:
