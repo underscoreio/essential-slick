@@ -192,7 +192,7 @@ messagesInsertWithId ++= testMessages
 //   ...)
 ~~~
 
-## Updating Rows
+## Updating Rows {#UpdatingRows}
 
 So far we've only looked at inserting new data into the database, but what if we want to update records that are already in the database? Slick lets us create SQL `UPDATE` queries using the same `Query` objects we saw in [Chapter 2](#Selecting).
 
