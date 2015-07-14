@@ -362,7 +362,7 @@ Outside of the REPL, and outside of the simple applications we provide, you don'
 
 If we want to retrieve a subset of the messages in our table,
 we simply run a modified version of our query.
-For example, calling `filter` on `messages` creates a modified query with an extra `WHERE` statement in the SQL that retrieves the expected subset of results:
+For example, calling `filter` on `messages` creates a modified query with a `WHERE` expression in the SQL that retrieves the expected subset of results:
 
 ~~~ scala
 messages.filter(_.sender === "HAL").result.statements
