@@ -165,14 +165,14 @@ Next we define a `Table` object, which corresponds to our database table and tel
 
 ~~~ scala
 final class MessageTable(tag: Tag)
-    extends Table[Message](tag, "message") {
+      extends Table[Message](tag, "message") {
 
   def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def sender  = column[String]("sender")
   def content = column[String]("content")
 
   def * = (sender, content, id) <>
-    (Message.tupled, Message.unapply)
+          (Message.tupled, Message.unapply)
 }
 ~~~
 
