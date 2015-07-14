@@ -315,7 +315,7 @@ Once our table is set up, we need to insert some test data. That would also be a
 val insert = messages ++= freshTestData
 ~~~
 
-The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert via `db.run`, and when the future completes, our table will be populated with data.
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert` via `db.run`, and when the future completes, our table will be populated with data.
 
 
 ### Selecting Data
