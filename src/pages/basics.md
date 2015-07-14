@@ -137,7 +137,7 @@ Database management systems are not created equal. Different systems support dif
 import slick.driver.H2Driver.api._
 ~~~
 
-Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 4](#Modelling) looks at working with different drivers.
+Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 4](#Modelling) looks how you can keep a specific database driver out of your code until necessary.
 
 ### Defining our Schema
 
