@@ -47,20 +47,20 @@ chapter-05
 chapter-06
 ~~~
 
-Each chapter of the book is associated with a separate SBT project that provides a combination of examples and exercises. We've bundled everything you need to run SBT in the directory for each chapter.
+Each chapter of the book is associated with a separate sbt project that provides a combination of examples and exercises. We've bundled everything you need to run sbt in the directory for each chapter.
 
 We'll be using a running example of a chat application, *Slack*, *Flowdock*, or an *IRC* application. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
 
-For now, we will start with a simple conversation between two famous celebrities. Change to the `chapter-01` directory now, use the `sbt.sh` script to start SBT, and compile and run the example to see what happens:
+For now, we will start with a simple conversation between two famous celebrities. Change to the `chapter-01` directory now, use the `sbt.sh` script to start sbt, and compile and run the example to see what happens:
 
 ~~~ bash
 bash$ cd chapter-01
 
 bash$ ./sbt.sh
-# SBT log messages...
+# sbt log messages...
 
 > compile
-# More SBT log messages...
+# More sbt log messages...
 
 > run
 Creating database table
@@ -81,14 +81,14 @@ Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
 If you get output similar to the above, congratulations! You're all set up and ready to run with the examples and exercises throughout the rest of this book. If you encounter any errors, let us know on our [Gitter channel][link-underscore-gitter] and we'll do what we can to help out.
 
 <div class="callout callout-info">
-**New to SBT?**
+**New to sbt?**
 
-The first time you run SBT, it will download a lot of library dependencies from the Internet and cache them on your hard drive. This means two things:
+The first time you run sbt, it will download a lot of library dependencies from the Internet and cache them on your hard drive. This means two things:
 
  - you need a working Internet connection to get started; and
  - the first `compile` command you issue could take a while to complete.
 
-If you haven't used SBT before, you may find the [SBT Tutorial](link-sbt-tutorial) useful.
+If you haven't used sbt before, you may find the [sbt Tutorial](link-sbt-tutorial) useful.
 </div>
 
 ## Example: A Sequel Odyssey
@@ -105,7 +105,7 @@ You might prefer to use *MySQL*, *PostgreSQL*, or some other database---and you 
 
 ### Library Dependencies
 
-Before diving into Scala code, let's look at the SBT configuration. You'll find this in `build.sbt` in the example:
+Before diving into Scala code, let's look at the sbt configuration. You'll find this in `build.sbt` in the example:
 
 ~~~ scala
 name := "essential-slick-chapter-01"
@@ -461,16 +461,16 @@ The query language is the one of the richest and most significant parts of Slick
 ## Exercise: Bring Your Own Data
 
 Let's get some experience with Slick by running queries against the example database.
-Start SBT using `sbt.sh` and type `console` to enter the interactive Scala console.
-We've configured SBT to run the example application before giving you control,
+Start sbt using `sbt.sh` and type `console` to enter the interactive Scala console.
+We've configured sbt to run the example application before giving you control,
 so you should start off with the test database set up and ready to go:
 
 ~~~ bash
 bash$ ./sbt.sh
-# SBT logging...
+# sbt logging...
 
 > console
-# More SBT logging...
+# More sbt logging...
 # Application runs...
 
 scala>
