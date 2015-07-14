@@ -207,7 +207,7 @@ If you're a fan of terminology, know that what we have discussed so far is calle
  - define `Table` objects representing mappings between our data types and the database;
  - define `TableQueries` and combinators to build useful queries before we run them against the database.
 
- Slick provides other querying models, but lifted embedding is the standard, non-experimental, way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
+ Slick provides other querying models, but lifted embedding is the standard way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
  </div>
 
 
