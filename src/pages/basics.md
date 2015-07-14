@@ -450,7 +450,7 @@ In this chapter we've seen a broad overview of the main aspects of Slick, includ
 We typically model data from the database as case classes and tuples that map to rows from a table. We define the mappings between these types and the database using `Table` classes such as `MessageTable`.
 
 We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`.
-These transformations look like transformations on collections, but the operate on the parameters of the query rather than the results returned.
+These transformations look like transformations on collections, but they operate on the parameters of the query rather than the results returned.
 
 We execute a query by creating an action object, via the `result` method of a query, and passing it to the `run` method of the database object.
 
