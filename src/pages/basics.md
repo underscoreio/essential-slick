@@ -127,7 +127,7 @@ This file declares the minimum library dependencies for a Slick project:
 - the H2 database; and
 - a logging library.
 
-If we were using a separate database like MySQL or PostgreSQL, we would substitute the H2 dependency for the JDBC driver for that database. We may also bring in a connection pooling library such as [C3P0][link-c3p0], [DBCP][link-dbcp], or [HikariCP][link-hikari]. Slick is based on JDBC under the hood, so many of the same low-level configuration options exist.
+If we were using a separate database like MySQL or PostgreSQL, we would substitute the H2 dependency for the JDBC driver for that database.
 
 ### Importing Library Code
 
@@ -315,23 +315,33 @@ Once our table is set up, we need to insert some test data. That would also be a
 val insert = messages ++= freshTestData
 ~~~
 
-The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert` via `db.run`, and when the future completes, our table will be populated with data.
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert` via `db.run`, and when the future completes, our table will be populated with data:
+
+~~~ scala
+val result: Future[Option[Int]] = db.run(insert)
+~~~
+
+The `freshTestData` contains four messages, so the result, when it completes, will be `Some(4)`.  It's optional because this is a batch insert. The underlying Java APIs do not guarantee a count of rows for batch inserts.  We discuss single and batch inserts and updates further in [Chapter 3](#Modifying).
 
 
 ### Selecting Data
 
-Now our database has a few rows in it, we can start running queries. We do this by taking a query, such as `messages` or `halSays`, and turning it into an action via the `result` method on a query:
+Now our database has a few rows in it, we can start selecting data. We do this by taking a query, such as `messages` or `halSays`, and turning it into an action via the `result` method on a query:
 
 ~~~ scala
-Await.result(db.run(messages.result), 2 seconds)
-// res1: Seq[Example.MessageTable#TableElementType] = Vector(
+val messagesAction: DBIO[Seq[Message]] = messages.result
+
+val messagesFuture: Future[Seq[Message]] = db.run(messagesAction)
+
+val messagesResults = Await.result(messagesFuture, 2 seconds)
+// messagesResults: Seq[Example.Message] = Vector(
 //  Message(Dave,Hello, HAL. Do you read me, HAL?,1),
 //  Message(HAL,Affirmative, Dave. I read you.,2),
 //  Message(Dave,Open the pod bay doors, HAL.,3),
 //  Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-We can see the SQL issued to H2 using the `statements` method on the query:
+We can see the SQL issued to H2 using the `statements` method on the action:
 
 ~~~ scala
 messages.result.statements
@@ -389,7 +399,7 @@ exec(halSays.result)
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of `result`:
+The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of the `result`:
 
 ~~~ scala
 halSays.map(_.id).result.statements
@@ -441,7 +451,7 @@ val actions =
   messages.result
 ~~~
 
-In Chapter **TODO** we'll see that actions can also be composed with for comprehensions, just like queries.
+One important reason for composing queries and actions is to wrap them inside a transaction. In Chapter **TODO** we'll see this, and also that actions can be composed with for comprehensions, just like queries.
 
 ## Take Home Points
 
