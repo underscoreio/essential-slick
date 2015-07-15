@@ -1,5 +1,7 @@
 [link-active-record]:        http://guides.rubyonrails.org/active_record_basics.html
 [link-c3p0]:                 http://www.mchange.com/projects/c3p0/
+[link-hikari]:               http://brettwooldridge.github.io/HikariCP/
+[link-config]:               https://github.com/typesafehub/config
 [link-dbcp]:                 http://commons.apache.org/proper/commons-dbcp/
 [link-essential-scala]:      http://underscore.io/training/courses/essential-scala
 [link-example]:              https://github.com/underscoreio/essential-slick-code
