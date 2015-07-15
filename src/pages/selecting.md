@@ -221,19 +221,40 @@ messages.map(t => t.id * 1000L).result.statements
 
 ## Running queries
 
-<!-- This needs more work than Joan Rivers has had -->
 Once we've built a query, we need to run it.
-There are two ways to do this, we have seen the first already, Materialized.
-Materalized queries are the way we are used to running a query.
-Execute the query andreturn all the results.
-The other way to run queries is by streaming back the results.
+We run queries by creating programs which the database can then execute.
+Slick calls these programs `Action`s and they have the following signature `DBIOAction[R, S, E]`.
+The three type parameters are:
+
+- `R` is the type of the result of the executed program,
+- `S` indicates whether the results are streamed `Streaming[T]` or not `NoStream`, and finally
+- `E` is the effect type and will be inferred. [TODO: Say more about effects?]
+
+We create actions by calling `result` on our queries.
+To execute the subsequent action, we pass it to one of two methods on our `db` object.
+The first we have seen `db.run`, this runs the action and returns all the results.
+These are known at  _Materalized_ queries.
+The other way to run actions is by streaming back the results.
 This, as you can imagine this is great for returning huge datasets without consuming large amounts of memory.
+
 To stream results we call `stream` on the database object, it returns a [`DatabasePublisher`][link-source-dbPublisher].
 `DatabasePublisher` exposes 3 methods to interact with the stream.
 `subscribe` which allows integration with Akka,
 `mapResult` which creates a new `Publisher` that maps the supplied function on the result set from the original publisher.
 Finally, there is the convenience method `foreach`.
 
+~~~ scala
+
+> db.stream(messages.result).foreach(println)
+res4: scala.concurrent.Future[Unit] = scala.concurrent.impl.Promise$DefaultPromise@52a01c1e
+
+scala> Message(Dave,Hello, HAL. Do you read me, HAL?,1)
+Message(HAL,Affirmative, Dave. I read you.,2)
+Message(Dave,Open the pod bay doors, HAL.,3)
+Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
+Message(Dave,What if I say 'Pretty please'?,5)
+
+~~~
 
 ## Column Expressions
 
