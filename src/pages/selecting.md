@@ -4,7 +4,7 @@ The last chapter provided a shallow end-to-end overview of Slick. We saw how to 
 
 This chapter covers *selecting* data using Slick's rich type-safe Scala reflection of SQL. [Chapter 3](#Modifying) covers *modifying* data by inserting, updating, and deleting records.
 
-Select queries are our main means of retrieving data. In this chapter we'll limit ourselves to simple select queries that operate on a single table. In [Chapter 5](#joins) we'll look at more complex queries involving joins, aggregates, and grouping clauses
+Select queries are our main means of retrieving data. In this chapter we'll limit ourselves to simple select queries that operate on a single table. In [Chapter 5](#joins) we'll look at more complex queries involving joins, aggregates, and grouping clauses.
 
 ## Select All The Rows!
 
@@ -33,8 +33,8 @@ We can see the SQL of the select query by calling `result.statements`:
 
 ~~~ scala
 messages.result.statements
-// res12: Iterable[String] = List(select x2."sender", x2."content", x2."id" ↩
-//                                from "message" x2)
+// res12: Iterable[String] =
+//  List(select x2."sender", x2."content", x2."id" from "message" x2)
 ~~~
 
 Our `TableQuery` is the equivalent of the SQL `SELECT * from message`.
@@ -68,7 +68,9 @@ The parameter to `filter` is a function from an instance of `MessageTable` to a 
 
 ~~~ scala
 messages.filter(_.sender === "HAL").result.statements
-// res13: Iterable[String] = List(select x2."sender", x2."content", x2."id"  ↩ //                                from "message" x2 where x2."sender" = 'HAL')
+// res14: Iterable[String] =
+// List(select x2."sender", x2."content", x2."id"
+//        from "message" x2 where x2."sender" = 'HAL')
 ~~~
 
 Slick uses the `Rep` type to represent expressions over columns as well as individual columns.
