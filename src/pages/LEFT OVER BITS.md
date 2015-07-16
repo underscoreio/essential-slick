@@ -218,3 +218,111 @@ where (
   (r."id" = 1)
 )
 ~~~
+
+------------------------
+
+_This applies to Slick 2, but in Slick 3 the static query stuff has the comment of "TODO port to 3.0".  So it may come back. _
+
+### Constructing Queries
+
+In addition to using `$` to reference Scala values in queries, you can build up queries incrementally.
+
+The queries produced by both and `sql` and `sqlu` (which we see later) are `StaticQuery`s. As the word "static" suggests,
+these kinds of queries do not compose, other than via a form of string concatenation.
+
+The operations available to you are:
+
+* `+` to append a string to the query, giving a new query; and
+* `+?` to add a value, and correctly escape the value for use in SQL.
+
+As an example, we can find all IDs for messages...
+
+~~~ scala
+val query = sql"""SELECT "id" from "message"""".as[Long]
+~~~
+
+...and then create a new query based on this to filter by message content:
+
+``` scala
+val pattern   = "%Dave%"
+val sensitive = query + """ WHERE "content" NOT LIKE """ +? pattern
+```
+
+The result of this is a new `StaticQuery` which we can execute.
+
+-------------------------
+
+_The same applies for sqlu_
+
+### Composing Updates
+
+All the techniques described for selects applies for composing plain SQL updates.
+
+As an example, we can start with an unconditional update...
+
+~~~ scala
+val query = sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
+~~~
+
+...and then create an alternative query using the `+` method defined on `StaticQuery`:
+
+~~~ scala
+val pattern = "%!"
+val sensitive =  query + """ WHERE "content" NOT LIKE """ +? pattern
+~~~
+
+The resulting query would append an `!` only to rows that don't already end with that character.
+
+
+-----------------------
+
+_StaticQuery exercises... may come back one day...._
+
+### String Interpolation Mistake
+
+When we constructed our `sensitive` query, we used `+?` to include a `String` in our query.
+
+It looks as if we could have used regular string interpolation instead:
+
+``` scala
+val sensitive = query + s""" WHERE "content" NOT LIKE $pattern"""
+```
+
+Why didn't we do that?
+
+<div class="solution">
+The standard Scala string interpolator doesn't have any knowledge of SQL.  It doesn't know that `Strings` need to be quoted in single quotes, for example.
+
+In contrast, Slick's `sql` and `sqlu` interpolators do understand SQL and do the correct embedding of values.  When working with regular `String`s, as we were, you must use `+?` to ensure values are correctly encoded for SQL.
+</div>
+
+
+### Unsafe Composition
+
+Here's a utility method that takes any string, and return a query to append the string to all messages.
+
+~~~ scala
+def append(s: String) =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $s)"""
+~~~
+
+Using, but not modifying, the method, restrict the update to messages from "HAL".
+
+Would it be possible to construct invalid SQL?
+
+<div class="solution">
+~~~ scala
+def append(s: String) =
+  sqlu"""UPDATE "message" SET "content" = CONCAT("content", $s)"""
+
+val halOnly = append("!") + """ WHERE "sender" = 'HAL' """
+~~~
+
+It is very easy to get this query wrong and only find out at run-time. Notice, for example, we had to include a space before "WHERE" and use the correct single quoting around "HAL".
+</div>
+
+
+
+
+
+

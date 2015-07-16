@@ -1,5 +1,7 @@
 [link-active-record]:        http://guides.rubyonrails.org/active_record_basics.html
 [link-c3p0]:                 http://www.mchange.com/projects/c3p0/
+[link-hikari]:               http://brettwooldridge.github.io/HikariCP/
+[link-config]:               https://github.com/typesafehub/config
 [link-dbcp]:                 http://commons.apache.org/proper/commons-dbcp/
 [link-essential-scala]:      http://underscore.io/training/courses/essential-scala
 [link-example]:              https://github.com/underscoreio/essential-slick-code
@@ -20,6 +22,7 @@
 [link-ref-orm]:              http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
 [link-sbt]:                  http://scala-sbt.org
 [link-sbt-tutorial]:         http://www.scala-sbt.org/0.13/tutorial/index.html
+[link-pins-interop]:         https://www.artima.com/pins1ed/combining-scala-and-java.html#i-855208314-1
 [link-scala-interpolation]:  http://docs.scala-lang.org/overviews/core/string-interpolation.html
 [link-scala-option]:         http://www.scala-lang.org/api/current/#scala.Option
 [link-scala-value-classes]:  http://docs.scala-lang.org/overviews/core/value-classes.html
