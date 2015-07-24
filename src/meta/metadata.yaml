@@ -2,7 +2,7 @@
 title: Essential Slick
 author: Richard Dallaway and Jonathan Ferguson
 date: "First Edition for Slick 2.1, July 2015"
-filenameStem: "essential-slick"
+filenameStem: "essential-slick-2"
 # Used by Pandoc to generate the PDF cover...
 # see src/css/book.less for HTML/ePub covers:
 coverColor: "F58B40"

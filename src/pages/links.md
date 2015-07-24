@@ -2,7 +2,7 @@
 [link-c3p0]:                 http://www.mchange.com/projects/c3p0/
 [link-dbcp]:                 http://commons.apache.org/proper/commons-dbcp/
 [link-essential-scala]:      http://underscore.io/training/courses/essential-scala
-[link-example]:              https://github.com/underscoreio/essential-slick-code
+[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/2.1
 [link-h2-home]:              http://www.h2database.com
 [link-h2-jdbc-url]:          http://www.h2database.com/html/tutorial.html#connecting_using_jdbc
 [link-hibernate]:            http://hibernate.org

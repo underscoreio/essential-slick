@@ -35,6 +35,8 @@ The aim of this first chapter is to provide a high-level overview of the core co
 bash$ git clone git@github.com:underscoreio/essential-slick-code.git
 Cloning into 'essential-slick-code'...
 
+bash$ git checkout 2.1
+
 bash$ cd essential-slick-code
 
 bash$ ls -1
