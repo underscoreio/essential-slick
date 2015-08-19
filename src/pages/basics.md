@@ -176,7 +176,7 @@ final class MessageTable(tag: Tag)
 }
 ~~~
 
-`MessageTable` defines three `columns`: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
+`MessageTable` defines three `column`s: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
 
 The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in [Chapter 4](#Modelling). For now, all you need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
 
@@ -566,7 +566,7 @@ exec(messages.filter(_.sender == "Dave").result)
 
 ~~~
 
-The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`. A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Rep[Boolean]` (Slick uses the `Rep` type to represent expressions over `Columns` as well as `Columns` themselves.). The error message is baffling when you first see it but makes sense once you understand what's going on.
+The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`. A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Rep[Boolean]` (Slick uses the `Rep` type to represent expressions over `Column`s as well as `Column`s themselves.). The error message is baffling when you first see it but makes sense once you understand what's going on.
 
 Finally, if you forget to call `result`,
 you'll end up with a compilation error as `exec` and the call it is wrapping `db.run` both expect actions:
