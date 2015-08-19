@@ -198,7 +198,7 @@ An example: if, outside of Slick, a table is modified to add a column, the resul
 
 ## Updates
 
-Back in [Chapter 4](#UpdatingRows) we saw how to modify rows with the `update` method. We noted that batch updates where challenging when we wanted to use the row's current value. The example we used was appending an exclamation mark to a message's content:
+Back in [Chapter 4](#UpdatingRows) we saw how to modify rows with the `update` method. We noted that batch updates were challenging when we wanted to use the row's current value. The example we used was appending an exclamation mark to a message's content:
 
 ``` sql
 UPDATE "message" SET "content" = CONCAT("content", '!')
