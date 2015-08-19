@@ -567,7 +567,7 @@ Scala Code             SQL Equivalent
 
 :  Methods for ordering, skipping, and limiting the results of a query.
 
-We'll look at each in term, starting with an example of `sortBy`:
+We'll look at each in turn, starting with an example of `sortBy`:
 
 ~~~ scala
 exec(messages.sortBy(_.sender).result)
