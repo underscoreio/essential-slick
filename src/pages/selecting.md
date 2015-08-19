@@ -392,7 +392,7 @@ Scala Code       Operand Types        Result Type        SQL Equivalent
 Slick provides the `++` method for string concatenation (SQL's `||` operator):
 
 ~~~ scala
-messages.map(m => m.sender ++ "> " + m.content).result.statements
+messages.map(m => m.sender ++ "> " ++ m.content).result.statements
 // res25: Iterable[String] =
 //  List(select (x2."sender"||'> ')||x2."content"
 //       from "message" x2)
