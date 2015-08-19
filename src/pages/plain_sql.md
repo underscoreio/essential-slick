@@ -299,7 +299,7 @@ tsql = {
 
 Note the `$` in the driver class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of Programming in Scala][link-pins-interop].
 
-You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different formant, and combines the Slick driver (`slicker.driver.H2Driver$`) and the JDBC driver (`org.h2.Drvier`) in one entry.
+You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick driver (`slicker.driver.H2Driver$`) and the JDBC driver (`org.h2.Drvier`) in one entry.
 
 A consequence of supplying a `@StaticDatabaseConfig` is that you can define one databases configuration for your application and a different one for the compiler to use. That is, perhaps you are running an application, or test suite, against an in-memory database, but validating the queries at compile time against a full-populated production-like integration database.
 
