@@ -47,5 +47,4 @@
 [link-wikipedia-joins]:      http://en.wikipedia.org/wiki/Join_(SQL)
 [link-reactive-streams]:     http://http://www.reactive-streams.org/
 [link-dw-effect-blog]:       http://danielwestheide.com/blog/2015/06/28/put-your-writes-where-your-master-is-compile-time-restriction-of-slick-effect-types.html
-[]
 
