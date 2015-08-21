@@ -12,7 +12,7 @@ pages:
   - src/pages/preface.md
   - src/pages/basics.md
   - src/pages/selecting.md
-  - src/pages/modifying_blank.md
+  - src/pages/modifying.md
   - src/pages/data_modelling_blank.md
   - src/pages/joins_blank.md
   - src/pages/plain_sql.md
