@@ -17,14 +17,6 @@ The material presented focuses on Slick version 2.1.0. Examples use [H2][link-h2
 
 Many thanks to [Dave Gurnell][link-twitter-dave], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
 
-
-## Notes on the Early Access Edition {-}
-
-This book is in early access status. The content is complete but may contain typos and errata.
-
-As a early access customer you will receive a free copy of the final text when it is released, plus free
-lifetime updates thereafter.
-
 ## How to Contact Us {-}
 
 You can provide feedback on this text via:
