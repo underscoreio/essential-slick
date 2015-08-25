@@ -17,6 +17,8 @@ Our examples so far have been stand-alone application. That's not how you'd work
 
 We've also been importing the H2 driver.  We need a driver of course, but it's useful to delay picking the driver until the code needs to be run. This will allow us to switch driver, which can be useful for testing. For example, you might use H2 for unit testing, but PostgresSQL for production.
 
+An example of this pattern can be found in the [example project][link-example], folder _chapter-04_, file _structure.scala_.
+
 ### Pattern Outline
 
 The basic pattern we'll use is as follows:
@@ -25,12 +27,12 @@ The basic pattern we'll use is as follows:
 
 * Create an instance of our tables using a specific profile.
 
-* Finally, configure a `Database` to obtain a `Session` to work with the table instance.
+* Finally, configure a `Database` to run our `DBIO` actions against..
 
 _Profile_ is a new term for us. When we have previously written...
 
 ~~~ scala
-import scala.slick.driver.H2Driver.simple._
+import slick.driver.H2Driver.api._
 ~~~
 
 ...that gave us an H2-specific JDBC driver. That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
@@ -42,7 +44,7 @@ Re-working the example from previous chapters, we have the schema in a trait:
 ~~~ scala
 trait Profile {
   // Place holder for a specific profile
-  val profile: scala.slick.driver.JdbcProfile
+  val profile: slick.driver.JdbcProfile
 }
 
 trait Tables {
@@ -50,7 +52,7 @@ trait Tables {
   this: Profile =>
 
   // Whatever that Profile is, we import it as normal:
-  import profile.simple._
+  import profile.api._
 
   // Row and table definitions here as normal
 }
@@ -65,27 +67,25 @@ class Schema(val profile: JdbcProfile) extends Tables with Profile
 object Main extends App {
 
   // A specific schema with a particular driver:
-  val schema = new Schema(scala.slick.driver.H2Driver)
+  val schema = new Schema(slick.driver.H2Driver)
 
   // Use the schema:
-  import schema._, profile.simple._
+  import schema._, profile.api._
 
-  def db = Database.forURL("jdbc:h2:mem:chapter03", driver="org.h2.Driver")
+  def db = Database.forConfig("chapter04")
 
-  db.withSession {
-    // Work with the database as normal here
-  }
+  // Work with the database as normal here
 }
 ~~~
 
 To work with a different database, create a different `Schema` instance and supply a different driver. The rest of the code does not need to change.
+
 
 ### Additional Considerations
 
 There is a potential down-side of packaging everything into a single `Schema` and performing `import schema._`.  All your case classes, and table queries, custom methods, implicits, and other values are imported into your current namespace.
 
 If you recognise this as a problem, it's time to split your code more finely and take care over importing just what you need.
-
 
 ## Representations for Rows
 
@@ -129,14 +129,15 @@ def * = (name, id)
 ...the compiler would tell us:
 
 ~~~
-Type mismatch
- found: (scala.slick.lifted.Column[String], scala.slick.lifted.Column[Long])
- required: scala.slick.lifted.ProvenShape[chapter03.User]
+type mismatch
+ found: (slick.lifted.Rep[String], lick.lifted.Rep[Long])
+ required: scala.slick.lifted.ProvenShape[User]
 ~~~
+
 
 This is good. We've defined the table as a `Table[User]` so we want `User` values, and the compiler has spotted that we've not defined a default projection to supply `User`s.
 
-How do we resolve this? The answer here is to give Slick the rules it needs to prove it can convert from the `Column` values into the shape we want, which is a case class. This is the role of the mapping function, `<>`.
+How do we resolve this? The answer here is to give Slick the rules it needs to prove it can convert from the `Rep` values into the shape we want, which is a case class. This is the role of the mapping function, `<>`.
 
 The two arguments to `<>` are:
 
@@ -165,14 +166,14 @@ We will see this in one of the exercises in this section.
 ### Tuples
 
 You've seen how Slick is able to map between a tuple of columns into case classes.
-However you can use tuples directly if you want, because Slick already knows how to convert from a `Column[T]` into a `T` for a variety of `T`s.
+However you can use tuples directly if you want, because Slick already knows how to convert from a `Rep[T]` into a `T` for a variety of `T`s.
 
 Let's return to the compile error we had above:
 
 ~~~
 Type mismatch
- found: (scala.slick.lifted.Column[String], scala.slick.lifted.Column[Long])
- required: scala.slick.lifted.ProvenShape[chapter03.User]
+ found: (slick.lifted.Rep[String], slick.lifted.Rep[Long])
+ required: slick.lifted.ProvenShape[User]
 ~~~
 
 We fixed this by supplying a mapping to our case class. We could have fixed this error by redefining the table in terms of a tuple:
@@ -205,14 +206,14 @@ We can hide information by excluding it from our row definition. The default pro
 
 ### Heterogeneous Lists
 
-Slick's **experimental** [`HList`][link-slick-hlist] implementation is useful if you need to support tables with more than 22 columns,
+Slick's [`HList`][link-slick-hlist] implementation is useful if you need to support tables with more than 22 columns,
 such as a legacy database.
 
 To motivate this, let's suppose our user table contains lots of columns for all sorts of information about a user:
 
 ~~~ scala
-import scala.slick.collection.heterogenous.{ HList, HCons, HNil }
-import scala.slick.collection.heterogenous.syntax._
+import slick.collection.heterogeneous.{ HList, HCons, HNil }
+import slick.collection.heterogeneous.syntax._
 
 final class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id           = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -255,7 +256,7 @@ I hope you don't have a table that looks like this, but it does happen.
 
 You could try to model this with a case class. Scala 2.11 supports case classes with more than 22 arguments,
 but it does not implement the `unapply` method we'd want to use for mapping.  Instead, in this situation,
-we're using a _hetrogenous list_.
+we're using a _heterogeneous list_.
 
 An HList has a mix of the properties of a list and a tuple.  It has an arbitrary length, just as a list,
 but unlike a list, each element can be a different type, like a tuple.
@@ -384,7 +385,7 @@ users += User(
  )
 ~~~
 
-Executing `users.run` will produce:
+Executing `exec(users.result)` will produce:
 
 ~~~ scala
 Vector(
@@ -396,13 +397,13 @@ Vector(
 )
 ~~~
 
-You can continue to select just some fields. For example `users.map(_.email).run` will produce:
+You can continue to select just some fields. For example `users.map(_.email).result` will produce:
 
 ~~~ scala
 Vector(dave@example.org)
 ~~~
 
-However, notice that if you used `users.ddl.create`, only the columns defined in the default projection were created in the H2 database.
+However, notice that if you used `users.schema.create`, only the columns defined in the default projection were created in the H2 database.
 
 </div>
 
@@ -470,7 +471,7 @@ The Slick query amounts to:
 SELECT * FROM "user" WHERE "email" = NULL
 ~~~
 
-Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Column[Option[A]]`:
+Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Reps[Option[A]]`:
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
@@ -484,13 +485,13 @@ Scala Code              Operand Column Types               Result Type        SQ
 --------------------------------------------------------------------------------------------------------
 
 : Optional column methods.
-  Operand and result types should be interpreted as parameters to `Column[_]`.
+  Operand and result types should be interpreted as parameters to `Rep[_]`.
 
 
 We fix our query with `isEmpty`:
 
 ~~~ scala
-users.filter(_.email.isEmpty).list
+users.filter(_.email.isEmpty).result
 // result: List(User(HAL,None,2))
 ~~~
 
@@ -726,7 +727,7 @@ def sender =
 
 Providing Slicks DDL command has been run for the table,
 or the SQL `ON DELETE CASCADE` action has been manually applied to the database,
-the following will remove HAL from the `users` table,
+the following action will remove HAL from the `users` table,
 and all of the messages that HAL sent:
 
 ~~~ scala
@@ -814,12 +815,15 @@ and as you have seen are accessed via `O`.
 We'll look at `Length`, `DBTYPE`, and `Default` now:
 
 ~~~ scala
-case class User(name: String, avatar: Option[Array[Byte]] = None, id: Long = 0L)
+case class User(name: String,
+                avatar: Option[Array[Byte]] = None,
+                id: Long = 0L)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
-  def name   = column[String]("name", O.Length(64, true), ↩
-                                                O.Default("Anonymous Coward"))
+  def name   = column[String]("name",
+                              O.Length(64, true),
+                              O.Default("Anonymous Coward"))
   def avatar = column[Option[Array[Byte]]]("avatar", O.DBType("BINARY(2048)"))
 
   def * = (name, avatar, id) <> (User.tupled, User.unapply)
@@ -829,7 +833,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 We have modified `name` to fix the maximum length of the column, and give a default value.
 
 `O.Default` gives a default value for rows being inserted.
-Remember it's the DDL commands from `users.ddl` that instruct the database to provide this default.
+Remember it's the DDL commands from `users.schema.create` that instruct the database to provide this default.
 
 `O.Length` takes one parameter you'd expect, one one you might not expect:
 
@@ -891,7 +895,7 @@ You don't always have to do everything at the SQL level.
 #### Inside the Option
 
 Build on the last exercise to match rows that start with the supplied optional value.
-Recall that `Column[String]` defines `startsWith`.
+Recall that `Rep[String]` defines `startsWith`.
 
 So this time even `filterByEmail(Some("dave@")).run` will produce one row.
 
@@ -995,13 +999,13 @@ Exercise the code as follows:
 
 ~~~ scala
 bills += Bill(daveId, 12.00)
-println(bills.list)
+println(exec(bills.result)
 
 // Unique index or primary key violation:
-//bills += Bill(daveId, 24.00)
+// exec(bills += Bill(daveId, 24.00))
 
 // Referential integrity constraint violation: "fk_bill_user:
-//users.filter(_.name === "Dave").delete
+// exec(users.filter(_.name === "Dave").delete)
 
 // Who has a bill?
 val has = for {
@@ -1061,9 +1065,10 @@ val halId:  Long = insertUser += User("HAL")
 val daveId: Long = insertUser += User("Dave")
 
 // Buggy lookup of a sender
-val id = messages.filter(_.senderId === halId).map(_.id).first
-
-val rubbish = messages.filter(_.senderId === id)
+  for {
+    id      <- messages.filter(_.senderId === haldId).map(_.id)
+    rubbish <- messages.filter(_.senderId === id)
+  } yield rubbish
 ~~~
 
 Do you see the problem here? We've looked up a _message_ `id`,
@@ -1115,7 +1120,7 @@ We only need to write...
 
 ~~~ scala
 object PKs {
-  import scala.slick.lifted.MappedTo
+  import slick.lifted.MappedTo
   case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
   case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
 }
@@ -1370,7 +1375,7 @@ However, we need to give the compiler a little help:
 messages.filter(_.flag === (Important : Flag)).run
 ~~~
 
-Notice the _type ascription added to the `Important` value.
+Notice the _type_ ascription added to the `Important` value.
 If you find yourself writing that kind of query often, be aware that extension methods allow you to package code like this into `messages.isImportant`  or similar.
 
 

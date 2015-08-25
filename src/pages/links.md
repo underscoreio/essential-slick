@@ -28,8 +28,8 @@
 [link-scala-value-classes]:  http://docs.scala-lang.org/overviews/core/value-classes.html
 [link-sip-named-default]:    http://docs.scala-lang.org/sips/completed/named-and-default-arguments.html
 [link-slf4j]:                http://www.slf4j.org/
-[link-slick-column-options]: http://slick.typesafe.com/doc/2.1.0/api/index.html#scala.slick.ast.ColumnOption
-[link-slick-hlist]:          http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList
+[link-slick-column-options]: http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.ast.ColumnOption
+[link-slick-hlist]:          http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.collection.heterogeneous.HList
 [link-slick]:                http://slick.typesafe.com/
 [link-source-extmeth]:       https://github.com/slick/slick/blob/3.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
 [link-source-dbPublisher]:   http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.backend.DatabasePublisher
