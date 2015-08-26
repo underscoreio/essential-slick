@@ -305,8 +305,6 @@ The result of `run` is a `Future[T]`.  As creating the schema is just a side-eff
 val result = Await.result(future, 2 seconds)
 ~~~
 
-We will have more to say on `Future`s, what you can do with them, and how they compose in Chapter **TODO**.
-
 ### Inserting Data
 
 Once our table is set up, we need to insert some test data. That would also be an action:
@@ -375,7 +373,7 @@ we simply run a modified version of our query.
 For example, calling `filter` on `messages` creates a modified query with a `WHERE` expression in the SQL that retrieves the expected subset of results:
 
 ~~~ scala
-messages.filter(_.sender === "HAL").result.statements
+messages.filter(_.sender === "HAL").result.statements.mkString
 // res3: String = select x2."sender", x2."content", x2."id"
 //                from "message" x2
 //                where x2."sender" = 'HAL'
@@ -451,7 +449,7 @@ val actions =
   messages.result
 ~~~
 
-One important reason for composing queries and actions is to wrap them inside a transaction. In Chapter **TODO** we'll see this, and also that actions can be composed with for comprehensions, just like queries.
+One important reason for composing queries and actions is to wrap them inside a transaction. In [Chapter 3](#Modifying) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
 
 ## Take Home Points
 
