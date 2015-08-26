@@ -187,8 +187,8 @@ Also notice that the generated SQL has changed.
 The revised query isn't just selecting a single column from the query results---it is actually telling the database to restrict the results to that column in the SQL:
 
 ~~~ scala
-messages.map(_.sender).result.statements
-// res16: Iterable[String] = List(select x2."sender" from "message" x2)
+messages.map(_.content).result.statements
+// res16: Iterable[String] = List(select x2."content" from "message" x2)
 ~~~
 
 Finally, notice that the mixed type (first type parameter) of our new query has changed to `Rep[String]`.
@@ -758,7 +758,7 @@ val msg1 = messages.filter(_.sender === "HAL").map(_.content).result.head
 
 You should get an action that produces "Affirmative, Dave. I read you."
 
-For Alice, `head` will throw a run-time exception. Use `headOption` instead.
+For Alice, `head` will throw a run-time exception as we are trying to return the head of an empty collection. Using `headOption` will prevent the exception.
 </div>
 
 
@@ -820,7 +820,7 @@ The query Slick generates looks something like this:
 select '(message Ref @421681221).content!' from "message" x2
 ~~~
 
-That is, a select expression for a strange constant string.
+That is a select expression for a strange constant string.
 
 The `_.content + "!"` expression converts `content` to a string and appends the exclamation point.
 What is `content`? It's a `Rep[String]`, not a `String` of the content.
@@ -839,9 +839,20 @@ messages.map(m => m.content ++ LiteralColumn("!"))
 Here `LiteralColumn[T]` is type of `Rep[T]` for holding a constant value to be inserted into the SQL.
 The `++` method is one of the extension methods defined for any `Rep[String]`.
 
-This will produce the desired result:
+Using `++` will produce the desired query:
 
 ~~~ sql
 select "content"||'!' from "message"
 ~~~
+
+You can also write:
+
+~~~ scala
+messages.map(m => m.content ++ "!")
+~~~
+
+... as "!" will be lifted to a `Rep[String]``
+
+This exercise highlights that inside of a `map` or `filter` you are working in terms of `Rep[T]`. You should become familiar with the operations available to you. The tables we've included in this chapter should help with that.
+
 </div>
