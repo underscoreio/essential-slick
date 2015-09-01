@@ -2,16 +2,23 @@
 
 Wrangling data with [joins][link-wikipedia-joins] and aggregates can be painful.  In this chapter we'll try to ease that pain by exploring:
 
-* different styles of join (implicit and explicit);
+* different styles of join (monadic and applicative);
 * different ways to join (inner, outer and zip); and
 * aggregate functions and grouping.
 
+<div class="callout callout-info">
+Joins have changed in Slick 3. Out are _Implicit_ and _Explicit_ joins, in are _Applicative_ and _Monadic_ joins.
 
-## Implicit Joins
+If you are new to Slick, don't worry about _Implicit_ and _Explicit_ joins - less to forget.
 
-The SQL standards recognises two styles of join: implicit and explicit. Implicit joins have been deprecated, but they're common enough to deserve a brief investigation.
+If you are familar with _Implicit_ and _Explicit_ joins, _Applicative_ use _Explicit_ joins under the hood and _Monadic_ use _Implicit_ joins - This might change in the future versions of Slick.
 
-We have seen an example of implicit joins in the last chapter:
+</div>
+
+
+## Monadic Joins
+
+We have seen an example of monadic joins in the last chapter:
 
 ~~~ scala
 val q = for {
@@ -37,7 +44,7 @@ where
   u."id" = m."sender"
 ```
 
-That's the implicit style of query, using foreign key relations.
+That's the monadic style of query, using foreign key relations.
 
 <div class="callout callout-info">
 **Run the Code**
@@ -47,7 +54,7 @@ You'll find the example queries for this section in the file _joins.sql_ over at
 From the _chapter-05_ folder, start SBT and at the SBT `>` prompt run:
 
 ~~~
-runMain chapter05.JoinsExample
+runMain JoinsExample
 ~~~
 </div>
 
@@ -64,37 +71,46 @@ val q = for {
 
 Note how this time we're using `msg.senderId`, not the foreign key `sender`. This produces the same query when we joined using `sender`.
 
+<div class="callout callout-warning">
+Monadic joins allow for the right-hand-side to depend on the left-hand side, which is not possible in SQL.
+If Slick is unable to compile them into applicative joins a runtime error will occur.
+</div>
 
-## Explicit Joins
+**TODO: Can we create an example to show the above failing?**
 
-An explicit join is where the join type is, unsurprisingly, explicitly defined.
-In SQL this is via the `JOIN` and `ON` keyword, which is mirrored in Slick as the `join` and `on` methods.
+
+## Applicative Joins
+
+An applicative join is where the join type is explicitly defined.
+In SQL this is via the `JOIN` and `ON` keywords,
+which is mirrored in Slick as the `join` and `on` methods.
 
 Slick offers the following methods to join two or more tables:
 
-  * `innerJoin` or `join` --- an inner join
-  * `leftJoin`  --- a left outer join
-  * `rightJoin` --- a right outer join
-  * `outerJoin` --- a full outer join.
+  * `join`      --- an inner join,
+  * `joinLeft`  --- a left outer join,
+  * `joinRight` --- a right outer join,
+  * `joinFull`  --- a full outer join.
 
-The above are convenience methods to `join` with an explicit `JoinType` parameter (which defaults to `innnerJoin`).  As you can see, Slicks's explicit join syntax gives you more options for how to join tables.
-
-As a quick taste of the syntax, we can join the `messages` table to the `users` on the `senderId`:
+As a quick taste of the syntax,
+we can join the `messages` table to the `users` on the `senderId`:
 
 ``` scala
-val q = messages innerJoin users on (_.senderId === _.id)
+val q = messages join users on (_.senderId === _.id)
 ```
 
-This will be a query of `(MessageTable, UserTable)`. If we wanted to, we could be more explicit about the values used in the `on` part:
+This will be a query of `(MessageTable, UserTable)`.
+If we wanted to, we could be more explicit about the values used in the `on` part:
 
 ``` scala
-val q = messages innerJoin users on ( (m: MessageTable, u: UserTable) =>  ↩
-                                                           m.senderId === u.id)
+val q = messages join users on
+  ( (m: MessageTable, u: UserTable) =>  m.senderId === u.id)
 ```
 
 ...but it reads well without this.
 
-In the rest of this section we'll work through a variety of more involved joins.  You may find it useful to refer to figure 5.1, which sketches the schema we're using in this chapter.
+In the rest of this section we'll work through a variety of more involved joins.
+You may find it useful to refer to figure 5.1, which sketches the schema we're using in this chapter.
 
 
 ![The database schema for this chapter.  Find this code in the _chat-schema.scala_ file of the example project on GitHub.](src/img/Schema.png)
@@ -103,20 +119,22 @@ In the rest of this section we'll work through a variety of more involved joins.
 
 ### Inner Join
 
-An inner join is where we select records from multiple tables, where those records exist (in some sense) in all tables. We'll lok at a chat example where we expect messages that have a sender in the user table, and a room in the rooms table:
+An inner join is where we select records from multiple tables, where those records exist (in some sense) in all tables. We'll look at a chat example where we expect messages that have a sender in the user table, and a room in the rooms table:
 
 ```scala
 val inner =
   messages.
-  innerJoin(users).on(_.senderId === _.id).
-  innerJoin(rooms).on{ case ((msg,user), room) => msg.roomId === room.id}
+  join(users).on(_.senderId === _.id).
+  join(rooms).on{ case ((msg,user), room) => msg.roomId === room.id}
 
 val query = for {
+  dId <- daveId
+  rId <- airLockId
   ((msgs, usrs), rms) <- inner
-  if usrs.id === daveId && rms.id === airLockId
+  if usrs.id === dId && rms.id === rId
 } yield (msgs.content, usrs.name, rms.title)
 
-val results = query.run
+val results = exec(query.result)
 ```
 
 You might prefer to inline `inner` within the `query`. That's fine, but we've separated the parts out here to discuss them. And as queries in Slick compose, this works out nicely.
@@ -128,8 +146,8 @@ We're using a pattern match to make this explicit, and that's the style we prefe
 ``` scala
 val inner =
   messages.
-  innerJoin(users).on(_.senderId  === _.id).
-  innerJoin(rooms).on(_._1.roomId === _.id)
+  join(users).on(_.senderId  === _.id).
+  join(rooms).on(_._1.roomId === _.id)
 ```
 
 Either way, when it comes to the `query` itself we're using pattern matching again to unpick the results of `inner`, and adding additional guard conditions (which will be a `WHERE` clause in SQL).
@@ -149,13 +167,13 @@ To implement this type of query we need to be aware of what columns are being re
 
 ``` scala
 val left = messages.
-  leftJoin(users).on(_.toId === _.id).
-  map { case (m, u) => (m.content, u.name.?) }
+  joinLeft(users).on(_.toId === _.id).
+  map { case (m, u) => (m.content, u.map(_.name)) }
 
-left.run.foreach(result => println(result))
+exec(left.result).foreach(println)
 ```
 
-We're producing a list of messages and the name of user they were sent to (if any). Note the `u.name.?` expression is required to turn the potentially null result from the query into an `Option` value.  You need to deal with this on a column-by-column basis.
+We're producing a list of messages and the name of user they were sent to (if any).
 
 The sample data we have in _joins.sql_ in the _chapter05_ folder contains just two private messages (between Frank and Dave).  The rest are public. So our query results are:
 
@@ -174,31 +192,8 @@ The sample data we have in _joins.sql_ in the _chapter05_ folder contains just t
 <div class="callout callout-info">
 **NULLs in Joins**
 
-If you're thinking that detecting null values and adding `.?` to a column is a bit of a pain, you'd be right.  The good news is that the situation will be much better for Slick 3. But in the meantime, you need to handle it for each column yourself.
-
-There's a way to tell if you've got it wrong. Take a look at this query, which is trying to list users and the rooms they are occupying:
-
-``` scala
-val outer = for {
-  (usrs, occ) <- users leftJoin occupants on (_.id === _.userId)
-} yield usrs.name -> occ.roomId
-```
-
-Do you see what's wrong here? If we run this,
-we'll get a `SlickException` with the following message:
-
-`Read NULL value (null) for ResultSet column Path s2._2`.
-
-This is due to users not having to be in a room. And in our test data, one user has not been assigned to any room.
-
-It's a limitation in Slick 2.x. even for non nullable columns.
-
-The fix is to manually add `.?` to the selected column:
-
-``` scala
-...
-} yield usrs.name -> occ.roomId.?
-```
+Notice we need to map over the `u` to retrieve the name?
+This because slick now wraps possibly null value in an `Option`.  So for those of you who are familiar with Slick 2.1, no more appending `.?` to possibly nullable columns.
 </div>
 
 
@@ -210,10 +205,10 @@ We can switch the example for left join and ask for all users, what private mess
 
 ``` scala
 val right = for {
-  (msg, user) <- messages.rightJoin(users).on(_.toId === _.id)
-} yield (user.name, msg.content.?)
+  (msg, user) <- messages.joinRight(users).on(_.toId === _.id)
+} yield (user.name, msg.map(_.content))
 
-right.run.foreach(result => println(result))
+exec(right.result).foreach(println)
 ```
 
 From the results this time we can see that just Dave and Frank have seen private messages:
@@ -228,15 +223,17 @@ From the results this time we can see that just Dave and Frank have seen private
 
 ### Full Outer Join
 
-At the time of writing H2 does not support full outer joins. But if you want to try it out with a different database, a simple example would be:
+At the time of writing H2 does not support full outer joins.
+Whereas earlier versions of Slick would throw a runtime exception,
+Slick 3 compiles the query down to something that will run.
 
 ``` scala
 val outer = for {
-  (room, msg) <- rooms outerJoin messages on (_.id === _.roomId)
-} yield room.title.? -> msg.content.?
+  (room, msg) <- rooms joinFull messages on (_.id === _.roomId)
+} yield room.map(_.title) -> msg.map(_.content)
 ```
 
-That would be title of all room and messages in those rooms. Either side could be `NULL` because messages don't have to be in rooms, and rooms don't have to have any messages.
+That would be the title of all rooms and messages in those rooms. Either side could be `NULL` because messages don't have to be in rooms, and rooms don't have to have any messages.
 
 ## Zip Joins
 
@@ -259,8 +256,10 @@ val msgs = messages.sortBy(_.ts asc)
 val conversations = msgs zip msgs.drop(1)
 
 // Select out just the contents of the first and second messages:
-val results: List[(String,String)] =
+val query: List[(String,String)] =
   conversations.map { case (fst, snd) => fst.content -> snd.content }.list
+
+exec(zipQuery.result).foreach(println)
 ```
 
 This will turn into an inner join, producing output like:
@@ -278,15 +277,15 @@ A second variation, `zipWith`, allows you to give a mapping function along with 
 def combiner(fst: MessageTable, snd: MessageTable) =
   fst.content -> snd.content
 
-val results = msgs.zipWith(msgs.drop(1), combiner).list
+val query = msgs.zipWith(msgs.drop(1), combiner)
 ```
 
 The final variant is `zipWithIndex`, which is as per the Scala collections method of the same name. Let's number each message:
 
 ``` scala
-messages.zipWithIndex.map {
+exec(messages.zipWithIndex.map {
   case (msg, index) => index -> msg.content
-}.list
+}.result).foreach(println)
 ```
 
 The data from this query will start:
@@ -346,9 +345,10 @@ select
   x2.x3, x4.x5
 from
   (select x6."name" as x3, x6."id" as x7 from "user" x6) x2
-  inner join
-  (select x8."content" as x5, x8."sender" as x9 from "message" x8) x4 on  ↩
-                                                                x2.x7 = x4.x9
+inner join
+  (select x8."content" as x5, x8."sender" as x9 from "message" x8) x4
+on
+  x2.x7 = x4.x9
 ```
 
 That's not so bad, but it is a little strange. For more involved queries they can look much worse.
@@ -390,11 +390,11 @@ Method           SQL
 Using them causes no great surprises, as shown in the following examples:
 
 ``` scala
-val numRows: Int = messages.length.run
+val numRows = exec(messages.length.result)
 
-val numSenders: Int = messages.map(_.senderId).countDistinct.run
+val senders:Int = exec(messages.map(_.senderId).countDistinct.result)
 
-val firstSent: Option[DateTime] = messages.map(_.ts).min.run
+val firstSent:Option[DateTime] = exec(messages.map(_.ts).min.result)
 ```
 
 While `length` and `countDistinct` return an `Int`, the other functions return an `Option`. This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
@@ -408,7 +408,7 @@ You may find you use the aggregate functions with column grouping. For example, 
 val msgPerUser =
   messages.groupBy(_.senderId).
   map { case (senderId, msgs) => senderId -> msgs.length }.
-  run
+  result
 ```
 
 That'll work, but it will be in terms of a user's primary key. It'd be nicer to see the user's name. We can do that using our join skills:
@@ -418,7 +418,7 @@ val msgsPerUser =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user)  => user.name }.
    map     { case (name, group) => name -> group.length }.
-   run
+   result
 ```
 
 The results would be:
@@ -486,7 +486,7 @@ def timestampOf[S[_]](group: Query[(MessageTable,UserTable), ↩
 
 What we've done here is introduced a method to work on the group query, using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.
 
-The query (`group`) is parameterized by the join, the unpacked values, and the container for the results. By container we mean something like `Vector[T]` (from `run`-ing the query) or `List[T]` (if we `list` the query).  We don't really care what our results go into, but we do care we're working with messages and users.
+The query (`group`) is parameterized by the join, the unpacked values, and the container for the results. By container we mean something like `Seq[T]`.  We don't really care what our results go into, but we do care we're working with messages and users.
 
 With this little piece of domain specific language in place, the query becomes:
 
@@ -565,7 +565,7 @@ Hopefully you're now in a position where you can unpick this:
 
 ## Take Home Points
 
-Slick supports `innerJoin`, `leftJoin`, `rightJoin`, `outerJoin` and a `zipJoin`. You can map and filter over these queries as you would other queries with Slick.  Using pattern matching on the query tuples can be more readable than accessing tuples via `._1`, `._2` and so on.
+Slick supports `join`, `joinLeft`, `joinRight`, `joinOuter` and a `zip` join. You can map and filter over these queries as you would other queries with Slick.  Using pattern matching on the query tuples can be more readable than accessing tuples via `._1`, `._2` and so on.
 
 Aggregation methods, such as `length` and `sum`, produce a value from a set of rows.
 
@@ -617,13 +617,11 @@ In this chapter we saw this query:
 
 ~~~ scala
 val outer = for {
-  (usrs, occ) <- users leftJoin occupants on (_.id === _.userId)
+  (usrs, occ) <- users joinLeft occupants on (_.id === _.userId)
 } yield usrs.name -> occ.roomId
 ~~~
 
-It causes us a problem because not every user occupies a room.
-
-Can you find another way to express this that doesn't cause this problem?
+It would be nicer if we could find another way to express this so it didn't show rooms users don't occupy.
 
 <div class="solution">
 A right join between users and occupants can help us here.

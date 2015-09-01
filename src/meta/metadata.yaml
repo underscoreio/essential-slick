@@ -14,7 +14,7 @@ pages:
   - src/pages/selecting.md
   - src/pages/modifying_blank.md
   - src/pages/data_modelling_blank.md
-  - src/pages/joins_blank.md
+  - src/pages/joins.md
   - src/pages/plain_sql.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md
