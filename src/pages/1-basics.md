@@ -4,9 +4,9 @@
 
 Slick is a Scala library for accessing relational databases using an interface similar to the Scala collections library. You can treat queries like collections, transforming and combining them with methods like `map`, `flatMap`, and `filter` before sending them to the database to fetch results. This is how we'll be working with Slick for the majority of this text.
 
-Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also supports *plain SQL queries* that look more like the prepared statements you may be used to from JDBC (Java Database Connectivity).
+Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also supports *plain SQL queries* that allow you to write SQL.
 
-In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
+In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC (Java Database Connectivity) directly, if that's something you're familiar with and find you need.
 
 This book provides a compact, no-nonsense guide to everything you need to know to use Slick in a commercial setting:
 
@@ -207,7 +207,7 @@ If you're a fan of terminology, know that what we have discussed so far is calle
  - define `Table` objects representing mappings between our data types and the database;
  - define `TableQueries` and combinators to build useful queries before we run them against the database.
 
- Slick provides other querying models, but lifted embedding is the standard way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
+Lifted embedding is the standard way to work with Slick. We will discuss the other approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
  </div>
 
 
@@ -276,7 +276,7 @@ In Slick, what you run against the database is an _action_. This is how we creat
 val action: DBIO[Unit] = messages.schema.create
 ~~~
 
-The result of this `messages.schema.create` expression is an `DBUnit[Unit]`.
+The result of this `messages.schema.create` expression is a `DBUnit[Unit]`.
 
 <div class="callout callout-info">
 **DBIO and DBIOAction**
@@ -304,8 +304,6 @@ The result of `run` is a `Future[T]`.  As creating the schema is just a side-eff
 ~~~ scala
 val result = Await.result(future, 2 seconds)
 ~~~
-
-We will have more to say on `Future`s, what you can do with them, and how they compose in Chapter **TODO**.
 
 ### Inserting Data
 
@@ -375,7 +373,7 @@ we simply run a modified version of our query.
 For example, calling `filter` on `messages` creates a modified query with a `WHERE` expression in the SQL that retrieves the expected subset of results:
 
 ~~~ scala
-messages.filter(_.sender === "HAL").result.statements
+messages.filter(_.sender === "HAL").result.statements.mkString
 // res3: String = select x2."sender", x2."content", x2."id"
 //                from "message" x2
 //                where x2."sender" = 'HAL'
@@ -451,7 +449,7 @@ val actions =
   messages.result
 ~~~
 
-One important reason for composing queries and actions is to wrap them inside a transaction. In Chapter **TODO** we'll see this, and also that actions can be composed with for comprehensions, just like queries.
+One important reason for composing queries and actions is to wrap them inside a transaction. In [Chapter 3](#Modifying) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
 
 ## Take Home Points
 
