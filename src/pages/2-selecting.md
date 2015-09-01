@@ -187,8 +187,8 @@ Also notice that the generated SQL has changed.
 The revised query isn't just selecting a single column from the query results---it is actually telling the database to restrict the results to that column in the SQL:
 
 ~~~ scala
-messages.map(_.sender).result.statements
-// res16: Iterable[String] = List(select x2."sender" from "message" x2)
+messages.map(_.content).result.statements
+// res16: Iterable[String] = List(select x2."content" from "message" x2)
 ~~~
 
 Finally, notice that the mixed type (first type parameter) of our new query has changed to `Rep[String]`.
@@ -255,7 +255,7 @@ messages.map(t => t.id * 1000L).result.statements
 
 Once we've built a query, we need to run it.
 We run queries by creating programs which the database can then execute.
-Slick calls these programs _actions_ and they have the following signature `DBIOAction[R, S, E]`.
+Slick calls these programs _actions_ and they have the following signature: `DBIOAction[R, S, E]`.
 
 The three type parameters are:
 
@@ -270,7 +270,7 @@ In many cases we can simplify the representation of an action to just `DBIO[T]`.
 
 Effects are not part of Essential Slick, and we'll be working in terms of `DBIO[T]` for most of this text.
 
-However, broadly speaking, `Effect` is a way to annotate (tag, mark) an action.
+However, broadly speaking, `Effect` is a way to annotate (tag, or mark) an action.
 For example, you can write a method that will only accept queries marked as `Read` or `Write`, or a combination such as `Read with Transactional`.  
 
 The effects defined in Slick under the `Effect` object are:
@@ -281,27 +281,35 @@ The effects defined in Slick under the `Effect` object are:
 - `Transactional` for transaction effects.
 - `All` for all of the above.
 
-Slick will infer the effect for your queries. For example, `messages.result` will be `DBIOAction[Seq[String], NoStream, Effect.Read]`. In the next chapter we will look at inserts and updates, and the inferred effect for an update would be: `DBIOAction[Int, NoStream, Effect.Write]`.
+Slick will infer the effect for your queries. For example, `messages.result` will be:
+
+~~~ scala
+DBIOAction[Seq[String], NoStream, Effect.Read]
+~~~
+In the next chapter we will look at inserts and updates, and the inferred effect for an update would be: `DBIOAction[Int, NoStream, Effect.Write]`.
 
 You can also add your own `Effect` types by extending the existing types.
 
-If you are interested in learning more about effects, Daniel Westheide has produced a description of [Compile-time Restrictions of Slick Effect Types][link-dw-effect-blog].
-</div>
+<!--
+THIS LOOKS GOOD, BUT I'VE NOT HAD CHANCE TO FULLY READ AND TRY IT YET:
 
+If you are interested in learning more about effects, Daniel Westheide has produced a description of [Compile-time Restrictions of Slick Effect Types][link-dw-effect-blog].
+-->
+</div>
 
 We create actions by calling `result` on our queries.
 To execute the subsequent action, we pass it to one of two methods on our `db` object.
-The first we have seen `db.run`, this runs the action and returns all the results.
+The first is `db.run`, which we have already seen, and this runs the action and returns all the results.
 These are known at _materalized_ queries.
 
-The other way to run actions is by streaming back the results.  This text will focus just on materialized queries.
+The other way to run actions is by streaming back the results. We will be working with materialized queries.
 
 <div class="callout callout-info">
 **Streaming**
 
 As you can imagine, streaming is great for returning huge datasets without consuming large amounts of memory.
 
-To stream results we call `stream` on the database object, which returns not a `Future` but a [`DatabasePublisher`][link-source-dbPublisher].
+To stream results we call `stream` on the database object, which returns a [`DatabasePublisher`][link-source-dbPublisher] instead of a `Future`.
 
 `DatabasePublisher` exposes three methods to interact with the stream:
 
@@ -312,8 +320,9 @@ To stream results we call `stream` on the database object, which returns not a `
 For example, we can stream our messages:
 
 ~~~ scala
-> db.stream(messages.result).foreach(println)
-res1: scala.concurrent.Future[Unit] = scala.concurrent.impl.Promise$DefaultPromise@52a01c1e
+db.stream(messages.result).foreach(println)
+// res1: scala.concurrent.Future[Unit] =
+//   scala.concurrent.impl.Promise$DefaultPromise@52a01c1e
 
 // Output:
 // Message(Dave,Hello, HAL. Do you read me, HAL?,1)
@@ -527,7 +536,7 @@ messages.filter(_.id === 123)
 ~~~
 
 On the flip side of the coin,
-Slick is clever about the equivalence of `Optional` and non-`Optional` columns.
+Slick is clever about the equivalence of optional and non-optional columns.
 As long as the operands are some combination of the types `A` and `Option[A]` (for the same value of `A`), the query will normally compile:
 
 ~~~ scala
@@ -537,7 +546,7 @@ messages.filter(_.id === Option(123L)).result.statements
 //       from "message" x2 where x2."id" = 123)
 ~~~
 
-However, any `Optional` arguments must be strictly of type `Option`, not `Some` or `None`:
+However, any optional arguments must be strictly of type `Option`, not `Some` or `None`:
 
 ~~~ scala
 messages.filter(_.id === Some(123L)).result.statements
@@ -546,6 +555,12 @@ messages.filter(_.id === Some(123L)).result.statements
 //  required: slick.lifted.Rep[?]
 //               messages.filter(_.id === Some(123L)).result.statements
 //                                            ^
+~~~
+
+If you find yourself in this situation, remember you can always provide a type ascription to the value:
+
+~~~ scala
+messages.filter(_.id === (Some(123L): Option[Long]) )
 ~~~
 
 
@@ -567,7 +582,7 @@ Scala Code             SQL Equivalent
 
 :  Methods for ordering, skipping, and limiting the results of a query.
 
-We'll look at each in turn, starting with an example of `sortBy`:
+We'll look at each in turn, starting with an example of `sortBy`. Say we want want messages in order of the sender's name:
 
 ~~~ scala
 exec(messages.sortBy(_.sender).result)
@@ -618,6 +633,8 @@ As we compose these queries, the types of the `Query` follow along to give type-
 The expressions we use in queries are defined in extension methods,
 and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Rep`.
 Comparisons to `Option` types are made easy for us as Slick will compare `Rep[T]` and `Rep[Option[T]]` automatically.
+
+We've seen that `map` acts like a SQL `SELECT`, and `filter` is like a `WHERE`. We'll see the Slick representation of `GROUP` and `JOIN` in [Chapter 5](#joins).
 
 We introduced some new terminology:
 
@@ -691,7 +708,7 @@ val results = exec(messages.filter(_.id === 1L).result)
 ~~~
 </div>
 
-#### Checking the SQL
+### Checking the SQL
 
 Calling the `result.statements` methods on a query will give you the SQL to be executed.
 Apply that to the last exercise.
@@ -758,7 +775,7 @@ val msg1 = messages.filter(_.sender === "HAL").map(_.content).result.head
 
 You should get an action that produces "Affirmative, Dave. I read you."
 
-For Alice, `head` will throw a run-time exception. Use `headOption` instead.
+For Alice, `head` will throw a run-time exception as we are trying to return the head of an empty collection. Using `headOption` will prevent the exception.
 </div>
 
 
@@ -820,7 +837,7 @@ The query Slick generates looks something like this:
 select '(message Ref @421681221).content!' from "message" x2
 ~~~
 
-That is, a select expression for a strange constant string.
+That is a select expression for a strange constant string.
 
 The `_.content + "!"` expression converts `content` to a string and appends the exclamation point.
 What is `content`? It's a `Rep[String]`, not a `String` of the content.
@@ -839,9 +856,20 @@ messages.map(m => m.content ++ LiteralColumn("!"))
 Here `LiteralColumn[T]` is type of `Rep[T]` for holding a constant value to be inserted into the SQL.
 The `++` method is one of the extension methods defined for any `Rep[String]`.
 
-This will produce the desired result:
+Using `++` will produce the desired query:
 
 ~~~ sql
 select "content"||'!' from "message"
 ~~~
+
+You can also write:
+
+~~~ scala
+messages.map(m => m.content ++ "!")
+~~~
+
+... as "!" will be lifted to a `Rep[String]``
+
+This exercise highlights that inside of a `map` or `filter` you are working in terms of `Rep[T]`. You should become familiar with the operations available to you. The tables we've included in this chapter should help with that.
+
 </div>
