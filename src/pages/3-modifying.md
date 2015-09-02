@@ -13,20 +13,25 @@ As we saw in [Chapter 1](#Basics), adding new data a table looks like a destruct
 To insert a single row into a table we use the `+=` method.
 
 ~~~ scala
-exec(messages += Message("HAL", "No. Seriously, Dave, I can't let you in."))
-// res2: Int = 1
+val action: DBIO[Int] =
+  messages += Message("HAL", "No. Seriously, Dave, I can't let you in.")
+
+exec(action)
+// res1: Int = 1
 ~~~
 
-The return value is the number of rows inserted. However, it is often useful to return something else, such as the primary key generated for the new row, or the entire row as a case class. As we will see below, we can get this information using a new method called `returning`.
+The return value is the number of rows inserted. However, it is often useful to return something else, such as the primary key generated for the new row, or the entire row as a case class. We can get this information using a method called `returning`.  First we need to understand where the primary key comes from.
 
 ### Primary Key Allocation
 
 If we recall the definition of `Message`, we put the `id` field at the end of the case class and gave it a default value of `0L`:
 
 ~~~ scala
-final case class Message(sender: String,
-                         content: String,
-                         id: Long = 0L)
+final case class Message(
+   sender:  String,
+   content: String,
+   id:      Long = 0L
+)
 ~~~
 
 Giving the `id` parameter a default value allows us to omit it when creating a new object. Placing the `id` at the end of the constructor allows us to omit it without having to pass the remaining arguments using keyword parameters:
@@ -35,11 +40,11 @@ Giving the `id` parameter a default value allows us to omit it when creating a n
 Message("Dave", "You're off my Christmas card list.")
 ~~~
 
-There's nothing special about our default value of `0L`---it's not a magic value meaning "this record has no `id`". In our running example the `id` field of `Message` is mapped to an auto-incrementing primary key (using the `O.AutoInc` option), causing Slick to ignore the value of the field when generating an insert query and allows the database to step in an generate the value for us. We can see the SQL we're executing using the `insertStatement` method:
+There's nothing special about our default value of `0L`---it's not a magic value meaning "this record has no `id`". In our running example the `id` field of `Message` is mapped to an auto-incrementing primary key (using the `O.AutoInc` option), causing Slick to ignore the value of the field when generating an insert query. The database will step in an generate the value for us. We can see the SQL we're executing using the `insertStatement` method:
 
 ~~~ scala
 messages.insertStatement
-// res4: String =
+// res2: String =
 //   insert into "message" ("sender","content")
 //   values (?,?)
 ~~~
@@ -47,56 +52,40 @@ messages.insertStatement
 Slick provides a `forceInsert` method that allows us to specify a primary key on insert, ignoring the database's suggestion:
 
 ~~~ scala
-exec(messages forceInsert Message("HAL",
-        "I'm a computer, what would I do with a Christmas card anyway?",
-        1000))
-// res5: Int = 1
+exec(
+   messages forceInsert Message("HAL",
+     "I'm a computer, what would I do with a Christmas card anyway?",
+     1000L)
+)
+// res3: Int = 1
 
-exec(messages.filter(_.id === 1000L).run)
-// res6: Seq[Example.MessageTable#TableElementType] =
-//   Vector(Message(HAL,
-            I'm a computer, what would I do with a Christmas card anyway?,
-            1000))
+exec(
+  messages.filter(_.id === 1000L).result
+)
+// res4: Seq[Example.MessageTable#TableElementType] =
+//   Vector(Message(HAL,I'm a computer, what would I do with a Christmas card anyway?,1000))
 ~~~
 
-### Inserting Specific Columns
-
-If we our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by `mapping` over a query before calling `insert`:
-
-~~~ scala
-messages.map(_.sender).insertStatement
-// res7: String =
-//   insert into "message" ("sender")
-//   values (?)
-~~~
-
-The parameter type of the `+=` method is matched to the *unpacked* type of the query, so we execute this query by passing it a `String` for the `sender`:
-
-~~~ scala
-exec(messages.map(_.sender) += "HAL")
-// org.h2.jdbc.JdbcSQLException:
-//   NULL not allowed for column "content"; SQL statement:
-// insert into "message" ("sender")  values (?) [23502-185]
-//   at ...
-~~~
-
-The query fails at runtime because the `content` column is non-nullable in our schema. No matter. We'll cover nullable columns when discussing schemas in [Chapter 4](#Modelling).
+Notice that our `id` value of 1000 has been accepted by the database.
 
 ### Retrieving Primary Keys on Insert
 
 Let's modify the insert to give us back the primary key generated:
 
 ~~~ scala
-exec(messages returning messages.map(_.id) += Message("Dave", "Point taken." ))
-// res5: Long = 7
+val insert: DBIO[Long] =
+  messages returning messages.map(_.id) += Message("Dave", "Point taken.")
+
+exec(insert)
+// res5: Long = 1001
 ~~~
 
 The argument to `messages returning` is a `Query`, which is why `messages.map(_.id)` makes sense here. We can show that the return value is a primary key by looking up the record we just inserted:
 
 ~~~ scala
-exec(messages.filter(_.id === 7L).result.headOption)
-// res6: Option[Example.MessageTable#TableElementType] =
-//   Some(Message(Dave,Point taken.,7))
+exec(messages.filter(_.id === 1001L).result.headOption)
+// res6: Option[Example.Message] =
+//   Some(Message(Dave,Point taken.,1001))
 ~~~
 
 H2 only allows us to retrieve the primary key from an insert. Some databases allow us to retrieve the complete inserted record. For example, we could ask for the whole `Message` back:
@@ -111,9 +100,9 @@ exec(messages returning messages +=
 If we tried this with H2, we get a runtime error:
 
 ~~~ scala
- exec(messages returning messages +=
+exec(messages returning messages +=
       Message("Dave", "So... what do we do now?" ))
-// scala.slick.SlickException: ↩
+// scala.slick.SlickException:
 //   This DBMS allows only a single AutoInc column ↩
 //     to be returned from an INSERT
 //   at ...
@@ -123,14 +112,17 @@ This is a shame, but getting the primary key is often all we need. Typing `messa
 
 ~~~ scala
 lazy val messagesInsert = messages returning messages.map(_.id)
-//messagesInsert: slick.driver.H2Driver.ReturningInsertActionComposer[
+// messagesInsert: slick.driver.H2Driver.ReturningInsertActionComposer[
     Example.MessageTable#TableElementType,
     Long
   ] = <lazy>
 
 exec(messagesInsert += Message("HAL", "I don't know. I guess we wait."))
-// res8: Long = 8
+// res8: Long = 1002
 ~~~
+
+Here `messagesInsert` is pre-set to return the `id`, not the count of the number of rows inserted.
+
 
 <div class="callout callout-info">
 **Driver Capabilities**
@@ -152,12 +144,46 @@ val messagesInsertWithId =
 //   Example.Message
 // ] = ...
 
-exec(messagesInsertWithId += Message("Dave", "You're such a jerk."))
-// res8: messagesInsertWithId.SingleInsertResult =
-//   Message(Dave,You're such a jerk.,8)
+val insert: DBIO[Message] =
+  messagesInsertWithId += Message("Dave", "You're such a jerk.")
+
+exec(insert)
+// res9: messagesInsertWithId.SingleInsertResult =
+//   Message(Dave,You're such a jerk.,1004)
 ~~~
 
 The `into` method allows us to specify a function to combine the record and the new primary key. It's perfect for emulating the `jdbc.returnInsertOther` capability, although we can use it for any post-processing we care to imagine on the inserted data.
+
+### Inserting Specific Columns
+
+If we our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by `mapping` over a query before calling `insert`:
+
+~~~ scala
+messages.map(_.sender).insertStatement
+// res10: String =
+//   insert into "message" ("sender")
+//   values (?)
+~~~
+
+The parameter type of the `+=` method is matched to the *unpacked* type of the query:
+
+~~~ scala
+messages.map(_.sender)
+// res11: slick.lifted.Query[slick.lifted.Rep[String],String,Seq] = Rep(Bind)
+~~~
+
+... so we execute this query by passing it a `String` for the `sender`:
+
+~~~ scala
+exec(messages.map(_.sender) += "HAL")
+// org.h2.jdbc.JdbcSQLException:
+//   NULL not allowed for column "content"; SQL statement:
+// insert into "message" ("sender")  values (?) [23502-185]
+//   at ...
+~~~
+
+The query fails at runtime because the `sender` column is non-nullable in our schema. No matter. We'll cover nullable columns when discussing schemas in [Chapter 4](#Modelling).
+
 
 ### Inserting Multiple Rows
 
