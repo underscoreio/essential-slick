@@ -24,6 +24,7 @@
 [link-slick-hlist]:          http://slick.typesafe.com/doc/3.0.0/api/#slick.collection.heterogenous.HList
 [link-source-dbPublisher]:   http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.backend.DatabasePublisher
 [link-source-extmeth]:       https://github.com/slick/slick/blob/3.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
+
 [link-sbt]:                  http://scala-sbt.org
 [link-sbt-tutorial]:         http://www.scala-sbt.org/0.13/tutorial/index.html
 [link-pins-interop]:         https://www.artima.com/pins1ed/combining-scala-and-java.html#i-855208314-1
@@ -47,4 +48,4 @@
 [link-wikipedia-joins]:      http://en.wikipedia.org/wiki/Join_(SQL)
 [link-reactive-streams]:     http://http://www.reactive-streams.org/
 [link-dw-effect-blog]:       http://danielwestheide.com/blog/2015/06/28/put-your-writes-where-your-master-is-compile-time-restriction-of-slick-effect-types.html
-
+[link-scala-type-alias-bug]: https://issues.scala-lang.org/browse/SI-7139
