@@ -385,6 +385,54 @@ However, for this particular example, we recommend using Plain SQL ([Chapter 6](
 
 ## Combining Actions
 
+Actions can be combined via a set of combinator functions that Slick provides.  
+
+
+-------------------------------------------------------------------------
+Method               Arguments           Notes
+------------------- -------------------- --------------------------------
+
+`map`                `T => R`
+
+`flatMap`            `T => DBIO[R]`      Requires an execution context.
+
+`filter`
+
+`named`
+
+`zip`
+
+`asTry`
+
+`andThen` or `>>`
+
+`andFinally`
+
+`cleanUp`
+
+`failed`
+
+-------------------------------------------------------------------------
+
+: Combinators on action instances of `DBIO[T]`.
+  Arguments simplified.
+
+
+
+
+-------------------------------------------------------------------------
+Method               Arguments           Notes
+------------------- -------------------- ------------------
+
+`sequence`
+
+etc
+
+-------------------------------------------------------------------------
+
+: Combinators on `DBIOAction` companion object.
+
+
 TODO
 
 - table of methods on Actions
