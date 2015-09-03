@@ -271,21 +271,33 @@ val halSenderCol  = messagesByHal.map(_.sender)
 Finally we call the `update` method, which takes a parameter of the *unpacked* type (in this case `String`), runs the query, and returns the number of affected rows:
 
 ~~~ scala
-val rowsAffected = exec(halSenderCol.update("HAL 9000"))
+val action: DBIO[Int] = halSenderCol.update("HAL 9000")
+
+val rowsAffected = exec(action)
 // rowsAffected: Int = 4
 ~~~
 
 ### Updating Multiple Fields
 
-We can update more than one field at the same time by `mapping` the query down to a tuple of the columns we care about:
+We can update more than one field at the same time by `mapping` the query down to a tuple of the columns we care about...
 
 ~~~ scala
-exec(
-  messages.
+val query = messages.
     filter(_.id === 4L).
-    map(message => (message.sender, message.content)).
-    update(("HAL 9000", "Sure, Dave. Come right in.")))
+    map(message => (message.sender, message.content))
+// query: slick.lifted.Query[
+//  (slick.lifted.Rep[String], slick.lifted.Rep[String]),
+//  (String, String),
+//  Seq] = Rep(Bind)
+~~~
 
+...and then supplying the tuple values we want to used in the update:
+
+~~~ scala
+val action: DBIO[Int] =
+  query.update(("HAL 9000", "Sure, Dave. Come right in."))
+
+exec(action)
 // res3: Int = 1
 
 exec(messages.filter(_.sender === "HAL 9000").result)
@@ -315,7 +327,7 @@ Let's now turn to more interesting updates. How about converting every message t
 update "message" set "content" = CONCAT("content", '!')
 ~~~
 
-This is not currently supported by `update` in Slick, but there are ways to achieve the same result. One such way is to use plain SQL queries, which we cover in [Chapter 6](#PlainSQL). Another is to perform a *client side update* by defining a Scala function to capture the change to each row:
+This is not currently supported by `update` in Slick, but there are ways to achieve the same result. One such way is to use Plain SQL queries, which we cover in [Chapter 6](#PlainSQL). Another is to perform a *client side update* by defining a Scala function to capture the change to each row:
 
 ~~~ scala
 def exclaim(msg: Message): Message =
