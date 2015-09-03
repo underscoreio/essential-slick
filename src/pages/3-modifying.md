@@ -388,49 +388,53 @@ However, for this particular example, we recommend using Plain SQL ([Chapter 6](
 Actions can be combined via a set of combinator functions that Slick provides.  
 
 
--------------------------------------------------------------------------
-Method               Arguments           Notes
-------------------- -------------------- --------------------------------
+--------------------------------------------------------------------------------------
+Method              Arguments            Result Type    Notes
+------------------- -------------------- -------------- ------------------------------
+`map`               `T => R`             `DBIO[R]`      Requires an execution context.
 
-`map`                `T => R`
+`flatMap`           `T => DBIO[R]`       `DBIO[R]`      Requires an execution context.
 
-`flatMap`            `T => DBIO[R]`      Requires an execution context.
+`filter`            `R => Boolean`       `DBIO[T]`      Requires an execution context.
 
-`filter`
+`named`             `String`             `DBIO[T]`      ?
 
-`named`
+`zip`               ?                    ?              ?
 
-`zip`
+`asTry`             -                    `DBIO[Try[T]]` ?
 
-`asTry`
+`andThen` or `>>`   ?                    ?              ?
 
-`andThen` or `>>`
+`andFinally`        ?                    ?              ?
 
-`andFinally`
+`cleanUp`           ?                    ?              ?
 
-`cleanUp`
+`failed`            ?                    ?              ?
 
-`failed`
+--------------------------------------------------------------------------------------
 
--------------------------------------------------------------------------
-
-: Combinators on action instances of `DBIO[T]`.
-  Arguments simplified.
-
+: Combinators on action instances of `DBIOAction`, specifically a `DBIO[T]`.
+  Types simplified.
 
 
 
--------------------------------------------------------------------------
-Method               Arguments           Notes
-------------------- -------------------- ------------------
+----------------------------------------------------------------------------------------
+Method              Arguments            Result Type      Notes
+------------------- -------------------- ---------------- ------------------------------
+`sequence`          ?                    ?                ?
 
-`sequence`
+`seq`               ?                    ?                ?
 
-etc
+`from`              `Future[T]`          `DBIO[T]`        ?
 
--------------------------------------------------------------------------
+`fold`              ?                    ?                ?
 
-: Combinators on `DBIOAction` companion object.
+`successful`        `V`, some value      `DBIO[V]`        ?
+
+`failed`            `Throwable`          `DBIO[Nothing]`  ?
+----------------------------------------------------------------------------------------
+
+: Combinators on `DBIO` object, with types simplified.
 
 
 TODO
