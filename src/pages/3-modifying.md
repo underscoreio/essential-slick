@@ -20,7 +20,7 @@ exec(action)
 // res1: Int = 1
 ~~~
 
-The return value is the number of rows inserted. However, it is often useful to return something else, such as the primary key generated for the new row, or the entire row as a case class. We can get this information using a method called `returning`.  First we need to understand where the primary key comes from.
+The return value is the number of rows inserted. However, it is often useful to return something else, such as the primary key generated for the new row. We can get this information using a method called `returning`. Before we get to that, we first need to understand where the primary key comes from.
 
 ### Primary Key Allocation
 
@@ -66,7 +66,7 @@ exec(
 //   Vector(Message(HAL,I'm a computer, what would I do with a Christmas card anyway?,1000))
 ~~~
 
-Notice that our `id` value of 1000 has been accepted by the database.
+Notice that our explicit `id` value of 1000 has been accepted by the database.
 
 ### Retrieving Primary Keys on Insert
 
@@ -88,6 +88,8 @@ exec(messages.filter(_.id === 1001L).result.headOption)
 //   Some(Message(Dave,Point taken.,1001))
 ~~~
 
+### Retrieving Rows on Insert
+
 H2 only allows us to retrieve the primary key from an insert. Some databases allow us to retrieve the complete inserted record. For example, we could ask for the whole `Message` back:
 
 ~~~ scala
@@ -108,20 +110,22 @@ exec(messages returning messages +=
 //   at ...
 ~~~
 
-This is a shame, but getting the primary key is often all we need. Typing `messages returning messages.map(_.id)` isn't exactly convenient, but we can easily define a query specifically for inserts:
+This is a shame, but getting the primary key is often all we need.
+
+Typing `messages returning messages.map(_.id)` isn't exactly convenient, but we can easily define a query specifically for inserts:
 
 ~~~ scala
 lazy val messagesInsert = messages returning messages.map(_.id)
 // messagesInsert: slick.driver.H2Driver.ReturningInsertActionComposer[
-    Example.MessageTable#TableElementType,
-    Long
-  ] = <lazy>
+//    Example.MessageTable#TableElementType,
+//    Long
+//  ] = <lazy>
 
 exec(messagesInsert += Message("HAL", "I don't know. I guess we wait."))
 // res8: Long = 1002
 ~~~
 
-Here `messagesInsert` is pre-set to return the `id`, not the count of the number of rows inserted.
+Using `messagesInsert` will return us the `id`, rather than the count of the number of rows inserted.
 
 
 <div class="callout callout-info">
@@ -156,7 +160,7 @@ The `into` method allows us to specify a function to combine the record and the 
 
 ### Inserting Specific Columns
 
-If we our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by `mapping` over a query before calling `insert`:
+If our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by `mapping` over a query before calling `insert`:
 
 ~~~ scala
 messages.map(_.sender).insertStatement
