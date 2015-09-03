@@ -335,15 +335,62 @@ def exclaim(msg: Message): Message =
 // exclaim: (msg: Example.Message)Example.Message
 ~~~
 
-We can update rows by selecting the relevant data from the database, applying this function, and writing the results back individually. Note that approach can be quite inefficient for large datasets---it takes `N + 1` queries to apply an update to `N` results:
+We can update rows by selecting the relevant data from the database, applying this function, and writing the results back individually. Note that approach can be quite inefficient for large datasets---it takes `N + 1` queries to apply an update to `N` results.
+
+You may be tempted to write something like this:
 
 ~~~ scala
+def modify(msg: Message): DBIO[Int] =
+  messages.filter(_.id === msg.id).update(exclaim(msg))
+
 for {
   msg <- exec(messages.result)
-} yield exec(messages.filter(_.id === msg.id).update(exclaim(msg)))
+} yield exec(modify(msg))
 ~~~
 
-We recommend plain SQL queries over this approach if you can use them. See [Chapter 6](#PlainSQL) for details.
+That will produce the desired effect, but with some cost.  What we have done is use our own `exec` method which will wait for results.  We use it to fetch all rows, and then we use it on each row to modify the row. That's a lot of waiting.
+
+A better (but not the best) approach is to try to find a way to turn our logic into a single `DBIO` action. Here's one way we can do that:
+
+~~~ scala
+val action: DBIO[Seq[Int]] =
+  messages.result.flatMap { msgs => DBIO.sequence(msgs.map(modify)) }
+
+val rowCounts: Seq[Int] = exec(action)
+// rowCounts: List(1, 1, 1, 1, 1)
+~~~
+
+To make sense of this we need to take `action` apart.
+
+To start with we know that `messages.result` is all the messages in the database, as a `DBIO[Seq[Message]]`.
+The `flatMap` method, expects a function from our `Seq[Message]` to another `DBIO`.
+Our problem here is that we're updating many rows, via many actions, so how can we get a single `DBIO` from that?
+Slick provides `DIO.sequence` for that purpose: it takes a sequence of `DBIO`s and gives back a `DBIO` of a sequence.
+
+The end result is a single action we can run, which turns into many SQL statements. In fact the action will result in:
+
+~~~ sql
+select x2."sender", x2."content", x2."id" from "message" x2
+update "message" set "sender" = ?, "content" = ?, "id" = ? where "message"."id" = 1
+update "message" set "sender" = ?, "content" = ?, "id" = ? where "message"."id" = 2
+update "message" set "sender" = ?, "content" = ?, "id" = ? where "message"."id" = 3
+update "message" set "sender" = ?, "content" = ?, "id" = ? where "message"."id" = 4
+update "message" set "sender" = ?, "content" = ?, "id" = ? where "message"."id" = 5
+~~~
+
+We'll turn to other ways to combine actions in the next section.
+
+However, for this particular example, we recommend using Plain SQL ([Chapter 6](#PlainSQL)) instead of client-side updates.
+
+
+## Combining Actions
+
+TODO
+
+- table of methods on Actions
+
+- material from blog post on upsert? Maybe ignoring talking about upsert for some future update unless we have the enegery to add it now. If so, suggest separate section just befoe "Combining action"
+
 
 ## Deleting Rows
 
