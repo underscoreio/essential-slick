@@ -115,17 +115,17 @@ This is a shame, but getting the primary key is often all we need.
 Typing `messages returning messages.map(_.id)` isn't exactly convenient, but we can easily define a query specifically for inserts:
 
 ~~~ scala
-lazy val messagesInsert = messages returning messages.map(_.id)
-// messagesInsert: slick.driver.H2Driver.ReturningInsertActionComposer[
+lazy val messagesReturningId = messages returning messages.map(_.id)
+// messagesReturningId: slick.driver.H2Driver.ReturningInsertActionComposer[
 //    Example.MessageTable#TableElementType,
 //    Long
 //  ] = <lazy>
 
-exec(messagesInsert += Message("HAL", "I don't know. I guess we wait."))
+exec(messagesReturningId += Message("HAL", "I don't know. I guess we wait."))
 // res8: Long = 1002
 ~~~
 
-Using `messagesInsert` will return us the `id`, rather than the count of the number of rows inserted.
+Using `messagesReturningId` will return us the `id`, rather than the count of the number of rows inserted.
 
 
 <div class="callout callout-info">
@@ -139,20 +139,20 @@ The API documentation for each driver also lists the capabilities that the drive
 If we do want to get a populated `Message` back from an insert for any database, we can do it by retrieving the primary key and manually adding it to the inserted record. Slick simplifies this with another method, `into`:
 
 ~~~ scala
-val messagesInsertWithId =
+val messagesReturningRow =
   messages returning messages.map(_.id) into { (message, id) =>
     message.copy(id = id)
   }
-// messagesInsertWithId: slick.driver.H2Driver.IntoInsertActionComposer[
+// messagesReturningRow: slick.driver.H2Driver.IntoInsertActionComposer[
 //   Example.MessageTable#TableElementType,
 //   Example.Message
 // ] = ...
 
 val insert: DBIO[Message] =
-  messagesInsertWithId += Message("Dave", "You're such a jerk.")
+  messagesReturningRow += Message("Dave", "You're such a jerk.")
 
 exec(insert)
-// res9: messagesInsertWithId.SingleInsertResult =
+// res9: messagesReturningRow.SingleInsertResult =
 //   Message(Dave,You're such a jerk.,1004)
 ~~~
 
@@ -205,18 +205,18 @@ val testMessages = Seq(
 // testMessages: Seq[Message] = ...
 
 exec(messages ++= testMessages)
-// res9: Option[Int] = Some(4)
+// res11: Option[Int] = Some(4)
 ~~~
 
 This code prepares one SQL statement and uses it for each row in the `Seq`. This can result in a significant boost in performance when inserting many records.
 
 As we saw earlier this chapter, the default return value of a single insert is the number of rows inserted. The multi-row insert above is also returning the number of rows, except this time the type is `Option[Int]`. The reason for this is that the JDBC specification permits the underlying database driver to indicate that the number of rows inserted is unknown.
 
-Slick also provides a batch version of `messages returning...`, including the `into` method. We can use the `messagesInsertWithId` query we defined last section and write:
+Slick also provides a batch version of `messages returning...`, including the `into` method. We can use the `messagesReturningRow` query we defined last section and write:
 
 ~~~ scala
-exec(messagesInsertWithId ++= testMessages)
-// res9: messagesInsertWithId.MultiInsertResult = List(
+exec(messagesReturningRow ++= testMessages)
+// res12: messagesReturningRow.MultiInsertResult = List(
 //   Message(Dave,Hello, HAL. Do you read me, HAL?,13),
 //   ...)
 ~~~
