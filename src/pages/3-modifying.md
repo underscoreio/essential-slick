@@ -465,7 +465,7 @@ val clear: DBIO[String] =
 ~~~
 
 ...which is the kind of Slick code you've seen many times.
-We can take this action and transform so that when it is run the result is obfuscated:
+We can take this action and transform it. When the action is run, the result is obfuscated:
 
 ~~~ scala
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -518,7 +518,7 @@ The reason for this is that `map` allows you to call arbitrary code when joining
 Slick cannot allow that code to be run on its own execution context,
 because it has no way to know if you are going to tie up Slicks threads for a long time.
 
-In contract, methods such as `andThen` which combine actions without custom code,
+In contrast, methods such as `andThen` which combine actions without custom code,
 can be run on Slick's own execution context.
 Therefore, you do not need an execution context available for `andThen`.
 
