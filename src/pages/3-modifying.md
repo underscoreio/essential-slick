@@ -388,51 +388,50 @@ However, for this particular example, we recommend using Plain SQL ([Chapter 6](
 Actions can be combined via a set of combinator functions that Slick provides.  
 
 
---------------------------------------------------------------------------------------
-Method              Arguments            Result Type    Notes
-------------------- -------------------- -------------- ------------------------------
-`map`               `T => R`             `DBIO[R]`      Requires an execution context.
+----------------------------------------------------------------------------------------------------
+Method              Arguments                       Result Type      Notes
+------------------- -----------------------------   ---------------- ------------------------------
+`map`               `T => R`                        `DBIO[R]`        Execution context required
 
-`flatMap`           `T => DBIO[R]`       `DBIO[R]`      Requires an execution context.
+`flatMap`           `T => DBIO[R]`                  `DBIO[R]`        _ditto_
 
-`filter`            `R => Boolean`       `DBIO[T]`      Requires an execution context.
+`filter`            `R => Boolean`                  `DBIO[T]`        _ditto_
 
-`named`             `String`             `DBIO[T]`      ?
+`named`             `String`                        `DBIO[T]`        
 
-`zip`               ?                    ?              ?
+`zip`               `DBIO[R]`                       `DBIO[(T,R)]`    
 
-`asTry`             -                    `DBIO[Try[T]]` ?
+`asTry`                                             `DBIO[Try[T]]`    
 
-`andThen` or `>>`   ?                    ?              ?
+`andThen` or `>>`   `DBIO[R]`                       `DBIO[Unit]`     Example in Chapter 1.
 
-`andFinally`        ?                    ?              ?
+`andFinally`        `DBIO[_]`                       `DBIO[T]`        
 
-`cleanUp`           ?                    ?              ?
+`cleanUp`           `Option[Throwable]=>DBIO[_]`    `DBIO[T]`        Execution context required
 
-`failed`            ?                    ?              ?
-
---------------------------------------------------------------------------------------
+`failed`                                            `DBIO[Throwable]`
+----------------------------------------------------------------------------------------------------
 
 : Combinators on action instances of `DBIOAction`, specifically a `DBIO[T]`.
   Types simplified.
 
 
 
-----------------------------------------------------------------------------------------
-Method              Arguments            Result Type      Notes
-------------------- -------------------- ---------------- ------------------------------
-`sequence`          ?                    ?                ?
+----------------------------------------------------------------------------------------------------------
+Method       Arguments                       Result Type                    Notes
+------------ ------------------------------- ------------------------------ ------------------------------
+`sequence`   `TraversableOnce[DBIO[T]]`      `DBIO[TraversableOnce[T]]`     Example in the previous section
 
-`seq`               ?                    ?                ?
+`seq`        `DBIO[_]*`                      `DBIO[Unit]`                   Combines actions with `andThen`
 
-`from`              `Future[T]`          `DBIO[T]`        ?
+`from`       `Future[T]`                     `DBIO[T]`                       
 
-`fold`              ?                    ?                ?
+`successful` `V`                             `DBIO[V]`                      
 
-`successful`        `V`, some value      `DBIO[V]`        ?
+`failed`     `Throwable`                     `DBIO[Nothing]`                
 
-`failed`            `Throwable`          `DBIO[Nothing]`  ?
-----------------------------------------------------------------------------------------
+`fold`       `(Seq[DBIO[T]], T)  (T,T)=>T`   `DBIO[T]`                      Execution context required
+----------------------------------------------------------------------------------------------------------
 
 : Combinators on `DBIO` object, with types simplified.
 
