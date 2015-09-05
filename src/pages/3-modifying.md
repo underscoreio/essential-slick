@@ -348,7 +348,10 @@ for {
 } yield exec(modify(msg))
 ~~~
 
-That will produce the desired effect, but with some cost.  What we have done is use our own `exec` method which will wait for results.  We use it to fetch all rows, and then we use it on each row to modify the row. That's a lot of waiting.
+Thee's nothing wrong with this, and it will produce the desired effect, but at some cost.
+What we have done there is use our own `exec` method which will wait for results.
+We use it to fetch all rows, and then we use it on each row to modify the row.
+That's a lot of waiting.
 
 A better (but not the best) approach is to try to find a way to turn our logic into a single `DBIO` action. Here's one way we can do that:
 
@@ -385,8 +388,23 @@ However, for this particular example, we recommend using Plain SQL ([Chapter 6](
 
 ## Combining Actions
 
-Actions can be combined via a set of combinator functions that Slick provides.  
+At some point you'll find yourself writing a piece of functionality made up of multiple actions.
+The temptation, as we have seen above, is to run each action, use the result, and run another action.
+This will require you to deal with multiple `Future`s.
 
+We recommend you avoid that whenever you can.
+Instead, focus on the actions and how they combine together, not on the messy details of running them.
+Slick provides a set of combinators to make this possible.
+
+This is a key concept in Slick. Make sure you spend time getting comfortable with combining actions.
+
+### Combinators Summary
+
+There are two tables in this section. They list out the key methods available on an action,
+and the combinators available on `DBIO`.
+
+Some, such as `map`, `fold`, and `zip`, will be familiar from the Scala collections library.
+We will give examples of how to use many of them in this section.
 
 ----------------------------------------------------------------------------------------------------
 Method              Arguments                       Result Type      Notes
@@ -395,7 +413,7 @@ Method              Arguments                       Result Type      Notes
 
 `flatMap`           `T => DBIO[R]`                  `DBIO[R]`        _ditto_
 
-`filter`            `R => Boolean`                  `DBIO[T]`        _ditto_
+`filter`            `T => Boolean`                  `DBIO[T]`        _ditto_
 
 `named`             `String`                        `DBIO[T]`        
 
@@ -414,7 +432,6 @@ Method              Arguments                       Result Type      Notes
 
 : Combinators on action instances of `DBIOAction`, specifically a `DBIO[T]`.
   Types simplified.
-
 
 
 ----------------------------------------------------------------------------------------------------------
@@ -436,11 +453,142 @@ Method       Arguments                       Result Type                    Note
 : Combinators on `DBIO` object, with types simplified.
 
 
-TODO
+### `map`
 
-- table of methods on Actions
+Mapping over an action is a way to transform a value once you have it out of the database.
 
-- material from blog post on upsert? Maybe ignoring talking about upsert for some future update unless we have the enegery to add it now. If so, suggest separate section just befoe "Combining action"
+As an example, let's create an action to give us the the text of a message from the database...
+
+~~~ scala
+val clear: DBIO[String] =
+  messages.map(_.content).result.head
+~~~
+
+...which is the kind of Slick code you've seen many times.
+We can take this action and transform so that when it is run the result is obfuscated:
+
+~~~ scala
+import scala.concurrent.ExecutionContext.Implicits.global
+
+// From: http://rosettacode.org/wiki/Rot-13#Scala
+def rot13(s: String) = s map {
+  case c if 'a' <= c.toLower && c.toLower <= 'm' => c + 13 toChar
+  case c if 'n' <= c.toLower && c.toLower <= 'z' => c - 13 toChar
+  case c => c
+}
+
+val action: DBIO[String] = clear.map(rot13)
+
+exec(action)
+// res1: String = Uryyb, UNY. Qb lbh ernq zr, UNY?!
+~~~
+
+What we _didn't_ do is run the query and then `rot13` the result.
+That would have involved us dealing with `Future[String]`.
+Instead we used a much cleaner way of writing code: we created an action, that when run, would ensure our `rot13` function is applied to the result.
+
+Note that we have used three kinds of `map` in this example:
+
+- the `String.map` to obfuscate text in `rot13`;
+- a `map` on a query to pick out the `content` column; and
+- `map` on our action so that the result will be transform when the action is run.
+
+Combinators everywhere!
+
+This example transformed a `String` to another `String`.
+As you may expect if `map` changes the type of a value, the type of `DBIO` changes too.
+
+Here map takes us from `DBIO[String]` to a `DBIO[Int]`:
+
+~~~ scala
+clear.map(s => s.length)
+// res2: slick.dbio.DBIOAction[
+//   Int,
+//   slick.dbio.NoStream,
+//   slick.dbio.Effect.All
+// ]
+~~~
+
+<div class="callout callout-info">
+**Execution Context Required**
+
+Some methods require an execution context, and some don't. For example, `map` does, but `andThen` does not.
+
+The reason for this is that `map` allows you to call arbitrary code when joining the actions together.
+Slick cannot allow that code to be run on its own execution context,
+because it has no way to know if you are going to tie up Slicks threads for a long time.
+
+In contract, methods such as `andThen` which combine actions without custom code,
+can be run on Slick's own execution context.
+Therefore, you do not need an execution context available for `andThen`.
+
+You'll know if you need an execution context, because the compiler will tell you:
+
+~~~
+error: Cannot find an implicit ExecutionContext. You might pass
+  an (implicit ec: ExecutionContext) parameter to your method
+  or import scala.concurrent.ExecutionContext.Implicits.global.
+~~~
+
+The Slick manual discusses this in the section on [Database I/O Actions][link-ref-actions].
+</div>
+
+
+### `filter`
+
+TODO: find a realisitc example that you wouldn't do via query.filter.
+
+
+### `DBIO.successful` and `DBIO.failed`
+
+TODO: Note repl problem
+
+### `flatMap`
+
+TODO: give an example of "find row or create it"?
+
+E.g.,
+(have we even got `room`s at this point?)
+
+~~~ scala
+def lookup(name: String): DBIO[Option[Room]] = ???
+def create(name: String): DBIO[Room] = ???
+~~~
+
+But how to combine them? What are the cases we care about:
+- no result, need an action to insert
+- some result, we're done. But we can't return the room, we need an action
+
+~~~ scala
+def createIfNeeded(maybeRoom: Option[Room]): DBIO[Room] = maybeRoom match {
+ case Some(room) => DBIO.successful(room)
+ case None       => create(room)
+}
+~~~
+
+flatmap is the way to sequence these two actions:
+
+~~~ scala
+def findOrCreate(name: String): DBIO[Room] = lookup.flatMap(createIfNeeded)
+~~~
+
+Or Something else?
+
+
+Add tip here on helping flatMap with effects via `flatMap[X,Y,Z]`.
+
+### `zip`
+
+### `DBIO.fold`
+
+### `named`
+
+### `andFinally`
+
+### `cleanUp`
+
+### `failed`
+
 
 
 ## Deleting Rows
