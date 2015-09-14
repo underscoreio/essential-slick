@@ -455,17 +455,19 @@ Method       Arguments                       Result Type                    Note
 
 ### `map`
 
-Mapping over an action is a way to transform a value once you have it out of the database.
+Mapping over an action is a way to set up a transformation of a value from the database.
+The transformation will run when the result is available from the database.
 
-As an example, let's create an action to give us the the text of a message from the database...
+As an example, we can create an action to return the text of a message from the database:
 
 ~~~ scala
-val clear: DBIO[String] =
+val text: DBIO[String] =
   messages.map(_.content).result.head
 ~~~
 
-...which is the kind of Slick code you've seen many times.
-We can take this action and transform it. When the action is run, the result is obfuscated:
+This is the regular kind of Slick code you've seen many times. There's nothing new there.
+
+We can now take this action and transform it so the text is obfuscated:
 
 ~~~ scala
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -477,7 +479,7 @@ def rot13(s: String) = s map {
   case c => c
 }
 
-val action: DBIO[String] = clear.map(rot13)
+val action: DBIO[String] = text.map(rot13)
 
 exec(action)
 // res1: String = Uryyb, UNY. Qb lbh ernq zr, UNY?!
@@ -485,7 +487,8 @@ exec(action)
 
 What we _didn't_ do is run the query and then `rot13` the result.
 That would have involved us dealing with `Future[String]`.
-Instead we used a much cleaner way of writing code: we created an action, that when run, would ensure our `rot13` function is applied to the result.
+Instead we used a much cleaner way of writing code:
+we created an action that when run would ensure our `rot13` function is applied to the result.
 
 Note that we have used three kinds of `map` in this example:
 
@@ -496,12 +499,10 @@ Note that we have used three kinds of `map` in this example:
 Combinators everywhere!
 
 This example transformed a `String` to another `String`.
-As you may expect if `map` changes the type of a value, the type of `DBIO` changes too.
-
-Here map takes us from `DBIO[String]` to a `DBIO[Int]`:
+As you may expect if `map` changes the type of a value, the type of `DBIO` changes too:
 
 ~~~ scala
-clear.map(s => s.length)
+text.map(s => s.length)
 // res2: slick.dbio.DBIOAction[
 //   Int,
 //   slick.dbio.NoStream,
@@ -512,7 +513,7 @@ clear.map(s => s.length)
 <div class="callout callout-info">
 **Execution Context Required**
 
-Some methods require an execution context, and some don't. For example, `map` does, but `andThen` does not.
+Some methods require an execution context and some don't. For example, `map` does, but `andThen` does not.
 
 The reason for this is that `map` allows you to call arbitrary code when joining the actions together.
 Slick cannot allow that code to be run on its own execution context,
@@ -536,7 +537,66 @@ The Slick manual discusses this in the section on [Database I/O Actions][link-re
 
 ### `filter`
 
-TODO: find a realisitc example that you wouldn't do via query.filter.
+As with `map`, `filter` is something you'll be familiar with, but there is a twist with Slick.
+
+As with regular Scala collections, `filter` tables a predicate function as an argument.
+
+~~~ scala
+val text: DBIO[String] =
+  messages.map(_.content).result.head
+
+val longMsgAction: DBIO[String] =
+  text.filter(s => s.length > 10)
+~~~
+
+So `filter` on an action gives us another action.
+When we run the `longMsgAction` we get a result if the value from the database is longer than 10 characters.
+
+~~~ scala
+exec(longMsgAction)
+// res3: Hello, HAL. Do you read me, HAL?!
+~~~
+
+The surprise comes if our predicate evaluates to `false`.
+When working with collections, if the predicate is false for some value, that value is excluded from the collection.
+But for actions, the result is an exception:
+
+~~~
+java.util.NoSuchElementException: Action.withFilter failed
+~~~
+
+That makes `filter` tricky to work with, but you have some options.
+First, if you want different behaviour from a filter-like function, you can implement it pretty easily with `flatMap`.
+We will get to `flatMap` shortly.
+
+Another option is to wrap the filter with a try, via `asTry`.
+
+<div class="callout callout-info">
+**Which `filter`?**
+
+Why would you even use `filter` on an action?
+One situation would be a test you want to apply which you cannot implement in the database.
+However, if you can implement the test via a `WHERE` clause,
+you'll probably be better off performing the `filter` on the _query_, not the _action_.
+</div>
+
+### `asTry`
+
+Calling `asTry` on an action changes the action's type from a `DBIO[T]` to a `DBIO[Try[T]]`.
+This means you can work in terms of Scala's `Success[T]` and `Failure` instead of exceptions.
+
+Continuing with the example from `filter`, we can deal with a failure:
+
+~~~ scala
+val text: DBIO[String] =
+  messages.map(_.content).result.head
+
+val willFail: DBIO[Try[String]] =
+  text.filter(s => s.length > 10000).asTry
+
+exec(willFail)
+// res3: Failure(java.util.NoSuchElementException: Action.withFilter failed)  
+~~~
 
 
 ### `DBIO.successful` and `DBIO.failed`
