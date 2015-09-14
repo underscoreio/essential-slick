@@ -601,7 +601,33 @@ exec(willFail)
 
 ### `DBIO.successful` and `DBIO.failed`
 
-TODO: Note repl problem
+When combining actions you will sometimes need to create an action that represents a simple value.
+Slick provides `DBIO.successful` for that purpose:
+
+~~~ scala
+val v: DBIO[Int] = DBIO.successful(100)
+// v: slick.dbio.DBIO[Int] = SuccessAction(100)
+~~~
+
+And for failures, the value is a `Throwable`:
+
+~~~ scala
+val v: DBIO[Nothing] =
+  DBIO.failed(new RuntimeException("pod bay door unexpectedly locked"))
+// v: slick.dbio.DBIO[Nothing] =
+//  FailureAction(java.lang.RuntimeException: pod bay door unexpectedly locked)
+~~~
+
+We will make use of these values when we discuss `flatMap`.
+
+<div class="callout callout-info">
+**Error: value successful is not a member of object slick.dbio.DBIO**
+
+Due to a [bug][link-scala-type-alias-bug] in Scala you may experience something like the above error when using `DBIO` methods on the REL and in IDEs. We're expecting this to be worked-around in [Slick 3.1][link-slick-type-alias-pr].
+
+If you do encounter it, you can carry on by writing your code in a `.scala` source file and `run`-ing it from SBT.
+</div>
+
 
 ### `flatMap`
 
@@ -729,8 +755,7 @@ Note:
   - we need to catch the exception,
   - we can see the updates temporarily applied before `DBIO.failed` is called.
 
-Due to a [bug][link-scala-type-alias-bug] in Scala we can not investigate this within the repl, although it is looking
-good to be fixed in [Slick 3.1][link-slick-type-alias-pr].
+
 
 ## Logging Queries and Results
 
