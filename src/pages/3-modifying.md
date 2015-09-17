@@ -4,7 +4,7 @@ In the last chapter we saw how to retrieve data from the database using select q
 
 SQL veterans will know that update and delete queries, in particular, share many similarities with select queries. The same is true in Slick, where we use the `Query` monad and combinators to build the different kinds of query. Ensure you are familiar with the content of [Chapter 2](#Selecting) before proceeding.
 
-## Inserting Data
+## Inserting Rows
 
 As we saw in [Chapter 1](#Basics), adding new data a table looks like a destructive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
 
@@ -221,9 +221,140 @@ exec(messagesReturningRow ++= testMessages)
 //   ...)
 ~~~
 
+### More Control over Inserts {#moreControlOverInserts}
+
+At this point we've inserted fixed data into the database.
+Sometimes you need more flexibility, including inserting data based on another query.
+Slick supports this via `forceInsertQuery`.
+
+The argument to `forceInsertQuery` is a query.  So the form is:
+
+~~~ scala
+ insertExpression.forceInsertQuery(selectExpression)
+~~~
+
+Our `selectExpression` can be pretty much anything.
+But it needs to match the columns needed by our `insertExpression`.
+
+As an example, our query could check to see if a particular row of data already exists, and insert it if it doesn't.
+That is, an "insert if doesn't exist" function.
+
+Let's say we only want the director to be able to say "Cut!" once. The SQL would end up like this:
+
+~~~ sql
+insert into "messages" ("sender", "content")
+  select 'Stanley', 'Cut!'
+where
+  not exists(
+    select
+      "id", "sender", "content"
+    from
+      "messages" where "name" = 'Stanley'
+                 and   "content" = 'Cut!')
+~~~
+
+That looks quite involved, but we can build it up gradually.
+
+The tricky part of this is the `select 'Stanley', 'Cut!'` part, as there is no `FROM` clause there.
+We saw an example of how to create that in Chapter 2, with `Query.apply`.
+
+For this situation it woudld be:
+
+~~~ scala
+val data = Query("Stanley" -> "Cut!")
+
+// data: slick.lifted.Query[
+//  (slick.lifted.ConstColumn[String], slick.lifted.ConstColumn[String]),
+//  (String, String),
+//  Seq] = Rep(Pure $@1413606951)
+~~~
+
+That's a tuple of two columns. That's one part of the what we need.
+
+We also need to be able to test to see if the data already exists. That's straight-forward:
+
+~~~ scala
+val exists =
+  messages
+   .filter(m => m.sender === "Stanley" && m.content === "Cut!")
+   .exists
+
+// exists: slick.lifted.Rep[Boolean] = Rep(Apply Function exists)
+~~~
+
+We want to use the `data` when the row _doesn't_ exists, so combine the `data` and `exists` with `filterNot` rather than `filter`:
+
+~~~ scala
+val selectExpression = data.filterNot(_ => exists)
+
+// selectExpression: slick.lifted.Query[
+//  (slick.lifted.ConstColumn[String], slick.lifted.ConstColumn[String]),
+//  (String, String),Seq] = Rep(Filter)
+~~~
+
+Finally, we need the apply this query with `forceInsertQuery`.
+But remember the column types for the insert and select need to match up.
+So we `map` on `messages` to make sure that's the case:
+
+~~~ scala
+val action =
+  messages
+    .map(m => m.sender -> m.content)
+    .forceInsertQuery(selectExpression)
+
+exec(action)
+// res13: Int = 1
+
+exec(action)
+//  res14: Int = 0  
+~~~
+
+The first time we run the query, the message is inserted.
+The second time, no rows are affected.
+
+In summary, `forceInsertQuery` provides a way to build-up more complicated inserts.
+If you find situations beyond the power of this method,
+you can always make use of Plain SQL inserts, described in [Chapter 6](#PlainSQL).
+
+
+## Deleting Rows
+
+Slick lets us delete rows using the same `Query` objects we saw in [Chapter 2](#Selecting).
+That is, we specify which rows to delete using the `filter` method, and then call `delete`:
+
+~~~ scala
+val removeHal: DBIO[Int] =
+  messages.filter(_.sender === "HAL").delete
+
+exec(removeHal)
+// res1: Int = 2
+~~~
+
+The return value is the number of rows affected.  
+
+The SQL generated for the action can be seen by `delete.statements`:
+
+~~~ scala
+messages.filter(_.sender === "HAL").delete.statements
+// res2: Iterable[String] = List(
+//   delete from "message"
+//   where "message"."sender" = 'HAL')
+~~~
+
+Note that it is an error to use `delete` in combination with `map`. We can only call `delete` on a `TableQuery`:
+
+~~~ scala
+messages.map(_.content).delete
+// <console>:14: error: value delete is not a member of ↩
+//   slick.lifted.Query[slick.lifted.Column[String],String,Seq]
+//          messages.map(_.content).delete
+//                                  ^
+~~~
+
+
 ## Updating Rows {#UpdatingRows}
 
-So far we've only looked at inserting new data into the database, but what if we want to update records that are already in the database? Slick lets us create SQL `UPDATE` queries using the same `Query` objects we saw in [Chapter 2](#Selecting).
+So far we've only looked at inserting new data into the database, and deleting existing data. But what if we want to update records that are already in the database? Slick lets us create SQL `UPDATE` actions via the kinds of `Query` values we've been using for selecting and deleting rows.
 
 ### Updating a Single Field
 
@@ -609,16 +740,19 @@ val v: DBIO[Int] = DBIO.successful(100)
 // v: slick.dbio.DBIO[Int] = SuccessAction(100)
 ~~~
 
+We'll see an example of this when we discuss `flatMap`.
+
 And for failures, the value is a `Throwable`:
 
 ~~~ scala
 val v: DBIO[Nothing] =
   DBIO.failed(new RuntimeException("pod bay door unexpectedly locked"))
-// v: slick.dbio.DBIO[Nothing] =
-//  FailureAction(java.lang.RuntimeException: pod bay door unexpectedly locked)
+// v: slick.dbio.DBIO[Nothing] = FailureAction(
+//  java.lang.RuntimeException: pod bay door unexpectedly locked)
 ~~~
 
-We will make use of these values when we discuss `flatMap`.
+This is a particular role to play inside transactions, which we cover later in this chapter.
+
 
 <div class="callout callout-info">
 **Error: value successful is not a member of object slick.dbio.DBIO**
@@ -631,37 +765,99 @@ If you do encounter it, you can carry on by writing your code in a `.scala` sour
 
 ### `flatMap`
 
-TODO: give an example of "find row or create it"?
+Ahh, `flatMap`. Wonderful `flatMap`.
+This method gives us the power to sequence actions and decide what we want to do at each step.
 
-E.g.,
-(have we even got `room`s at this point?)
+The signature of `flatMap` should feel similar to the `flatMap` you see elsewhere:
 
 ~~~ scala
-def lookup(name: String): DBIO[Option[Room]] = ???
-def create(name: String): DBIO[Room] = ???
+// Simplified:
+def flatMap[S](f: R => DBIO[S])(implicit e: ExecutionContext): DBIO[S]
 ~~~
 
-But how to combine them? What are the cases we care about:
-- no result, need an action to insert
-- some result, we're done. But we can't return the room, we need an action
+That is, we give `flatMap` a function that depends on the value from an action, and evaluates to another action.
+
+As an example, let's write a method to remove all the crew's messages, and post a message saying how many messages were removed.
+This will involve an `INSERT` and a `DELETE`, both of which we're familiar with:
 
 ~~~ scala
-def createIfNeeded(maybeRoom: Option[Room]): DBIO[Room] = maybeRoom match {
- case Some(room) => DBIO.successful(room)
- case None       => create(room)
+val delete: DBIO[Int] =
+  messages.delete
+
+def insert(count: Int) =
+  messages += Message("NOBODY", s"I removed ${count} messages")
+~~~
+
+The first thing `flatMap` allows us to do is run these actions in order:
+
+~~~ scala
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val resetMessagesAction: DBIO[Int] =
+  delete.flatMap{ count => insert(count) }
+
+exec(resetMessagesAction)
+// res4: Int = 1
+~~~
+
+This single action produces the two SQL expresisons you'd expect:
+
+~~~ sql
+delete from "message"
+insert into "message" ("sender","content")  values ('NOBODY', 'I removed 4 messages')
+~~~
+
+
+Beyond sequencing, `flatMap` also gives us control over which actions are run.
+To illustrate this we will change `resetMessagesAction` to not insert a message if no messages were removed in the first step:
+
+~~~ scala
+val resetMessagesAction: DBIO[Int] =
+  delete.flatMap{
+    case 0 => DBIO.successful(0)
+    case n => insert(n)
+  }
+~~~
+
+We've decided a result of `0` is right if no message was inserted.
+But the point here is that `flatMap` gives us arbitrary control over how actions can be combined.
+
+Occasionally the compiler will complain about a `flatMap` and need your help to figuring out the types.
+Recall that `DBIO[T]` is an alias for `DBIOAction[T,S,E]`, encoding streaming and effects.
+When mixing effects, such as inserts and selects, you may need to explicitly specify the types:
+
+~~~ scala
+query.flatMap[Int, dbio.NoStream, dbio.Effect.All] { .... etc ... }
+~~~
+
+...but for many cases the compiler will figures these out for you.
+
+
+<div class="callout callout-info">
+**Do it the database if you can**
+
+Combining actions to sequence queries is a powerful feature of Slick.
+However, you may be able to reduce multiple queries into a single database query.
+If you can do that, you're probably better off doing it.
+
+As an example, you could implement "insert if not exists" like this:
+
+~~~ scala
+// Not the best way:
+def insertIfNotExists(m: Message): DBIO[Int] = {
+  val query =
+    messages.filter(_.content === m.content).result.headOption
+  query.flatMap {
+    case Some(m) => DBIO.successful(0)
+    case None    => messages += m
+  }
 }
 ~~~
 
-flatmap is the way to sequence these two actions:
+...but as we saw earlier in ["More Control over Inserts"](#moreControlOverInserts) you can achieve the same effect with a single SQL statement.
+And one query can often be better than sequencing multiple queries.
+</div>
 
-~~~ scala
-def findOrCreate(name: String): DBIO[Room] = lookup.flatMap(createIfNeeded)
-~~~
-
-Or Something else?
-
-
-Add tip here on helping flatMap with effects via `flatMap[X,Y,Z]`.
 
 ### `zip`
 
@@ -677,33 +873,7 @@ Add tip here on helping flatMap with effects via `flatMap[X,Y,Z]`.
 
 
 
-## Deleting Rows
 
-Deleting rows is very similar to updating them. We specify which rows to delete using the `filter` method and call `delete`:
-
-~~~ scala
-exec(messages.filter(_.sender === "HAL").delete)
-// res6: Int = 2
-~~~
-
-As usual, the return value is the number of rows affected, and as usual, Slick provides a method that allows us to view the generated SQL:
-
-~~~ scala
-messages.filter(_.sender === "HAL").delete.statements
-// res7: Iterable[String] = List(
-//   delete from "message"
-//   where "message"."sender" = 'HAL')
-~~~
-
-Note that it is an error to use `delete` in combination with `map`. We can only call `delete` on a `TableQuery`:
-
-~~~ scala
-messages.map(_.content).delete
-// <console>:14: error: value delete is not a member of ↩
-//   slick.lifted.Query[slick.lifted.Column[String],String,Seq]
-//          messages.map(_.content).delete
-//                                  ^
-~~~
 
 ## Transactions
 
