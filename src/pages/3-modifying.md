@@ -258,7 +258,7 @@ That looks quite involved, but we can build it up gradually.
 The tricky part of this is the `select 'Stanley', 'Cut!'` part, as there is no `FROM` clause there.
 We saw an example of how to create that in Chapter 2, with `Query.apply`.
 
-For this situation it woudld be:
+For this situation it would be:
 
 ~~~ scala
 val data = Query("Stanley" -> "Cut!")
@@ -479,7 +479,7 @@ for {
 } yield exec(modify(msg))
 ~~~
 
-Thee's nothing wrong with this, and it will produce the desired effect, but at some cost.
+There's nothing wrong with this, and it will produce the desired effect, but at some cost.
 What we have done there is use our own `exec` method which will wait for results.
 We use it to fetch all rows, and then we use it on each row to modify the row.
 That's a lot of waiting.
@@ -499,7 +499,7 @@ To make sense of this we need to take `action` apart.
 To start with we know that `messages.result` is all the messages in the database, as a `DBIO[Seq[Message]]`.
 The `flatMap` method, expects a function from our `Seq[Message]` to another `DBIO`.
 Our problem here is that we're updating many rows, via many actions, so how can we get a single `DBIO` from that?
-Slick provides `DIO.sequence` for that purpose: it takes a sequence of `DBIO`s and gives back a `DBIO` of a sequence.
+Slick provides `DBIO.sequence` for that purpose: it takes a sequence of `DBIO`s and gives back a `DBIO` of a sequence.
 
 The end result is a single action we can run, which turns into many SQL statements. In fact the action will result in:
 
@@ -757,7 +757,7 @@ This is a particular role to play inside transactions, which we cover later in t
 <div class="callout callout-info">
 **Error: value successful is not a member of object slick.dbio.DBIO**
 
-Due to a [bug][link-scala-type-alias-bug] in Scala you may experience something like the above error when using `DBIO` methods on the REL and in IDEs. We're expecting this to be worked-around in [Slick 3.1][link-slick-type-alias-pr].
+Due to a [bug][link-scala-type-alias-bug] in Scala you may experience something like the above error when using `DBIO` methods on the REPL and in IDEs. We're expecting this to be worked-around in [Slick 3.1][link-slick-type-alias-pr].
 
 If you do encounter it, you can carry on by writing your code in a `.scala` source file and `run`-ing it from SBT.
 </div>
@@ -800,7 +800,7 @@ exec(resetMessagesAction)
 // res4: Int = 1
 ~~~
 
-This single action produces the two SQL expresisons you'd expect:
+This single action produces the two SQL expressions you'd expect:
 
 ~~~ sql
 delete from "message"
@@ -927,147 +927,122 @@ Note:
 
 
 
-## Logging Queries and Results
+  ## Logging Queries and Results
 
-We've seen how to retrieve the SQL of a query using the `result.statements`, `insertStatement`, `update(???).statements`, and `delete.statements` queries. These are useful for exprimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
+  We've seen how to retrieve the SQL of a query using the `insertStatement`, `delete.statements`, and similar methods.
+  These are useful for experimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
 
-Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
+  Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
 
-~~~ xml
-<logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
-~~~
+  ~~~ xml
+  <logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
+  ~~~
 
-This causes Slick to log every query, even modifications to the schema:
+  This causes Slick to log every query, even modifications to the schema:
 
-~~~
-DEBUG slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
-  delete from "message" where "message"."sender" = 'HAL'
-~~~
+  ~~~
+  DEBUG slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
+    delete from "message" where "message"."sender" = 'HAL'
+  ~~~
 
-We can modify the level of various loggers, as shown in table 3.1.
+  We can change the level of various loggers, as shown in the table below:
 
--------------------------------------------------------------------------------------------------------------------
-Logger                                 Effect
--------------------------------------  ----------------------------------------------------------
-`slick.jdbc.JdbcBackend.statement`     Logs SQL sent to the database as described above.
+  -------------------------------------------------------------------------------------------------------------------
+  Logger                                 Effect
+  -------------------------------------  ----------------------------------------------------------
+  `slick.jdbc.JdbcBackend.statement`     Logs SQL sent to the database as described above.
 
-`slick.jdbc.StatementInvoker.result`   Logs the results of each query.
+  `slick.jdbc.StatementInvoker.result`   Logs the results of each query.
 
-`slick.session`                        Logs session events such as opening/closing connections.
+  `slick.session`                        Logs session events such as opening/closing connections.
 
-`slick`                                Logs everything! Equivalent to changing all of the above.
--------------------------------------  ----------------------------------------------------------
+  `slick`                                Logs everything! Equivalent to changing all of the above.
+  -------------------------------------  ----------------------------------------------------------
 
-: Slick loggers and their effects.
+  : Slick loggers and their effects.
 
-The `StatementInvoker.result` logger, in particular, is pretty cute:
+  The `StatementInvoker.result` logger, in particular, is pretty cute:
 
-~~~
-SI.result - /--------+----------------------+----------------------+----\
-SI.result - | sender | content              | ts                   | id |
-SI.result - +--------+----------------------+----------------------+----+
-SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
-SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
-SI.result - \--------+----------------------+----------------------+----/
-~~~
+  ~~~
+  SI.result - /--------+----------------------+----------------------+----\
+  SI.result - | sender | content              | ts                   | id |
+  SI.result - +--------+----------------------+----------------------+----+
+  SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
+  SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
+  SI.result - \--------+----------------------+----------------------+----/
+  ~~~
 
-## Take Home Points
+  ## Take Home Points
 
-For modifying the rows in the database we have seen that:
+  For modifying the rows in the database we have seen that:
 
-* inserts are via a  `+=` or `++=` call on a table.
-* updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
-* deletes are via a  `delete` call to a query;
+  * inserts are via a  `+=` or `++=` call on a table.
+  * updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
+  * deletes are via a  `delete` call to a query;
 
-Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
+  Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
 
-Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
+  Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
-The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
+  Inserts, selects, deletes and other forms of Database Action can be combined using `flatMap` and other combinators.
 
-## Exercises
+  The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
 
-The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
+  ## Exercises
 
+  The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
 
-### Insert New Messages Only
+  ### First!
 
-Messages sent to our application might fail, and might be resent to us.  Write a method that will insert a message for someone, but only if the message content hasn't already been stored. We want the `id` of the message as a result.
+  Create a method that will insert a message, but if it is the first message in the database,
+  automatically insert the message "First!" before it.
 
-The signature of the method is:
+  Use your knowledge of action combinators to achieve this.
 
-~~~ scala
-def insertOnce(sender: String, message: String): Long = ???
-~~~
+  <div class="solution">
+  ~~~ scala
+  TODO
+  ~~~
 
-<div class="solution">
-~~~ scala
-def insertOnce(sender: String, text: String): Long = {
-  val exists =
-    exec(messages.filter(m => m.content === text &&
-      m.sender === sender).map(_.id).result.headOption)
+  ### Duped
 
-  lazy val insert = exec((messages returning messages.map(_.id)) +=
-    Message(sender, text))
+  Messages that a repeated are just noise.
+  Write a delete expression that will remove all repeated messages.
 
-  exists getOrElse insert
-}
-~~~
-</div>
-<!-- This is no longer applicable
-### Rollback
+  For example, if the database contains the messages...
 
-Assuming you already have an `implicit session`, what is the state of the database after this code is run?
+  * Hello
+  * Morning
+  * Morning
 
-~~~ scala
-session.withTransaction {
-  messages.delete
-  session.rollback()
-  messages.delete
-  println("Surprised?")
-}
-~~~
+  ...then regardless of who sent them, after the delete we just expect to have "Hello" in the database.
 
-Is "Surprised?" printed?
+  <div class="solution">
+  ~~~ scala
+  TODO
+  ~~~
 
-<div class="solution">
-The call to `rollback` only impacts Slick calls.
+  ### Update Using a For Comprehension
 
-This means the two calls to `delete` will have no effect: the database will have the same message records it had before this block of code was run.
+  Rewrite the update statement below to use a for comprehension.
 
-It also means the message "Surprised?" will be printed.
-</div>
--->
-### Update Using a For Comprehension
+  ~~~ scala
+  val rowsAffected = messages.
+    filter(_.sender === "HAL").
+    map(msg => (msg.sender, msg.ts)).
+    update("HAL 9000", DateTime.now)
+  ~~~
 
-Rewrite the update statement below to use a for comprehension.
+  Which style do you prefer?
 
-~~~ scala
-val rowsAffected = messages.
-                    filter(_.sender === "HAL").
-                    map(msg => (msg.sender, msg.ts)).
-                    update("HAL 9000", DateTime.now)
-~~~
+  <div class="solution">
+  ~~~ scala
+  val query = for {
+    message <- messages
+    if message.sender === "HAL"
+  } yield (message.sender, message.ts)
 
-Which style do you prefer?
-
-<div class="solution">
-~~~ scala
-val query = for {
-  message <- messages
-  if message.sender === "HAL"
-} yield (message.sender, message.ts)
-
-val rowsAffected = query.update("HAL 9000", DateTime.now)
-~~~
-</div>
-
-### Delete All The Messages
-
-How would you delete all messages?
-
-<div class="solution">
-~~~ scala
-val deleted = messages.delete
-~~~
-</div>
+  val rowsAffected = query.update("HAL 9000", DateTime.now)
+  ~~~
+  </div>
+  
