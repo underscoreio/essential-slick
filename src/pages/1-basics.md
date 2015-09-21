@@ -217,7 +217,7 @@ Lifted embedding is the standard way to work with Slick. We will discuss the oth
 We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for managing connections and transactions:
 
 ~~~ scala
-def db = Database.forConfig("chapter01")
+val db = Database.forConfig("chapter01")
 ~~~
 
 The parameter to `Database.forConfig` determines which configuration to use from the `application.conf` file.
@@ -234,7 +234,7 @@ chapter01 = {
 
 This format comes from the [Typesafe Config](link-config) library, which is also used by Akka and the Play framework.
 
-The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"`.  
+The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"`.
 
 By default the H2 in-memory database is deleted when the last connection is closed. As we will be running multiple connections in our examples, we enable `keepAliveConnection` to keep the data around until our program completes.
 
@@ -289,7 +289,7 @@ But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 </div>
 
 
-What's important to know is that anything you can run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally): a query, an update, you name it, they are all examples of a Database I/O Action.  
+What's important to know is that anything you can run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally): a query, an update, you name it, they are all examples of a Database I/O Action.
 
 Let's run this action:
 

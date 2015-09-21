@@ -72,7 +72,7 @@ object Main extends App {
   // Use the schema:
   import schema._, profile.api._
 
-  def db = Database.forConfig("chapter04")
+  val db = Database.forConfig("chapter04")
 
   // Work with the database as normal here
 }
