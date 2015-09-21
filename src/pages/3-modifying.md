@@ -927,122 +927,224 @@ Note:
 
 
 
-  ## Logging Queries and Results
+## Logging Queries and Results
 
-  We've seen how to retrieve the SQL of a query using the `insertStatement`, `delete.statements`, and similar methods.
-  These are useful for experimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
+We've seen how to retrieve the SQL of a query using the `insertStatement`, `delete.statements`, and similar methods.
+These are useful for experimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
 
-  Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
+Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
 
-  ~~~ xml
-  <logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
-  ~~~
+~~~ xml
+<logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
+~~~
 
-  This causes Slick to log every query, even modifications to the schema:
+This causes Slick to log every query, even modifications to the schema:
 
-  ~~~
-  DEBUG slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
-    delete from "message" where "message"."sender" = 'HAL'
-  ~~~
+~~~
+DEBUG slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
+  delete from "message" where "message"."sender" = 'HAL'
+~~~
 
-  We can change the level of various loggers, as shown in the table below:
+We can change the level of various loggers, as shown in the table below:
 
-  -------------------------------------------------------------------------------------------------------------------
-  Logger                                 Effect
-  -------------------------------------  ----------------------------------------------------------
-  `slick.jdbc.JdbcBackend.statement`     Logs SQL sent to the database as described above.
+-------------------------------------------------------------------------------------------------------------------
+Logger                                 Effect
+-------------------------------------  ----------------------------------------------------------
+`slick.jdbc.JdbcBackend.statement`     Logs SQL sent to the database as described above.
 
-  `slick.jdbc.StatementInvoker.result`   Logs the results of each query.
+`slick.jdbc.StatementInvoker.result`   Logs the results of each query.
 
-  `slick.session`                        Logs session events such as opening/closing connections.
+`slick.session`                        Logs session events such as opening/closing connections.
 
-  `slick`                                Logs everything! Equivalent to changing all of the above.
-  -------------------------------------  ----------------------------------------------------------
+`slick`                                Logs everything! Equivalent to changing all of the above.
+-------------------------------------  ----------------------------------------------------------
 
-  : Slick loggers and their effects.
+: Slick loggers and their effects.
 
-  The `StatementInvoker.result` logger, in particular, is pretty cute:
+The `StatementInvoker.result` logger, in particular, is pretty cute:
 
-  ~~~
-  SI.result - /--------+----------------------+----------------------+----\
-  SI.result - | sender | content              | ts                   | id |
-  SI.result - +--------+----------------------+----------------------+----+
-  SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
-  SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
-  SI.result - \--------+----------------------+----------------------+----/
-  ~~~
+~~~
+SI.result - /--------+----------------------+----------------------+----\
+SI.result - | sender | content              | ts                   | id |
+SI.result - +--------+----------------------+----------------------+----+
+SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
+SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
+SI.result - \--------+----------------------+----------------------+----/
+~~~
 
-  ## Take Home Points
+## Take Home Points
 
-  For modifying the rows in the database we have seen that:
+For modifying the rows in the database we have seen that:
 
-  * inserts are via a  `+=` or `++=` call on a table.
-  * updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
-  * deletes are via a  `delete` call to a query;
+* inserts are via a  `+=` or `++=` call on a table.
+* updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
+* deletes are via a  `delete` call to a query;
 
-  Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
+Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
 
-  Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
+Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
-  Inserts, selects, deletes and other forms of Database Action can be combined using `flatMap` and other combinators.
+Inserts, selects, deletes and other forms of Database Action can be combined using `flatMap` and other combinators.
 
-  The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
+The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
 
-  ## Exercises
+## Exercises
 
-  The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
+The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
 
-  ### First!
+### First!
 
-  Create a method that will insert a message, but if it is the first message in the database,
-  automatically insert the message "First!" before it.
+Create a method that will insert a message, but if it is the first message in the database,
+automatically insert the message "First!" before it.
 
-  Use your knowledge of action combinators to achieve this.
+Use your knowledge of action combinators to achieve this.
 
-  <div class="solution">
-  ~~~ scala
-  TODO
-  ~~~
+<div class="solution">
+~~~ scala
+TODO
+~~~
+</div>
 
-  ### Duped
+### Duped
 
-  Messages that a repeated are just noise.
-  Write a delete expression that will remove all repeated messages.
+Messages that a repeated are just noise.
+Write a delete expression that will remove all repeated messages.
 
-  For example, if the database contains the messages...
+For example, if the database contains the messages...
 
-  * Hello
-  * Morning
-  * Morning
+* Hello
+* Morning
+* Morning
 
-  ...then regardless of who sent them, after the delete we just expect to have "Hello" in the database.
+...then regardless of who sent them, after the delete we just expect to have "Hello" in the database.
 
-  <div class="solution">
-  ~~~ scala
-  TODO
-  ~~~
+<div class="solution">
+~~~ scala
+TODO
+~~~
+</div>
 
-  ### Update Using a For Comprehension
+### Update Using a For Comprehension
 
-  Rewrite the update statement below to use a for comprehension.
+Rewrite the update statement below to use a for comprehension.
 
-  ~~~ scala
-  val rowsAffected = messages.
-    filter(_.sender === "HAL").
-    map(msg => (msg.sender, msg.ts)).
-    update("HAL 9000", DateTime.now)
-  ~~~
+~~~ scala
+val rowsAffected = messages.
+  filter(_.sender === "HAL").
+  map(msg => (msg.sender, msg.ts)).
+  update("HAL 9000", DateTime.now)
+~~~
 
-  Which style do you prefer?
+Which style do you prefer?
 
-  <div class="solution">
-  ~~~ scala
-  val query = for {
-    message <- messages
-    if message.sender === "HAL"
-  } yield (message.sender, message.ts)
+<div class="solution">
+~~~ scala
+val query = for {
+  message <- messages
+  if message.sender === "HAL"
+} yield (message.sender, message.ts)
 
-  val rowsAffected = query.update("HAL 9000", DateTime.now)
-  ~~~
-  </div>
-  
+val rowsAffected = query.update("HAL 9000", DateTime.now)
+~~~
+</div>
+
+### Filter Revisited
+
+In this chapter we noted that `DBIO`'s `filter` method produces a run-time exception if the filter predicate is false.  We commented that you could write your own `filter` if that wasn't what you wanted.
+
+Create your own version of `filter` which will take some other action when the filter predicate fails.  The signature could be:
+
+TODO TODO TODO TODO
+
+
+### Unfolding
+
+We saw that `fold` can etc etc TODO.
+
+Now imagine the opposite: unfolding a function into a sequence of values. In this exercise we want you to write an `unfold` method tht will do just that.
+
+Why would you need to? One example would be when you have a tree structure represented in a database and need to search it. You'd follow a link between rows, possibly recording what you find as you follow those links.
+
+As an example, let's pretend the crew's ship is just a set of rooms, one connected to just one other:
+
+~~~ scala
+final case class Room(name: String, connectsTo: String)
+
+final class FloorPlan(tag: Tag) extends Table[Room](tag, "floorplan") {
+  def name       = column[String]("name")
+  def connectsTo = column[String]("next")
+  def * = (name, next) <> (Room.tupled, Room.unapply)
+}
+
+lazy val floorplan = TableQuery[FloorPlan]
+
+exec {
+  (floorplan.schema.create) >>
+  (floorplan += Room("Outside",     "Podbay Door")) >>
+  (floorplan += Room("Podbay Door", "Podbay"))      >>
+  (floorplan += Room("Podbay",      "Galley"))      >>
+  (floorplan += Room("Galley",      "Computer"))    >>
+  (floorplan += Room("Computer",    "Engine Room"))
+}
+~~~
+
+For any given room it's easy to find the next room. For example:
+
+~~~ sql
+SELECT
+  "connectsTo"
+FROM
+  "foorplan"
+WHERE
+  "name" = 'Podbay'
+
+-- Returns 'Galley'
+~~~
+
+Write a method `unfold` that will take any room name as a starting point, and a query to find the next room, and will follow all the connections until there are no more connecting rooms.
+
+The signature of `unfold` could be:
+
+~~~ scala
+def unfold(
+  z: String,
+  f: String => DBIO[Option[String]]
+  ): DBIO[Seq[String]]
+~~~
+
+... where `z` is the starting ("zero") room, and `f` will lookup the connecting room.
+
+If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Galley", "Computer", "Engine Room")`.
+
+<div class="solution">
+
+The trick here is to recognise that:
+
+1. this is a recursive problem, so we need to define a stopping condition.
+
+2. we need to find a combinator for actions that will pass a value long. That job can be handled by `flatMap`.  
+
+TODO ... explain more steps.
+
+
+The solution below is generalized with `T` rather than having a hard-coded `String` type.
+
+TODO .... This isn't quite right: the results are in the wrong order, doesn't quite follow the suggested signature....
+
+~~~ scala
+def unfold[T]
+  (z: T, acc: Seq[T] = Seq.empty)
+  (f: T => DBIO[Option[T]]): DBIO[Seq[T]] =
+  f(z).flatMap {
+    case None    => DBIO.successful(acc)
+    case Some(t) => unfold(t, z +: acc)(f)
+  }
+
+println("\nRoom path:")
+val path: DBIO[Seq[String]] =
+  unfold("Podbay") {
+     r => floorplan.filter(_.name === r).map(_.connectsTo).result.headOption
+   }
+println( exec(path) )
+// ??? TODO
+~~~
