@@ -801,6 +801,37 @@ The row model should reflect the row, not the row plus a bunch of other data fro
 To pull data from across tables, use a query.
 
 
+<div class="callout callout-info">
+**Save your sanity with laziness**
+
+By defining table queries lazily we can reference them as foreign keys without having to worry about code order.
+In the example below we define table queries after `users` is referenced by the `sender` foreign key in the message table.
+
+~~~ scala
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def senderId = column[Long]("sender")
+  def content  = column[String]("content")
+  def ts       = column[DateTime]("ts")
+
+  def * = (senderId, content, ts, id) <> (Message.tupled, Message.unapply)
+
+  def sender = foreignKey("sender_fk",
+                          senderId,
+                          users)(_.id, onDelete=ForeignKeyAction.Cascade)
+}
+
+lazy val users      = TableQuery[UserTable]
+lazy val messages   = TableQuery[MessageTable]
+lazy val insertUser = users returning users.map(_.id)
+~~~
+
+The complete example of this can be found in the [example project][link-example], folder _chapter-04_, file _foreign_keys.scala_.
+
+
+</div>
+
+
 ### Table and Column Modifiers {#schema-modifiers}
 
 We'll round off this section by looking at modifiers for columns and tables.
