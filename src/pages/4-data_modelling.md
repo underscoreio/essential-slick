@@ -80,6 +80,19 @@ object Main extends App {
 
 To work with a different database, create a different `Schema` instance and supply a different driver. The rest of the code does not need to change.
 
+### Name spacing queries
+
+We can exploit the expanded form of `TableQuery[T]`, a macro, to provide a location to store queries.
+`TableQuery[T]`'s expanded form is `(new TableQuery(new T(_)))`.
+Using this, we can provide a module to hold `Message` queries:
+
+~~~ scala
+object messages  extends TableQuery( new MessageTable(_)) {
+  val findBySender = this.findBy(_.sender)
+  val numSenders   = this.map(_.sender).countDistinct
+}
+~~~
+
 
 ### Additional Considerations
 
