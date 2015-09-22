@@ -35,7 +35,13 @@ _Profile_ is a new term for us. When we have previously written...
 import slick.driver.H2Driver.api._
 ~~~
 
-...that gave us an H2-specific JDBC driver. That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
+...that gave us an H2-specific JDBC driver. We now write
+
+~~~ scala
+import slick.driver.JdbcProfile
+~~~
+
+That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
 
 ### Working with a Profile
 
@@ -44,7 +50,7 @@ Re-working the example from previous chapters, we have the schema in a trait:
 ~~~ scala
 trait Profile {
   // Place holder for a specific profile
-  val profile: slick.driver.JdbcProfile
+  val profile: JdbcProfile
 }
 
 trait Tables {
@@ -104,7 +110,7 @@ If you recognise this as a problem, it's time to split your code more finely and
 
 In previous chapters we modelled rows as case classes.  That's a great choice, and the one we recommend, but you should be aware that Slick is more flexible that that.
 
-There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
+There are in fact three common representations used: tuples, case classes, and an `HList` implementation.
 
 ### Case Classes and `<>`
 
@@ -144,7 +150,7 @@ def * = (name, id)
 ~~~
 type mismatch
  found: (slick.lifted.Rep[String], lick.lifted.Rep[Long])
- required: scala.slick.lifted.ProvenShape[User]
+ required: slick.lifted.ProvenShape[User]
 ~~~
 
 
@@ -336,16 +342,6 @@ val age: Int = dave.apply(1)
 However, accessing the `HList` by index is dangerous. If you run off the end of the list with `dave(99)`, you'll get a run-time exception.
 
 The `HList` representation probably won't be the one you choose to use; but you need to know it's there for you when dealing with nasty schemas.
-
-<div class="callout callout-danger">
-**Extra Dependencies**
-
-Some parts of `HList` depend on Scala reflection. Modify your _build.sbt_ to include:
-
-~~~ scala
-"org.scala-lang" % "scala-reflect" % scalaVersion.value
-~~~
-</div>
 
 
 ### Exercises
@@ -838,9 +834,6 @@ lazy val users      = TableQuery[UserTable]
 lazy val messages   = TableQuery[MessageTable]
 lazy val insertUser = users returning users.map(_.id)
 ~~~
-
-The complete example of this can be found in the [example project][link-example], folder _chapter-04_, file _foreign_keys.scala_.
-
 
 </div>
 
