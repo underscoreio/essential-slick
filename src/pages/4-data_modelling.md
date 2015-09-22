@@ -149,7 +149,7 @@ def * = (name, id)
 
 ~~~
 type mismatch
- found: (slick.lifted.Rep[String], lick.lifted.Rep[Long])
+ found: (slick.lifted.Rep[String], slick.lifted.Rep[Long])
  required: slick.lifted.ProvenShape[User]
 ~~~
 
@@ -472,7 +472,7 @@ users.filter(_.email === none).list
 
 We have one row in the database without an email address, but the query will produce no results.
 
-Veterans of database administration will be familiar with this interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `true`, whereas the expression `'Dave' = null` evaluates to `null`.
+Veterans of database administration will be familiar with this interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `false`, whereas the expression `'Dave' = null` evaluates to `null`.
 
 The Slick query amounts to:
 
