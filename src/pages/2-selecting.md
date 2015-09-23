@@ -271,7 +271,7 @@ In many cases we can simplify the representation of an action to just `DBIO[T]`.
 Effects are not part of Essential Slick, and we'll be working in terms of `DBIO[T]` for most of this text.
 
 However, broadly speaking, `Effect` is a way to annotate (tag, or mark) an action.
-For example, you can write a method that will only accept queries marked as `Read` or `Write`, or a combination such as `Read with Transactional`.  
+For example, you can write a method that will only accept queries marked as `Read` or `Write`, or a combination such as `Read with Transactional`.
 
 The effects defined in Slick under the `Effect` object are:
 
@@ -494,7 +494,7 @@ Scala Code              Operand Column Types               Result Type        SQ
 : Boolean column methods.
   Operand and result types should be interpreted as parameters to `Rep[_]`.
 
-### Option Methods and Type Equivalence
+### Option Methods and Type Equivalence {#type_equivalence}
 
 Slick models nullable columns in SQL as `Rep`s with `Option` types.  We'll discuss this in some depth in [Chapter 4](#Modelling).
 However, as a preview, know that if we have a nullable column in our database, we declare it as optional in our `Table`:
@@ -623,6 +623,30 @@ from "message"
 order by "sender"
 limit 5 offset 5
 ~~~~
+
+<div class="callout callout-info">
+**Sorting on Null columns**
+
+We had a brief introduction to nullable columns earlier in the chapter when we looked at [Option Methods and Type Equivalence](#type_equivalence).
+Slick offers three modifiers which can be used in conjunction with `desc` and `asc` when sorting on nullable columns: `nullFirst`, `nullsDefault` and `nullsLast`.
+These do what you'd expect: put rows containg null coulmns at the beginning of the result set, default behaviour and put rows containing null columns at the end of the results set.
+
+An example of sorting a nullable column:
+
+~~~ scala
+users.sortBy { _.name.nullsFirst }.result.statements.foreach { println }
+~~~
+
+Generates the following SQL:
+
+~~~ sql
+select x2."name", x2."email", x2."id"
+from "user" x2
+order by x2."name" nulls first
+~~~
+
+We cover nullable columns in [Chapter 4](#null-columns) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
+</div>
 
 
 ## Take Home Points

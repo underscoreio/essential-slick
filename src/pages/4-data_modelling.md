@@ -415,7 +415,7 @@ In particular we'll explore nullable columns,
 foreign keys, more about primary keys, composite keys,
 and options you can apply a table.
 
-### Nullable Columns
+### Nullable Columns {#null-columns}
 
 Columns defined in SQL are nullable by default. That is, they can contain `NULL` as a value.
 Slick makes columns not nullable by default, and
