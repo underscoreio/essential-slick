@@ -124,7 +124,9 @@ messages.filter(_.sender === 123)
 //                                        ^
 ~~~
 
-## Transforming Results: The *map* Method
+## Transforming Results
+
+### The *map* Method
 
 Sometimes we don't want to select all of the data in a `Table`.
 We can use the `map` method on a `Query` to select specific columns for inclusion in the results.
@@ -243,13 +245,41 @@ messages.map(t => t.id * 1000L).result.statements
 // res20: Iterable[String] = List(select x2."id" * 1000 from "message" x2)
 ~~~
 
-<!--
-<div class="callout callout-info">
-**Query's *flatMap* method**
+### exists
 
-`Query` also has a `flatMap` method with similar monadic semantics to that of `Option` or `Future`. `flatMap` is mostly used for joins, so we'll cover it in [Chapter 5](#joins).
-</div>
--->
+Sometimes we are less interested in the contents of a queries result than if results exist at all.
+For this we have `exists`, which will return `true` if the result set is not empty and false otherwise.
+
+Let's look at quick example to show how we can use an existing query with the `exists` keyword:
+
+~~~ scala
+val containsBay = for {
+  m <- messages
+  if m.content like "%bay%"
+} yield m
+
+if(exec(containsBay.exists.result)) {
+  ...
+} else {
+  ...
+}
+~~~
+
+Above we have a query `containsBay` which returns all messages whose contains `bay`.
+We then use this query in the `if` expression to determine which branch to execute.
+
+The above will generate SQL which looks simliar to this:
+
+~~~ sql
+select exists(
+  select x2."sender", x2."content", x2."id"
+  from "message" x2
+  where x2."content" like '%bay%'
+)
+~~~
+
+We will see a more useful example in [Chapter 3](#insertOrUpdate).
+
 
 ## Running Queries
 
