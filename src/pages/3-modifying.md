@@ -4,6 +4,10 @@ In the last chapter we saw how to retrieve data from the database using select q
 
 SQL veterans will know that update and delete queries, in particular, share many similarities with select queries. The same is true in Slick, where we use the `Query` monad and combinators to build the different kinds of query. Ensure you are familiar with the content of [Chapter 2](#Selecting) before proceeding.
 
+This chapter also introduces the important concept of _action combinators_.
+These combinators, such as `flatMap`, enable us to combine actions into a single action.
+The result is an action that can be made up of multiple updates, selects, deletes, or other actions.
+
 ## Inserting Rows
 
 As we saw in [Chapter 1](#Basics), adding new data a table looks like a destructive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
@@ -570,7 +574,7 @@ Method       Arguments                       Result Type                    Note
 ------------ ------------------------------- ------------------------------ ------------------------------
 `sequence`   `TraversableOnce[DBIO[T]]`      `DBIO[TraversableOnce[T]]`     Example in the previous section
 
-`seq`        `DBIO[_]*`                      `DBIO[Unit]`                   Combines actions with `andThen`
+`seq`        `DBIO[_]*`                      `DBIO[Unit]`                   Combines actions, ignores results
 
 `from`       `Future[T]`                     `DBIO[T]`                       
 
@@ -583,6 +587,33 @@ Method       Arguments                       Result Type                    Note
 
 : Combinators on `DBIO` object, with types simplified.
 
+
+### `andThen` (or `>>`)
+
+The simplest way to run one action after another is perhaps `andThen`.
+The combined actions are both run, but only the result of the second is returned:
+
+~~~ scala
+val reset: DBIO[Int] =
+  messages.delete andThen messages.size.result
+
+exec(reset)
+// res1: Int = 0
+~~~
+
+The result of the first query is ignored, so we cannot use.
+Later we will see how `flatMap` allows us to use the result to make choices about which action to run next.
+
+### `DBIO.seq`
+
+If you have a bunch of actions you want to run, you can use `DBIO.seq` to combine them:
+
+~~~ scala
+val reset: DBIO[Unit] =
+  DBIO.seq(messages.delete, messages.size.result)
+~~~
+
+This is rather like combining the actions with `andThen`, but even the last value is discarded.
 
 ### `map`
 
@@ -650,8 +681,7 @@ The reason for this is that `map` allows you to call arbitrary code when joining
 Slick cannot allow that code to be run on its own execution context,
 because it has no way to know if you are going to tie up Slicks threads for a long time.
 
-In contrast, methods such as `andThen` which combine actions without custom code,
-can be run on Slick's own execution context.
+In contrast, methods such as `andThen` which combine actions without custom code can be run on Slick's own execution context.
 Therefore, you do not need an execution context available for `andThen`.
 
 You'll know if you need an execution context, because the compiler will tell you:
@@ -670,7 +700,7 @@ The Slick manual discusses this in the section on [Database I/O Actions][link-re
 
 As with `map`, `filter` is something you'll be familiar with, but there is a twist with Slick.
 
-As with regular Scala collections, `filter` tables a predicate function as an argument.
+Just like `filter` in the Scala collections library, `filter` tales a predicate function as an argument.
 
 ~~~ scala
 val text: DBIO[String] =
@@ -685,7 +715,7 @@ When we run the `longMsgAction` we get a result if the value from the database i
 
 ~~~ scala
 exec(longMsgAction)
-// res3: Hello, HAL. Do you read me, HAL?!
+// res1: Hello, HAL. Do you read me, HAL?!
 ~~~
 
 The surprise comes if our predicate evaluates to `false`.
@@ -726,7 +756,7 @@ val willFail: DBIO[Try[String]] =
   text.filter(s => s.length > 10000).asTry
 
 exec(willFail)
-// res3: Failure(java.util.NoSuchElementException: Action.withFilter failed)  
+// res1: Failure(java.util.NoSuchElementException: Action.withFilter failed)  
 ~~~
 
 
@@ -751,15 +781,16 @@ val v: DBIO[Nothing] =
 //  java.lang.RuntimeException: pod bay door unexpectedly locked)
 ~~~
 
-This is a particular role to play inside transactions, which we cover later in this chapter.
+This has a particular role to play inside transactions, which we cover later in this chapter.
 
 
 <div class="callout callout-info">
 **Error: value successful is not a member of object slick.dbio.DBIO**
 
-Due to a [bug][link-scala-type-alias-bug] in Scala you may experience something like the above error when using `DBIO` methods on the REPL and in IDEs. We're expecting this to be worked-around in [Slick 3.1][link-slick-type-alias-pr].
+Due to a [bug][link-scala-type-alias-bug] in Scala you may experience something like the above error when using `DBIO` methods on the REPL with Slick 3.0. This is resolved in Slick 3.1.
 
-If you do encounter it, you can carry on by writing your code in a `.scala` source file and `run`-ing it from SBT.
+If you do encounter it, and have to stay with Slick 3.0,
+you can carry on by writing your code in a `.scala` source file and running it from SBT.
 </div>
 
 
@@ -797,7 +828,7 @@ val resetMessagesAction: DBIO[Int] =
   delete.flatMap{ count => insert(count) }
 
 exec(resetMessagesAction)
-// res4: Int = 1
+// res1: Int = 1
 ~~~
 
 This single action produces the two SQL expressions you'd expect:
@@ -858,41 +889,146 @@ def insertIfNotExists(m: Message): DBIO[Int] = {
 And one query can often be better than sequencing multiple queries.
 </div>
 
+### `DBIO.fold`
+
+Recall that the Scala collections supports `fold` as a way to combine values:
+
+~~~ scala
+List(3,5,7).fold(1) { (a,b) => a * b }
+// res1: Int = 105
+~~~
+
+You can do the same kind of thing in Slick:
+when you need to run a sequence of actions, and reduce the results down to a value, you use `fold`.
+
+As an example, let's suppose we have a complicated way of measuring the sentiment of the crews' messages:
+
+~~~ scala
+// Feel free to implement a more realistic measure!
+def sentiment(m: Message): Int =
+  scala.util.Random.nextInt(100)
+~~~
+
+Let's start measuring the sentiment of each crew member, but just gather the happy messages.
+Let's say any score above 50 is happy:
+
+~~~ scala
+def isHappy(message: Message): Boolean =
+  sentiment(message) > 50
+~~~
+
+We're going to ask for each crew members mesages in turn:
+
+~~~ scala
+def sayingsOf(crewName: String): DBIO[Seq[Message]] =
+  messages.filter(_.sender === crewName).result
+
+// An action for each crew member:
+val actions: List[DBIO[Seq[Message]]] =
+  sayingsOf("Dave") :: sayingsOf("HAL") :: Nil
+~~~
+
+To find the happy messages we `fold` those `actions` with a function.
+
+But we also need to consider our starting position.
+There might be no happy messages:
+
+~~~ scala
+val default: Seq[Message] = Seq.empty
+~~~
+
+Finally we can produce an action to give us just the happy crew messages:
+
+~~~ scala
+val roseTinted: DBIO[Seq[Message]] =
+  DBIO.fold(actions, default) {
+    (happy, crewMessages) => crewMessages.filter(isHappy) ++ happy
+}
+~~~
+
+`DBIO.fold` is a way to combine actions, such that the results are combined by a function you supply.
+As with other combinators, your function isn't run until we execute the `roseTinged` action itself.
+
 
 ### `zip`
 
-### `DBIO.fold`
+We've seen how `DBIO.seq` will combine actions and ignore the results.
+We've also seen that `andThen` combines actions and keeps one result.
+If you want to keep both results, `zip` is for you:
 
-### `named`
+~~~ scala
+val countAndHal: DBIO[(Int, Seq[Message])] =
+  messages.size.result zip messages.filter(_.sender === "HAL").result
 
-### `andFinally`
+exec(countAndHall)
+// res1: (Int, Seq[Example.Message]) =
+//  (4,
+//   Vector(
+//    Message(HAL,Affirmative, Dave. I read you.,8),
+//    Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,10)
+//   )
+// )
+~~~
 
-### `cleanUp`
-
-### `failed`
+Notice the action is a tuple, representing the values we'll receive from both queries.
 
 
+### `andFinally` and `cleanUp`
 
+The two methods `cleanUp` and `andFinally` act a little like Scala's `catch` and `finally`.
+
+`cleanUp` runs after an action completes, and has access to any error information (if any) as an `Option[Throwable]`:
+
+~~~ scala
+// Let's record problems we encounter:
+def log(err: Throwable): DBIO[Int] =
+  messages += Message("SYSTEM", err.getMessage)
+
+// Pretend this is important work which might fail:
+val work =
+  DBIO.failed(new RuntimeException("Boom!"))
+
+val action =
+  work.cleanUp {
+    case Some(err) => log(err)
+    case None      => DBIO.successful(0)
+  }
+
+exec(action)
+// java.lang.RuntimeException: Boom!
+//  ... 45 elided
+
+exec(messages.filter(_.sender === "SYSTEM").result)
+// res1: Seq[Example.MessageTable#TableElementType] =
+//  Vector(Message(SYSTEM,Boom!,11))
+~~~
+
+Notice the result is still the original exception, but `cleanUp` has produced a side-effect for us.
+
+Both `cleanUp` and `andFinally` run after an action, regardless of whether it succeeds or fails.
+The difference with `andFinally` is that it just runs, and has no access to the `Option[Throwable]`
+that `cleanUp` sees.
 
 
 ## Transactions
 
 So far, each of the changes we've made to the database have run independently of the others. That is, each insert, update, or delete query, we run can succeed or fail independently of the rest.
 
-We often want to tie sets of modifications together in a *transaction* so that they either *all* succeed or *all* fail. We can do this in Slick using the `transactionally` method:
+We often want to tie sets of modifications together in a *transaction* so that they either *all* succeed or *all* fail. We can do this in Slick using the `transactionally` method.
+
+As an example, we can re-write the story. We want to make sure the script changes all complete or nothing changes:
 
 ~~~ scala
 def updateContent(id: Long) =
   messages.filter(_.id === id).map(_.content)
 
 exec {
-    (updateContent(2L).update("Wanna come in?") andThen
-     updateContent(3L).update("Pretty please!") andThen
-     updateContent(4L).update("Opening now.")).transactionally
-  }
-
-  exec(messages.result)
+  (updateContent(2L).update("Wanna come in?") andThen
+   updateContent(3L).update("Pretty please!") andThen
+   updateContent(4L).update("Opening now.") ).transactionally
 }
+
+exec(messages.result)
 // res1: Seq[Example.MessageTable#TableElementType] = Vector(
 //   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
 //   Message(HAL,Wanna come in?,2),
@@ -905,29 +1041,28 @@ The changes we make in the `transactionally` block are temporary until the block
 To manually force a rollback you need to call `DBIO.failed` with an appropriate exception.
 
 ~~~ scala
-try {
-  exec {
-    (
-    updateContent(2L).update("Blue Mooon")                          andThen
-    updateContent(3L).update("Please, anything but your singing ")  andThen
-    messages.result.map(_.foreach { println })                      andThen
-    DBIO.failed(new Exception("agggh my ears"))                     andThen
-    updateContent(4L).update("That's incredibly hurtful")
-    ).transactionally
-  }
+val willRollback = (
+  (messages += Message("HAL",  "Daisy, Daisy..."))                   >>
+  (messages += Message("Dave", "Please, anything but your singing")) >>
+  DBIO.failed(new Exception("agggh my ears"))                        >>
+  (messages += Message("HAL", "Give me your answer do"))
+  ).transactionally
 
-} catch {
-  case weKnow: Throwable => println("expected")
-}
+exec(willRollback.asTry)
+// scala.util.Try[Int] =
+//  Failure(java.lang.Exception: agggh my ears)
 ~~~
-Note:
-  - `transactionally` is applied to the  parentheses surrounding the combined actions and not applied to the last action,
-  - we need to catch the exception,
-  - we can see the updates temporarily applied before `DBIO.failed` is called.
 
+The result of running `willRollback` is that the database won't have changed.
+Inside of transactional block, you would see the inserts until `DBIO.failed` is called.
+
+If we removed the `.transactionally` that is wrapping our combined actions, the first two inserts would succeed,
+even though the combined action failed.
 
 
 ## Logging Queries and Results
+
+With actions combined together, it's useful to see the queries that are being exectured.
 
 We've seen how to retrieve the SQL of a query using the `insertStatement`, `delete.statements`, and similar methods.
 These are useful for experimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
@@ -985,8 +1120,9 @@ Auto-incrementing values are inserted by Slick, unless forced. The auto-incremen
 Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
 
 Inserts, selects, deletes and other forms of Database Action can be combined using `flatMap` and other combinators.
+These can be executed in a transaction.
 
-The SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
+Finally, we saw that the SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
 
 ## Exercises
 
@@ -1059,11 +1195,13 @@ TODO TODO TODO TODO
 
 ### Unfolding
 
-We saw that `fold` can etc etc TODO.
+We saw that `fold` can take a number of actions and reduce them using a function you supply.
+Now imagine the opposite: unfolding an initial value into a sequence of values via a function.
+In this exercise we want you to write an `unfold` method tht will do just that.
 
-Now imagine the opposite: unfolding a function into a sequence of values. In this exercise we want you to write an `unfold` method tht will do just that.
-
-Why would you need to? One example would be when you have a tree structure represented in a database and need to search it. You'd follow a link between rows, possibly recording what you find as you follow those links.
+Why would you need to do something like this?
+One example would be when you have a tree structure represented in a database and need to search it.
+You can follow a link between rows, possibly recording what you find as you follow those links.
 
 As an example, let's pretend the crew's ship is just a set of rooms, one connected to just one other:
 
@@ -1148,3 +1286,5 @@ val path: DBIO[Seq[String]] =
 println( exec(path) )
 // ??? TODO
 ~~~
+</div>
+
