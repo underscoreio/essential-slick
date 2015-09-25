@@ -296,7 +296,7 @@ val selectExpression = data.filterNot(_ => exists)
 //  (String, String),Seq] = Rep(Filter)
 ~~~
 
-Finally, we need the apply this query with `forceInsertQuery`.
+Finally, we need to apply this query with `forceInsertQuery`.
 But remember the column types for the insert and select need to match up.
 So we `map` on `messages` to make sure that's the case:
 
@@ -336,7 +336,7 @@ exec(removeHal)
 
 The return value is the number of rows affected.  
 
-The SQL generated for the action can be seen by `delete.statements`:
+The SQL generated for the action can be seen by calling `delete.statements`:
 
 ~~~ scala
 messages.filter(_.sender === "HAL").delete.statements
@@ -478,6 +478,7 @@ You may be tempted to write something like this:
 def modify(msg: Message): DBIO[Int] =
   messages.filter(_.id === msg.id).update(exclaim(msg))
 
+// Not the best way, avoid:
 for {
   msg <- exec(messages.result)
 } yield exec(modify(msg))
@@ -525,9 +526,8 @@ However, for this particular example, we recommend using Plain SQL ([Chapter 6](
 
 At some point you'll find yourself writing a piece of functionality made up of multiple actions.
 The temptation, as we have seen above, is to run each action, use the result, and run another action.
-This will require you to deal with multiple `Future`s.
+This will require you to deal with multiple `Future`s. We recommend you avoid that whenever you can.
 
-We recommend you avoid that whenever you can.
 Instead, focus on the actions and how they combine together, not on the messy details of running them.
 Slick provides a set of combinators to make this possible.
 
@@ -623,8 +623,8 @@ The transformation will run when the result is available from the database.
 As an example, we can create an action to return the text of a message from the database:
 
 ~~~ scala
-val text: DBIO[String] =
-  messages.map(_.content).result.head
+val text: DBIO[Option[String]] =
+  messages.map(_.content).result.headOption
 ~~~
 
 This is the regular kind of Slick code you've seen many times. There's nothing new there.
@@ -641,32 +641,34 @@ def rot13(s: String) = s map {
   case c => c
 }
 
-val action: DBIO[String] = text.map(rot13)
+val action: DBIO[Option[String]] =
+  text.map{ optionText => optionText.map(rot13) }
 
 exec(action)
-// res1: String = Uryyb, UNY. Qb lbh ernq zr, UNY?!
+// res1: Option[String] =
+//  Some(Uryyb, UNY. Qb lbh ernq zr, UNY?!)
 ~~~
 
 What we _didn't_ do is run the query and then `rot13` the result.
-That would have involved us dealing with `Future[String]`.
+That would have involved us dealing with `Future[Option[String]]`.
 Instead we used a much cleaner way of writing code:
 we created an action that when run would ensure our `rot13` function is applied to the result.
 
-Note that we have used three kinds of `map` in this example:
+Note that we have made four uses of `map` in this example:
 
-- the `String.map` to obfuscate text in `rot13`;
-- a `map` on a query to pick out the `content` column; and
+- `String`'s `map` to obfuscate text in `rot13`;
+- an `Option` `map` to apply `rot13` to our `Option[String]` result;
+- a `map` on a query to select just the `content` column; and
 - `map` on our action so that the result will be transform when the action is run.
 
 Combinators everywhere!
 
-This example transformed a `String` to another `String`.
+This example transformed an `Option[String]` to another `Option[String]`.
 As you may expect if `map` changes the type of a value, the type of `DBIO` changes too:
 
 ~~~ scala
-text.map(s => s.length)
-// res2: slick.dbio.DBIOAction[
-//   Int,
+text.map(os => os.map(_.length))// res2: slick.dbio.DBIOAction[
+//   Option[Int],
 //   slick.dbio.NoStream,
 //   slick.dbio.Effect.All
 // ]
@@ -700,7 +702,7 @@ The Slick manual discusses this in the section on [Database I/O Actions][link-re
 
 As with `map`, `filter` is something you'll be familiar with, but there is a twist with Slick.
 
-Just like `filter` in the Scala collections library, `filter` tales a predicate function as an argument.
+Just like `filter` in the Scala collections library or on `Option`, `filter` takes a predicate function as an argument.
 
 ~~~ scala
 val text: DBIO[String] =
@@ -719,14 +721,14 @@ exec(longMsgAction)
 ~~~
 
 The surprise comes if our predicate evaluates to `false`.
-When working with collections, if the predicate is false for some value, that value is excluded from the collection.
+When working with `Option`, if the predicate is `false` the result is `None`.
 But for actions, the result is an exception:
 
 ~~~
 java.util.NoSuchElementException: Action.withFilter failed
 ~~~
 
-That makes `filter` tricky to work with, but you have some options.
+That makes `filter` tricky to work with, but you have some tools to help.
 First, if you want different behaviour from a filter-like function, you can implement it pretty easily with `flatMap`.
 We will get to `flatMap` shortly.
 
@@ -1197,7 +1199,7 @@ TODO TODO TODO TODO
 
 We saw that `fold` can take a number of actions and reduce them using a function you supply.
 Now imagine the opposite: unfolding an initial value into a sequence of values via a function.
-In this exercise we want you to write an `unfold` method tht will do just that.
+In this exercise we want you to write an `unfold` method that will do just that.
 
 Why would you need to do something like this?
 One example would be when you have a tree structure represented in a database and need to search it.
