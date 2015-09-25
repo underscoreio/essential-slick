@@ -124,6 +124,36 @@ messages.filter(_.sender === 123)
 //                                        ^
 ~~~
 
+<div class="callout callout-info">
+**Beyond `From`**
+
+How can we perform useful queries such as
+`Select 1` in Slick and why would we want to?
+
+We can use the `Query` companion object!
+
+``` scala
+Query(1)
+```
+will produce
+
+``` sql
+select 1
+```
+
+The `apply` method of the `Query` object allows
+us to lift a scalar value to a `Query`.
+
+A simple query such as `Select 1` can be used to confirm we have database connectivity.
+A useful thing to do as an application is starting up and as a heartbeat system check that will consume minimal resources.
+
+We'll see another example of using a `From`less query in [Chapter 3](#insertOrUpdate).
+
+
+
+</div>
+
+
 ## Transforming Results
 
 ### The *map* Method
