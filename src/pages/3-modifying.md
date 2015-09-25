@@ -1138,14 +1138,42 @@ automatically insert the message "First!" before it.
 Use your knowledge of action combinators to achieve this.
 
 <div class="solution">
+There are two elements to this problem:
+
+1. being able to use the result of a count, which is what `flatMap` gives us; and
+2. combining two inserts via `andThen`.
+
 ~~~ scala
-TODO
+import scala.concurrent.ExecutionContext.Implicits.global
+
+def insert(m: Message): DBIO[Int] =
+    messages.size.result.flatMap {
+      case 0 =>
+        (messages += Message(m.sender, "First!")) andThen (messages += m)
+      case n =>
+        messages += m
+    }
+
+// Throw away all the messages:
+exec(messages.delete)
+// res1: Int = 3
+
+// Try out the method:
+exec {
+  insert(Message("Me", "Hello?"))
+}
+// res2: Int = 1
+
+// What's in the database?
+exec(messages.result).foreach(println)
+// Message(Me,First!,7)
+// Message(Me,Hello?,8)
 ~~~
 </div>
 
 ### Duped
 
-Messages that a repeated are just noise.
+Messages that are repeated are just noise.
 Write a delete expression that will remove all repeated messages.
 
 For example, if the database contains the messages...
@@ -1157,8 +1185,31 @@ For example, if the database contains the messages...
 ...then regardless of who sent them, after the delete we just expect to have "Hello" in the database.
 
 <div class="solution">
+
+If you're familiar with SQL you may find it helpful to ask "what SQL would achieve this?".
+
+One way is:
+
+~~~ sql
+DELETE FROM
+  message AS msg
+WHERE (
+   SELECT
+    COUNT(1)
+    FROM
+      message
+    WHERE
+      message.content = msg.content
+    ) > 1
+~~~
+
+Don't be distracted by the `DELETE` part: we need to find the request query, and then call `delete` in Slick...
+
 ~~~ scala
-TODO
+val dedupe: DBIO[Int] =
+  messages.filter { m =>
+    messages.filter(_.content === m.content).size > 1
+  }.delete
 ~~~
 </div>
 
@@ -1192,8 +1243,7 @@ In this chapter we noted that `DBIO`'s `filter` method produces a run-time excep
 
 Create your own version of `filter` which will take some other action when the filter predicate fails.  The signature could be:
 
-TODO TODO TODO TODO
-
+TODO
 
 ### Unfolding
 
