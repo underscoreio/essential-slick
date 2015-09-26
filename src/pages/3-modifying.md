@@ -1255,7 +1255,7 @@ Why would you need to do something like this?
 One example would be when you have a tree structure represented in a database and need to search it.
 You can follow a link between rows, possibly recording what you find as you follow those links.
 
-As an example, let's pretend the crew's ship is just a set of rooms, one connected to just one other:
+As an example, let's pretend the crew's ship a set of rooms, one connected to just one other:
 
 ~~~ scala
 final case class Room(name: String, connectsTo: String)
@@ -1304,39 +1304,38 @@ def unfold(
 
 ... where `z` is the starting ("zero") room, and `f` will lookup the connecting room.
 
-If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Galley", "Computer", "Engine Room")`.
+If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Podbday", "Galley", "Computer", "Engine Room")`.
 
 <div class="solution">
 
-The trick here is to recognise that:
+The trick here is to recognize that:
 
-1. this is a recursive problem, so we need to define a stopping condition.
+1. this is a recursive problem, so we need to define a stopping condition;
 
-2. we need to find a combinator for actions that will pass a value long. That job can be handled by `flatMap`.  
+2. we need `flatMap` to pass a value long; and
 
-TODO ... explain more steps.
-
+3. we need to accumulate results from each step.
 
 The solution below is generalized with `T` rather than having a hard-coded `String` type.
-
-TODO .... This isn't quite right: the results are in the wrong order, doesn't quite follow the suggested signature....
 
 ~~~ scala
 def unfold[T]
   (z: T, acc: Seq[T] = Seq.empty)
   (f: T => DBIO[Option[T]]): DBIO[Seq[T]] =
   f(z).flatMap {
-    case None    => DBIO.successful(acc)
-    case Some(t) => unfold(t, z +: acc)(f)
+    case None    => DBIO.successful(acc :+ z)
+    case Some(t) => unfold(t, acc :+ z)(f)
   }
 
-println("\nRoom path:")
 val path: DBIO[Seq[String]] =
   unfold("Podbay") {
-     r => floorplan.filter(_.name === r).map(_.connectsTo).result.headOption
+     roomName => floorplan
+          .filter(_.name === roomName)
+          .map(_.connectsTo).result.headOption
    }
+
 println( exec(path) )
-// ??? TODO
+// List(Podbay, Galley, Computer, Engine Room)
 ~~~
 </div>
 
