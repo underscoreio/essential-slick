@@ -275,7 +275,7 @@ val data = Query("Stanley" -> "Cut!")
 
 That's a tuple of two columns. That's one part of the what we need.
 
-We also need to be able to test to see if the data already exists. That's straight-forward:
+We also need to be able to test to see if the data already exists. That's straightforward:
 
 ~~~ scala
 val exists =
@@ -1194,21 +1194,39 @@ One way is:
 DELETE FROM
   message AS msg
 WHERE (
-   SELECT
+  SELECT
     COUNT(1)
-    FROM
-      message
-    WHERE
-      message.content = msg.content
-    ) > 1
+  FROM
+    message
+  WHERE
+    message.content = msg.content
+  )
+  > 1
 ~~~
 
-Don't be distracted by the `DELETE` part: we need to find the request query, and then call `delete` in Slick...
+To approach this, first figure out the query to select the rows.
+
+The inner query (`SELECT COUNT(1)...`) is easy enough.
+If we have some `Message`, `msg`, we can count how many messages have the same content as `msg`:
 
 ~~~ scala
-val dedupe: DBIO[Int] =
-  messages.filter { m =>
-    messages.filter(_.content === m.content).size > 1
+messages.filter(_.content === msg.content).size
+~~~
+
+Where can we get `msg` from?  That would be the outer query:
+
+~~~ scala
+messages.filter { msg =>
+  messages.filter(_.content === msg.content).size > 1
+}
+~~
+
+To turn a query into a delete, we just called `.delete`:
+
+~~~ scala
+val zap: DBIO[Int] =
+  messages.filter { msg =>
+    messages.filter(_.content === msg.content).size > 1
   }.delete
 ~~~
 </div>
@@ -1239,11 +1257,36 @@ val rowsAffected = query.update("HAL 9000", DateTime.now)
 
 ### Filter Revisited
 
-In this chapter we noted that `DBIO`'s `filter` method produces a run-time exception if the filter predicate is false.  We commented that you could write your own `filter` if that wasn't what you wanted.
+In this chapter we noted that `DBIO`'s `filter` method produces a runtime exception if the filter predicate is false.
+We commented that you could write your own `filter` if you wanted different behaviour.
 
-Create your own version of `filter` which will take some other action when the filter predicate fails.  The signature could be:
+Create your own version of `filter` which will take some alternative action when the filter predicate fails.
+The signature could be:
 
-TODO
+~~~ scala
+def myFilter[T]
+  (action: DBIO[T])
+  (p: T => Boolean)
+  (alternative: => DBIO[T]) = ???
+~~~
+
+<div class="solution">
+This is a fairly simple example of using `flatMap`:
+
+~~~ scala
+import scala.concurrent.ExecutionContext.Implicits.global
+
+def myFilter[T]
+  (action: DBIO[T])
+  (p: T => Boolean)
+  (alternative: => DBIO[T]) =
+    action.flatMap{ v =>
+      if (p(v)) DBIO.successful(v)
+      else alternative
+    }
+~~~
+</div>
+
 
 ### Unfolding
 
