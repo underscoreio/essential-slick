@@ -16,10 +16,11 @@
 [link-mysql]:                http://www.mysql.com/
 [link-postgres-download]:    http://www.postgresql.org/download/
 [link-postgres]:             http://www.postgresql.org/
-[link-ref-dbs]:              http://slick.typesafe.com/doc/3.0.0/introduction.html#supported-database-systems
+[link-ref-dbs]:              http://slick.typesafe.com/doc/3.0.0/supported-databases.html
 [link-ref-gen]:              http://slick.typesafe.com/doc/3.0.0/code-generation.html
 [link-ref-h2driver]:         http://slick.typesafe.com/doc/3.0.0/api/#slick.driver.H2Driver
 [link-ref-orm]:              http://slick.typesafe.com/doc/3.0.0/orm-to-slick.html
+[link-ref-actions]:          http://slick.typesafe.com/doc/3.1.0-M2/dbio.html
 [link-slick-column-options]: http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.ast.ColumnOption
 [link-slick-hlist]:          http://slick.typesafe.com/doc/3.0.0/api/#slick.collection.heterogenous.HList
 [link-source-dbPublisher]:   http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.backend.DatabasePublisher
