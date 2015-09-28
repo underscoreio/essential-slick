@@ -1,4 +1,4 @@
-# Selecting Data {#Selecting}
+# Selecting Data {#selecting}
 
 The last chapter provided a shallow end-to-end overview of Slick. We saw how to model data, create queries, connect to a database, and run those queries. In the next two chapters we will look in more detail at the various types of query we can perform in Slick.
 
@@ -37,7 +37,7 @@ messages.result.statements
 //  List(select x2."sender", x2."content", x2."id" from "message" x2)
 ~~~
 
-Our `TableQuery` is the equivalent of the SQL `SELECT * from message`.
+Our `TableQuery` is the equivalent of the SQL `select * from message`.
 
 <div class="callout callout-warning">
 **Query Extension Methods**
@@ -124,7 +124,39 @@ messages.filter(_.sender === 123)
 //                                        ^
 ~~~
 
-## Transforming Results: The *map* Method
+<div class="callout callout-info">
+**Beyond *from* **
+
+How can we perform useful queries such as
+`select 1` in Slick and why would we want to?
+
+We can use the `Query` companion object!
+
+``` scala
+Query(1)
+```
+will produce
+
+``` sql
+select 1
+```
+
+The `apply` method of the `Query` object allows
+us to lift a scalar value to a `Query`.
+
+A simple query such as `select 1` can be used to confirm we have database connectivity.
+A useful thing to do as an application is starting up and as a heartbeat system check that will consume minimal resources.
+
+We'll see another example of using a `from`-less query in [Chapter 3](#insertOrUpdate).
+
+
+
+</div>
+
+
+## Transforming Results
+
+### The *map* Method
 
 Sometimes we don't want to select all of the data in a `Table`.
 We can use the `map` method on a `Query` to select specific columns for inclusion in the results.
@@ -214,7 +246,7 @@ This change of mixed type can complicate query composition with `map`.
 We recommend calling `map` only as the final step in a sequence of transformations on a query,
 after all other operations have been applied.
 
-It is worth noting that we can `map` to anything that Slick can pass to the database as part of a `SELECT` clause.
+It is worth noting that we can `map` to anything that Slick can pass to the database as part of a `select` clause.
 This includes individual `Rep`s and `Table`s,
 as well as `Tuple`s of the above.
 For example, we can use `map` to select the `id` and `content` columns of messages:
@@ -243,13 +275,39 @@ messages.map(t => t.id * 1000L).result.statements
 // res20: Iterable[String] = List(select x2."id" * 1000 from "message" x2)
 ~~~
 
-<!--
-<div class="callout callout-info">
-**Query's *flatMap* method**
+### *exists*
 
-`Query` also has a `flatMap` method with similar monadic semantics to that of `Option` or `Future`. `flatMap` is mostly used for joins, so we'll cover it in [Chapter 5](#joins).
-</div>
--->
+Sometimes we are less interested in the contents of a queries result than if results exist at all.
+For this we have `exists`, which will return `true` if the result set is not empty and false otherwise.
+
+Let's look at quick example to show how we can use an existing query with the `exists` keyword:
+
+~~~ scala
+val containsBay = for {
+  m <- messages
+  if m.content like "%bay%"
+} yield m
+
+val bayMentioned: DBIO[Boolean] =
+  containsBay.exists.result
+~~~
+
+
+The `containsBay query` returns all messages that mention "bay".
+We can then use this query in the `bayMentioned` expression to determine what to execute.
+
+The above will generate SQL which looks simliar to this:
+
+~~~ sql
+select exists(
+  select x2."sender", x2."content", x2."id"
+  from "message" x2
+  where x2."content" like '%bay%'
+)
+~~~
+
+We will see a more useful example in [Chapter 3](#insertOrUpdate).
+
 
 ## Running Queries
 
@@ -271,7 +329,7 @@ In many cases we can simplify the representation of an action to just `DBIO[T]`.
 Effects are not part of Essential Slick, and we'll be working in terms of `DBIO[T]` for most of this text.
 
 However, broadly speaking, `Effect` is a way to annotate (tag, or mark) an action.
-For example, you can write a method that will only accept queries marked as `Read` or `Write`, or a combination such as `Read with Transactional`.  
+For example, you can write a method that will only accept queries marked as `Read` or `Write`, or a combination such as `Read with Transactional`.
 
 The effects defined in Slick under the `Effect` object are:
 
@@ -494,7 +552,7 @@ Scala Code              Operand Column Types               Result Type        SQ
 : Boolean column methods.
   Operand and result types should be interpreted as parameters to `Rep[_]`.
 
-### Option Methods and Type Equivalence
+### Option Methods and Type Equivalence {#type_equivalence}
 
 Slick models nullable columns in SQL as `Rep`s with `Option` types.  We'll discuss this in some depth in [Chapter 4](#Modelling).
 However, as a preview, know that if we have a nullable column in our database, we declare it as optional in our `Table`:
@@ -624,6 +682,35 @@ order by "sender"
 limit 5 offset 5
 ~~~~
 
+<div class="callout callout-info">
+**Sorting on Null columns**
+
+We had a brief introduction to nullable columns earlier in the chapter when we looked at [Option Methods and Type Equivalence](#type_equivalence).
+Slick offers three modifiers which can be used in conjunction with `desc` and `asc` when sorting on nullable columns: `nullFirst`, `nullsDefault` and `nullsLast`.
+These do what you'd expect by including nulls at the beginning or end of the result set.
+The `nullsDefault` behaviour will use the SQL engines preference.
+
+
+
+
+
+An example of sorting a nullable column:
+
+~~~ scala
+users.sortBy { _.name.nullsFirst }.result.statements.foreach { println }
+~~~
+
+Generates the following SQL:
+
+~~~ sql
+select x2."name", x2."email", x2."id"
+from "user" x2
+order by x2."name" nulls first
+~~~
+
+We cover nullable columns in [Chapter 4](#null-columns) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
+</div>
+
 
 ## Take Home Points
 
@@ -634,7 +721,7 @@ The expressions we use in queries are defined in extension methods,
 and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Rep`.
 Comparisons to `Option` types are made easy for us as Slick will compare `Rep[T]` and `Rep[Option[T]]` automatically.
 
-We've seen that `map` acts like a SQL `SELECT`, and `filter` is like a `WHERE`. We'll see the Slick representation of `GROUP` and `JOIN` in [Chapter 5](#joins).
+We've seen that `map` acts like a SQL `select`, and `filter` is like a `WHERE`. We'll see the Slick representation of `GROUP` and `JOIN` in [Chapter 5](#joins).
 
 We introduced some new terminology:
 
