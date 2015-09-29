@@ -92,7 +92,7 @@ There is a potential down-side of packaging everything into a single `Schema` an
 
 If you recognise this as a problem, it's time to split your code more finely and take care over importing just what you need.
 
-### Name spacing queries
+### Namespacing Queries
 
 We can exploit the expanded form of `TableQuery[T]`, a macro, to provide a location to store queries.
 `TableQuery[T]`'s expanded form is:
