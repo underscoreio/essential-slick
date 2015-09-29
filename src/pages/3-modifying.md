@@ -386,7 +386,9 @@ In the `Messages` we've created so far we've referred to the computer from *2001
 ~~~ scala
 val updateQuery =
   messages.filter(_.sender === "HAL").map(_.sender)
-//
+//updateQuery: slick.lifted.Query[
+//  slick.lifted.Rep[String],
+//  String,Seq] = Rep(Bind)
 
 exec(updateQuery.update("HAL 9000"))
 // res1: Int = 2
