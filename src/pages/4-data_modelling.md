@@ -1106,7 +1106,7 @@ Using the Slick `MappedColumnType.base` call enables this machinery, which is ma
 This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
 
 
-## Value Classes {#value-classes}
+### Value Classes {#value-classes}
 
 In modelling rows we are using `Long`s as primary keys.
 Although that's a good choice for the database, it's not a great choice
@@ -1274,81 +1274,7 @@ Depending on the nature of your application, that might be convenient for you.
 The general point is that you have the whole of the Scala type system at your disposal for representing IDs.
 </div>
 
-
-### Exercises
-
-#### Mapping Enumerations
-
-We can use the same trick that we've seen for `DateTime` and value classes to map enumerations.
-
-Here's a Scala Enumeration for a user's role:
-
-~~~ scala
-object UserRole extends Enumeration {
-  type UserRole = Value
-  val Owner   = Value("O")
-  val Regular = Value("R")
-}
-~~~
-
-Modify the `user` table to include a `UserRole`.
-In the database store the role as a single character.
-
-<div class="solution">
-The first step is to supply an implicit to and from the database values:
-
-~~~ scala
-object UserRole extends Enumeration {
-  type UserRole = Value
-  val Owner   = Value("O")
-  val Regular = Value("R")
-}
-
-import UserRole._
-implicit val userRoleMapper =
-  MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
-~~~
-
-Then we can use the `UserRole` in the table definition:
-
-~~~ scala
-case class User(name: String,
-                userRole: UserRole = Regular,
-                id: UserPK = UserPK(0L))
-
-class UserTable(tag: Tag) extends Table[User](tag, "user") {
-  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
-  def name = column[String]("name")
-  def role = column[UserRole]("role", O.Length(1,false))
-
-  def * = (name, role, id) <> (User.tupled, User.unapply)
-}
-~~~
-</div>
-
-
-#### Alternative Enumerations
-
-Modify your solution to the previous exercise to store the value in the database as an integer.
-
-Oh, and by the way, this is a legacy system. If we see an unrecognized user role value, just
-default it to a `UserRole.Regular`.
-
-<div class="solution">
-The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
-
-~~~ scala
-implicit val userRoleMapper =
-  MappedColumnType.base[UserRole, Int](
-  _.id,
-  v => UserRole.values.find(_.id == v) getOrElse Regular)
-~~~
-</div>
-
-
-
-
-## Sum Types
+### Sum Types
 
 We've used case classes extensively for modelling data.
 These are known as _product types_, which form one half of _algebraic data types_ (ADTs).
@@ -1438,6 +1364,75 @@ If you find yourself writing that kind of query often, be aware that extension m
 
 
 ### Exercises
+
+#### Mapping Enumerations
+
+We can use the same trick that we've seen for `DateTime` and value classes to map enumerations.
+
+Here's a Scala Enumeration for a user's role:
+
+~~~ scala
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+~~~
+
+Modify the `user` table to include a `UserRole`.
+In the database store the role as a single character.
+
+<div class="solution">
+The first step is to supply an implicit to and from the database values:
+
+~~~ scala
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+
+import UserRole._
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
+~~~
+
+Then we can use the `UserRole` in the table definition:
+
+~~~ scala
+case class User(name: String,
+                userRole: UserRole = Regular,
+                id: UserPK = UserPK(0L))
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def role = column[UserRole]("role", O.Length(1,false))
+
+  def * = (name, role, id) <> (User.tupled, User.unapply)
+}
+~~~
+</div>
+
+
+#### Alternative Enumerations
+
+Modify your solution to the previous exercise to store the value in the database as an integer.
+
+Oh, and by the way, this is a legacy system. If we see an unrecognized user role value, just
+default it to a `UserRole.Regular`.
+
+<div class="solution">
+The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
+
+~~~ scala
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, Int](
+  _.id,
+  v => UserRole.values.find(_.id == v) getOrElse Regular)
+~~~
+</div>
+
 
 #### Custom Boolean
 
