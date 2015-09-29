@@ -286,7 +286,7 @@ val bayMentioned: DBIO[Boolean] =
 ~~~
 
 
-The `containsBay query` returns all messages that mention "bay".
+The `containsBay` query returns all messages that mention "bay".
 We can then use this query in the `bayMentioned` expression to determine what to execute.
 
 The above will generate SQL which looks simliar to this:
