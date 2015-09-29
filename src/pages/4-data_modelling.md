@@ -1078,9 +1078,9 @@ val hasNot = for {
 
 ## Custom Column Mappings
 
-We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
+We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, and `content` fields are mapped into a row representation of `Message`.
 
-At a level down from that, we can also control how our types are converted into column values.  For example, we'd like to use [JodaTime][link-jodatime]'s `DateTime` class for anything data and time related. Support for this is not built-in to Slick, but it's painless to map custom types to the database.
+At a level down from that, we can also control how our types are converted into column values.  For example, perhaps we'd like to use [JodaTime][link-jodatime]'s `DateTime` class for anything date and time related. Support for this is not built-in to Slick, but it's painless to map custom types to the database.
 
 The mapping for JodaTime's `DateTime` is:
 
@@ -1159,10 +1159,12 @@ This is just the same as we've previously added for JodaTime:
 
 ~~~ scala
 import PKs._
-implicit val messagePKMapper = MappedColumnType.base[MessagePK, Long]  ↩
-                                                    (_.value, MessagePK(_))
-implicit val userPKMapper    = MappedColumnType.base[UserPK, Long]  ↩
-                                                    (_.value, UserPK(_))
+
+implicit val messagePKMapper =
+  MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
+
+implicit val userPKMapper =
+   MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
 ~~~
 
 Recall that `MappedColumnType.base` is how we define the functions to convert between our classes (`MessagePK`, `UserPK`)
@@ -1268,6 +1270,8 @@ lazy val users = TableQuery[UserTable]
 
 We now get type safety without having to define the boiler plate of individual primary key case classes per table.
 Depending on the nature of your application, that might be convenient for you.
+
+The general point is that you have the whole of the Scala type system at your disposal for representing IDs.
 </div>
 
 
