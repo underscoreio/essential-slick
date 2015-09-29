@@ -698,16 +698,14 @@ To do this we change the definition of `message` to reference an `id` of a `user
 ~~~ scala
 case class Message(senderId: Long,
                    content: String,
-                   ts: DateTime,
                    id: Long = 0L)
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def senderId = column[Long]("sender")
   def content  = column[String]("content")
-  def ts       = column[DateTime]("ts")
 
-  def * = (senderId, content, ts, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
 
   def sender = foreignKey("sender_fk", senderId, users)(_.id)
 }
@@ -822,7 +820,6 @@ rather than a `User`:
 ~~~ scala
 case class Message(senderId: Long,
                    content: String,
-                   ts: DateTime,
                    id: Long = 0L)
 ~~~
 
@@ -842,9 +839,8 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def senderId = column[Long]("sender")
   def content  = column[String]("content")
-  def ts       = column[DateTime]("ts")
 
-  def * = (senderId, content, ts, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
 
   def sender = foreignKey("sender_fk",
                           senderId,
