@@ -299,7 +299,7 @@ select exists(
 )
 ~~~
 
-We will see a more useful example in [Chapter 3](#insertOrUpdate).
+We will see a more useful example in [Chapter 3](#moreControlOverInserts).
 
 
 We can even map sets of columns to Scala data structures using the
