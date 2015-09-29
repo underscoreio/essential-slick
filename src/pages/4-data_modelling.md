@@ -494,7 +494,7 @@ The Slick query amounts to:
 SELECT * FROM "user" WHERE "email" = NULL
 ~~~
 
-Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Reps[Option[A]]`:
+Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Rep[Option[A]]`:
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
@@ -608,7 +608,7 @@ This is a key which is based on the value of two or more columns.
 
 We'll look at this by adding the ability for people to chat in rooms.
 
-The room definition is straight-forward:
+The room definition is straightforward:
 
 ~~~ scala
 // Regular table definition for a chat room:
@@ -660,7 +660,10 @@ CREATE TABLE "occupant" (
   "user" BIGINT NOT NULL
 )
 
-ALTER TABLE "occupant" ADD CONSTRAINT "room_user_pk" ↩
+ALTER TABLE
+  "occupant"
+ADD CONSTRAINT
+  "room_user_pk"
 PRIMARY KEY("room", "user")
 ~~~
 
@@ -795,8 +798,12 @@ val q = for {
 This is equivalent the the query:
 
 ~~~ sql
-SELECT u."name", m."content" FROM "message" m, "user" u ↩
-WHERE u."id" = m."sender"
+SELECT
+  u."name", m."content"
+FROM
+  "message" m, "user" u
+WHERE
+  u."id" = m."sender"
 ~~~
 
 ...and will produce:
