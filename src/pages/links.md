@@ -52,5 +52,4 @@
 [link-scala-type-alias-bug]: https://issues.scala-lang.org/browse/SI-7139
 
 [link-akka-streams]:         http://akka.io/docs/
-[link-reactive-streams]:     http://www.reactive-streams.org/
 [link-slick-streaming]:      http://slick.typesafe.com/doc/3.0.0/database.html#streaming
