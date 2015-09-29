@@ -587,7 +587,7 @@ def pk = primaryKey("pk_id", id)
 
 This separate step doesn't make much of a difference in this case.
 It separates the column definition from the key constraint,
-meaning the DDL will emit:
+meaning the schema will include:
 
 ~~~ sql
 ALTER TABLE "user" ADD CONSTRAINT "pk_id" PRIMARY KEY("id")
@@ -718,7 +718,7 @@ which is the foreign key linking the `senderId` to a `user` `id`.
 
 The `foreignKey` gives us two things.
 
-First, in the DDL, if you use it, the appropriate constraint is added:
+First, in the `schema` method, if you use it, the appropriate constraint is added:
 
 ~~~ sql
 ALTER TABLE "message" ADD CONSTRAINT "sender_fk"
@@ -749,7 +749,7 @@ def sender =
   (_.id, onDelete=ForeignKeyAction.Cascade)
 ~~~
 
-Providing Slicks DDL command has been run for the table,
+Providing Slick's `schema` command has been run for the table,
 or the SQL `ON DELETE CASCADE` action has been manually applied to the database,
 the following action will remove HAL from the `users` table,
 and all of the messages that HAL sent:
@@ -905,7 +905,7 @@ Finally, we can add an index to the table:
 def nameIndex = index("name_idx", name, unique=true)
 ~~~
 
-The corresponding DDL statement will be:
+The corresponding DDL statement produced from a called to `schema` will be:
 
 ~~~ sql
 CREATE UNIQUE INDEX "name_idx" ON "user" ("name")
@@ -1019,7 +1019,7 @@ Go ahead and model this.
 Hint: Remember to include your new table when creating the schema:
 
 ~~~ scala
-(messages.ddl ++ users.ddl ++ bills.dll).create
+(messages.schema ++ users.schema ++ bills.schema).create
 ~~~
 
 Additionally, provide queries to give the full details of users:
