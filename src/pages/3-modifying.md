@@ -377,7 +377,7 @@ messages.map(_.content).delete
 
 ## Updating Rows {#UpdatingRows}
 
-So far we've only looked at inserting new data and deleting existing data data. But what if we want to update existing data without deleting it first? Slick lets us create SQL `UPDATE` actions via the kinds of `Query` values we've been using for selecting and deleting rows.
+So far we've only looked at inserting new data and deleting existing data. But what if we want to update existing data without deleting it first? Slick lets us create SQL `UPDATE` actions via the kinds of `Query` values we've been using for selecting and deleting rows.
 
 ### Updating a Single Field
 
