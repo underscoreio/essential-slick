@@ -104,10 +104,20 @@ We can exploit the expanded form of `TableQuery[T]`, a macro, to provide a locat
 Using this, we can provide a module to hold `Message` queries:
 
 ~~~ scala
-object messages  extends TableQuery( new MessageTable(_)) {
-  val findBySender = this.findBy(_.sender)
-  val numSenders   = this.map(_.sender).countDistinct
+object messages extends TableQuery(new MessageTable(_)) {
+
+  def messagesFrom(name: String) =
+    this.filter(_.sender === name)
+
+  val numSenders = this.map(_.sender).countDistinct
 }
+~~~
+
+This adds values and methods to `messages`:
+
+~~~ scala
+val action =
+  messages.numSenders.result
 ~~~
 
 ## Representations for Rows
