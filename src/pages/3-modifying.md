@@ -342,7 +342,7 @@ you can always make use of Plain SQL inserts, described in [Chapter 6](#PlainSQL
 
 ## Deleting Rows
 
-Slick lets us delete rows using the same `Query` objects we saw in [Chapter 2](#Selecting).
+Slick lets us delete rows using the same `Query` objects we saw in [Chapter 2](#selecting).
 That is, we specify which rows to delete using the `filter` method, and then call `delete`:
 
 ~~~ scala
