@@ -386,7 +386,7 @@ messages.filter(_.sender === "HAL").result.statements.mkString
 ~~~
 
 To run this query, we convert it to an action using `result`,
-run it agaisnt the database with `db.run`, and await the final result with `exec`:
+run it against the database with `db.run`, and await the final result with `exec`:
 
 ~~~ scala
 exec(messages.filter(_.sender === "HAL").result)
