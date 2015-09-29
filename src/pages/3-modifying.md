@@ -438,7 +438,7 @@ val rowsAffected = exec(action)
 
 ### Updating Multiple Fields
 
-We can update more than one field at the same time by `map`ping the query down to a tuple of the columns we care about...
+We can update more than one field at the same time by mapping the query down to a tuple of the columns we care about...
 
 ~~~ scala
 val query = messages.
