@@ -232,7 +232,7 @@ chapter01 = {
 }
 ~~~
 
-This syntax comes from the [Typesafe Config](link-config) library, which is also used by Akka and the Play framework.
+This syntax comes from the [Typesafe Config][link-config] library, which is also used by Akka and the Play framework.
 
 The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"`.
 
