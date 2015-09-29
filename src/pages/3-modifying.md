@@ -118,7 +118,7 @@ exec(messages.filter(_.id === 1001L).result.headOption)
 
 ### Retrieving Rows on Insert
 
-Not all databases support complete support for the `returning` method. H2 only allows us to retrieve the primary key from an insert. However, some databases allow us to retrieve the complete inserted record. For example, we could ask for the whole `Message` back:
+Not all databases provide complete support for the `returning` method. H2 only allows us to retrieve the primary key from an insert. However, some databases allow us to retrieve the complete inserted record. For example, we could ask for the whole `Message` back:
 
 ~~~ scala
 exec(messages returning messages +=
