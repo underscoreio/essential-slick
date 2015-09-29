@@ -86,10 +86,21 @@ object Main extends App {
 
 To work with a different database, create a different `Schema` instance and supply a different driver. The rest of the code does not need to change.
 
+### Additional Considerations
+
+There is a potential down-side of packaging everything into a single `Schema` and performing `import schema._`.  All your case classes, and table queries, custom methods, implicits, and other values are imported into your current namespace.
+
+If you recognise this as a problem, it's time to split your code more finely and take care over importing just what you need.
+
 ### Name spacing queries
 
 We can exploit the expanded form of `TableQuery[T]`, a macro, to provide a location to store queries.
-`TableQuery[T]`'s expanded form is `(new TableQuery(new T(_)))`.
+`TableQuery[T]`'s expanded form is:
+
+~~~ scala
+(new TableQuery(new T(_)))`
+~~~
+
 Using this, we can provide a module to hold `Message` queries:
 
 ~~~ scala
@@ -98,13 +109,6 @@ object messages  extends TableQuery( new MessageTable(_)) {
   val numSenders   = this.map(_.sender).countDistinct
 }
 ~~~
-
-
-### Additional Considerations
-
-There is a potential down-side of packaging everything into a single `Schema` and performing `import schema._`.  All your case classes, and table queries, custom methods, implicits, and other values are imported into your current namespace.
-
-If you recognise this as a problem, it's time to split your code more finely and take care over importing just what you need.
 
 ## Representations for Rows
 
