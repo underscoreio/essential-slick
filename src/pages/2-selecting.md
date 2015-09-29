@@ -147,9 +147,7 @@ us to lift a scalar value to a `Query`.
 A simple query such as `select 1` can be used to confirm we have database connectivity.
 A useful thing to do as an application is starting up and as a heartbeat system check that will consume minimal resources.
 
-We'll see another example of using a `from`-less query in [Chapter 3](#insertOrUpdate).
-
-
+We'll see another example of using a `from`-less query in [Chapter 3](#moreControlOverInserts).
 
 </div>
 
