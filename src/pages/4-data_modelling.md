@@ -9,7 +9,7 @@ In this chapter we will:
 - expand on our knowledge of modelling tables to introduce optional values and foreign keys; and
 - use custom types to avoid working with just low-level database values.
 
-To do this, we'll expand chat application schema to support more than just messages.
+To do this, we'll expand the chat application schema to support more than just messages.
 
 ## Application Structure
 
