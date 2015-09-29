@@ -381,7 +381,7 @@ So far we've only looked at inserting new data and deleting existing data. But w
 
 ### Updating a Single Field
 
-In the `Messages` we've created so far we've referred to the computer from *2001: A Space Odyssey* as `"HAL"`, but the correct name is "HAL 9000".  Let's fix that:
+In the `Messages` we've created so far we've referred to the computer from *2001: A Space Odyssey* as "`HAL`", but the correct name is "`HAL 9000`".  Let's fix that:
 
 ~~~ scala
 val updateQuery =
