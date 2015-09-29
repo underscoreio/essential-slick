@@ -744,7 +744,7 @@ from "user" x2
 order by x2."name" nulls first
 ~~~
 
-We cover nullable columns in [Chapter 4](#null-columns) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
+We cover nullable columns in [Chapter 4](#Modelling) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
 </div>
 
 
