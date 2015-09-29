@@ -217,7 +217,7 @@ The query fails at runtime because the `sender` column is non-nullable in our sc
 
 ### Inserting Multiple Rows
 
-Suppose we want to insert several `Messages` at the same time. We could just use `+=` to insert each one in turn. However, this would result in a separate query being issued to the database for each record, which could be slow for large numbers of inserts.
+Suppose we want to insert several `Message`s at the same time. We could just use `+=` to insert each one in turn. However, this would result in a separate query being issued to the database for each record, which could be slow for large numbers of inserts.
 
 As an alternative, Slick supports *batch inserts*, where all the inserts are sent to the database in one go. We've seen this already in the first chapter:
 
