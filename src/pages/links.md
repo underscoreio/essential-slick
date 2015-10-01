@@ -50,3 +50,6 @@
 [link-reactive-streams]:     http://http://www.reactive-streams.org/
 [link-dw-effect-blog]:       http://danielwestheide.com/blog/2015/06/28/put-your-writes-where-your-master-is-compile-time-restriction-of-slick-effect-types.html
 [link-scala-type-alias-bug]: https://issues.scala-lang.org/browse/SI-7139
+
+[link-akka-streams]:         http://akka.io/docs/
+[link-slick-streaming]:      http://slick.typesafe.com/doc/3.0.0/database.html#streaming

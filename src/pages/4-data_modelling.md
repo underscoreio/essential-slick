@@ -93,7 +93,7 @@ In previous chapters we modelled rows as case classes.  That's a great choice, a
 
 There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
 
-### Case Classes and `<>`
+### Case Classes and `<>` {#projection-operator}
 
 To explore these different representations we'll start with comparing tuples and case classes.
 For a little bit of variety, let's define a `user` table so we no longer have to store names in the `message` table.
