@@ -732,70 +732,6 @@ The Slick manual discusses this in the section on [Database I/O Actions][link-re
 </div>
 
 
-### `filter`
-
-As with `map`, `filter` is something you'll be familiar with, but there is a twist with Slick.
-
-Just like `filter` in the Scala collections library or on `Option`, `filter` takes a predicate function as an argument.
-
-~~~ scala
-val text: DBIO[String] =
-  messages.map(_.content).result.head
-
-val longMsgAction: DBIO[String] =
-  text.filter(s => s.length > 10)
-~~~
-
-So `filter` on an action gives us another action.
-When we run the `longMsgAction` we get a result if the value from the database is longer than 10 characters.
-
-~~~ scala
-exec(longMsgAction)
-// res1: Hello, HAL. Do you read me, HAL?!
-~~~
-
-The surprise comes if our predicate evaluates to `false`.
-When working with `Option`, if the predicate is `false` the result is `None`.
-But for actions, the result is an exception:
-
-~~~
-java.util.NoSuchElementException: Action.withFilter failed
-~~~
-
-That makes `filter` tricky to work with, but you have some tools to help.
-First, if you want different behaviour from a filter-like function, you can implement it pretty easily with `flatMap`.
-We will get to `flatMap` shortly.
-
-Another option is to wrap the filter with a try, via `asTry`.
-
-<div class="callout callout-info">
-**Which `filter`?**
-
-Why would you even use `filter` on an action?
-One situation would be a test you want to apply which you cannot implement in the database.
-However, if you can implement the test via a `WHERE` clause,
-you'll probably be better off performing the `filter` on the _query_, not the _action_.
-</div>
-
-### `asTry`
-
-Calling `asTry` on an action changes the action's type from a `DBIO[T]` to a `DBIO[Try[T]]`.
-This means you can work in terms of Scala's `Success[T]` and `Failure` instead of exceptions.
-
-Continuing with the example from `filter`, we can deal with a failure:
-
-~~~ scala
-val text: DBIO[String] =
-  messages.map(_.content).result.head
-
-val willFail: DBIO[Try[String]] =
-  text.filter(s => s.length > 10000).asTry
-
-exec(willFail)
-// res1: Failure(java.util.NoSuchElementException: Action.withFilter failed)
-~~~
-
-
 ### `DBIO.successful` and `DBIO.failed`
 
 When combining actions you will sometimes need to create an action that represents a simple value.
@@ -1045,6 +981,34 @@ Notice the result is still the original exception, but `cleanUp` has produced a 
 Both `cleanUp` and `andFinally` run after an action, regardless of whether it succeeds or fails.
 `cleanUp` runs in response to a previous failed action; `andFinally` runs all the time, regardless of success or failure, and has no access to the `Option[Throwable]` that `cleanUp` sees.
 
+### `asTry`
+
+Calling `asTry` on an action changes the action's type from a `DBIO[T]` to a `DBIO[Try[T]]`.
+This means you can work in terms of Scala's `Success[T]` and `Failure` instead of exceptions.
+
+Suppose we had an action that might throw an exception:
+
+~~~ scala
+val work =
+  DBIO.failed(new RuntimeException("Boom!"))
+~~~
+
+We can place this inside `Try` by combining the action with `asTry`:
+
+~~~ scala
+exec(work.asTry)
+// res1: scala.util.Try[Nothing] =
+//  Failure(java.lang.RuntimeException: Boom!)
+~~~
+
+And successful actions will evauluate to a `Success[T]`:
+
+~~~ scala
+exec(messages.size.result.asTry)
+// res2: scala.util.Try[Int] =
+//  Success(4)
+~~~
+
 
 ## Transactions
 
@@ -1169,7 +1133,7 @@ The code for this chapter is in the [GitHub repository][link-example] in the _ch
 Create a method that will insert a message, but if it is the first message in the database,
 automatically insert the message "First!" before it.
 
-Use your knowledge of action combinators to achieve this.
+Use your knowledge of the `flatMap` action combinator to achieve this.
 
 <div class="solution">
 There are two elements to this problem:
@@ -1205,65 +1169,16 @@ exec(messages.result).foreach(println)
 ~~~
 </div>
 
-### Duped
+### No Apologies
 
-Messages that are repeated are just noise.
-Write a delete expression that will remove all repeated messages.
-
-For example, if the database contains the messages...
-
-* Hello
-* Morning
-* Morning
-
-...then regardless of who sent them, after the delete we just expect to have "Hello" in the database.
+Write a query to delete messages that contain "sorry".
 
 <div class="solution">
-
-If you're familiar with SQL you may find it helpful to ask "what SQL would achieve this?".
-
-One way is:
-
-~~~ sql
-DELETE FROM
-  message AS msg
-WHERE (
-  SELECT
-    COUNT(1)
-  FROM
-    message
-  WHERE
-    message.content = msg.content
-  )
-  > 1
-~~~
-
-To approach this, first figure out the query to select the rows.
-
-The inner query (`SELECT COUNT(1)...`) is easy enough.
-If we have some `Message`, `msg`, we can count how many messages have the same content as `msg`:
-
 ~~~ scala
-messages.filter(_.content === msg.content).size
-~~~
-
-Where can we get `msg` from?  That would be the outer query:
-
-~~~ scala
-messages.filter { msg =>
-  messages.filter(_.content === msg.content).size > 1
-}
-~~~
-
-To turn a query into a delete, we just called `.delete`:
-
-~~~ scala
-val zap: DBIO[Int] =
-  messages.filter { msg =>
-    messages.filter(_.content === msg.content).size > 1
-  }.delete
+messages.filter(_.content like "%sorry%").delete
 ~~~
 </div>
+
 
 ### Update Using a For Comprehension
 
@@ -1289,21 +1204,44 @@ val rowsAffected = query.update("HAL 9000", DateTime.now)
 ~~~
 </div>
 
-### Filter Revisited
+### Filtering
 
-In this chapter we noted that `DBIO`'s `filter` method produces a runtime exception if the filter predicate is false.
-We commented that you could write your own `filter` if you wanted different behaviour.
+There is a `DBIO` `filter` method, but it produces a runtime exception if the filter predicate is false.
+It's like `Future`'s `filter` method in that respect. We've not found a situation where we need it.
 
-Create your own version of `filter` which will take some alternative action when the filter predicate fails.
+However, we can create our own kind of filter.
+It can take some alternative action when the filter predicate fails.
+
 The signature could be:
 
 ~~~ scala
 def myFilter[T]
   (action: DBIO[T])
   (p: T => Boolean)
-  (alternative: => DBIO[T]) = ???
+  (alternative: => T) = ???
 ~~~
 
+If you're not comfortable with the `[T]` type parameter,
+or the by name parameter on `alternative`,
+just use `Int` instead:
+
+~~~ scala
+def myFilter
+  (action: DBIO[Int])
+  (p: Int => Boolean)
+  (alternative: Int) = ???
+~~~
+
+Go ahead and implement `myFilter`.
+
+We have an example usage from the ship's marketing department.
+They are happy to report the number of chat messages, but only if that number is at least 100:
+
+~~~ scala
+exec(
+  myFilter(messages.size.result)( _ > 100)(100)
+)
+~~~
 <div class="solution">
 This is a fairly simple example of using `flatMap`:
 
@@ -1313,16 +1251,78 @@ import scala.concurrent.ExecutionContext.Implicits.global
 def myFilter[T]
   (action: DBIO[T])
   (p: T => Boolean)
-  (alternative: => DBIO[T]) =
+  (alternative: => T) =
     action.flatMap{ v =>
       if (p(v)) DBIO.successful(v)
-      else alternative
+      else DBIO.successful(alternative)
     }
 ~~~
 </div>
 
 
+### Duped
+
+This is a harder exercise for working with queries and delete.
+
+Messages that are repeated are just noise.
+Write a delete expression that will remove all repeated messages.
+
+For example, if the database contains the messages...
+
+* Hello
+* Morning
+* Morning
+
+...then regardless of who sent them, after the delete we just expect to have "Hello" in the database.
+
+One way to do this in SQL is:
+
+~~~ sql
+DELETE FROM
+  message AS msg
+WHERE (
+  SELECT
+    COUNT(1)
+  FROM
+    message
+  WHERE
+    message.content = msg.content
+  )
+  > 1
+~~~
+
+To translate that into a Slick query, first figure out how to select those rows.
+That is, don't worry about deleting those rows, just try to select them.
+
+<div class="solution">
+If we have some `Message`, `msg`, we can count how many messages have the same content as `msg`:
+
+~~~ scala
+messages.filter(_.content === msg.content).size
+~~~
+
+Where can we get `msg` from?  That would be the outer query:
+
+~~~ scala
+messages.filter { msg =>
+  messages.filter(_.content === msg.content).size > 1
+}
+~~~
+
+To turn a query into a delete, we just called `.delete`:
+
+~~~ scala
+val zap: DBIO[Int] =
+  messages.filter { msg =>
+    messages.filter(_.content === msg.content).size > 1
+  }.delete
+~~~
+</div>
+
+
 ### Unfolding
+
+This is a challenging exercise.
 
 We saw that `fold` can take a number of actions and reduce them using a function you supply.
 Now imagine the opposite: unfolding an initial value into a sequence of values via a function.
