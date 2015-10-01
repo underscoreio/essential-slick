@@ -793,7 +793,7 @@ val q = for {
 } yield (usr.name, msg.content)
 ~~~
 
-This is equivalent the the query:
+This is equivalent to the query:
 
 ~~~ sql
 SELECT
