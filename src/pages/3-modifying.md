@@ -1253,7 +1253,7 @@ Where can we get `msg` from?  That would be the outer query:
 messages.filter { msg =>
   messages.filter(_.content === msg.content).size > 1
 }
-~~
+~~~
 
 To turn a query into a delete, we just called `.delete`:
 
