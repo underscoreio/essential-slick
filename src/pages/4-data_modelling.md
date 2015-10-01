@@ -360,7 +360,7 @@ The `HList` representation probably won't be the one you choose to use; but you 
 
 ### Exercises
 
-#### Turning Many Rows into Case Classes
+#### Turning a Row into Many Case Classes
 
 Our `HList` example mapped a table with many columns.
 It's not the only way to deal with lots of columns.
