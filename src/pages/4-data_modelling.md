@@ -499,7 +499,7 @@ Null comparison is a classic source of errors for inexperienced SQL developers. 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
 ----------------------- ---------------------------------- ------------------ --------------------------
-`col1.?`                `A`                                `A`                `col1`
+`col1.?`                `A`                                `Option[A]`        `col1`
 
 `col1.isEmpty`          `Option[A]`                        `Boolean`          `col1 is null`
 
