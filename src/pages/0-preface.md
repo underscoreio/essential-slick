@@ -1,21 +1,38 @@
 # Preface {-}
 
-*Essential Slick* is aimed at beginner-to-intermediate Scala developers who want to get started using [Slick][link-slick].
+[Slick][link-slick] is a Scala library for working with relational databases.
+That means it allows you to model a schema, run queries, insert data, and update data.
+You write queries in Scala and they are type checked by the compiler.
+Slick makes working with a database like working with regular Scala collections.
 
-Slick is a Scala library for working with databases: querying, inserting data, updating data, and representing a schema.  Queries are written in Scala and type checked by the compiler. Slick aims to make working with a database similar to working with regular Scala collections.
+We've seen that developers using Slick for the first time often need help getting the most from it.
+For example, key concepts that need to be known about include:
 
-This material is aimed at a Scala developer who has:
+- _queries_: which compose using combinators such as `map`, `flatMap`, and `filter`;
+
+- _actions_: the things you can run against a database, which themselves compose; and
+
+- _futures_: which are the result of actions, and also support a set of combinators.
+
+We've produced _Essential Slick_ as a guide for those who want to get started using Slick.
+
+This material is aimed at beginner-to-intermediate Scala developers. You need:
 
 * a working knowledge of Scala
   (we recommend [Essential Scala][link-essential-scala] or an equivalent book);
 * experience with relational databases
   (familiarity with concepts such as rows, columns, joins, indexes, SQL); and
-* an installed JDK 7, along with a programmer's text editor or IDE
+* an installed JDK 7 or better, along with a programmer's text editor or IDE
   (Scala IDE for Eclipse or IntelliJ are both good choices).
 
-The material presented focuses on Slick version 2.1.0. Examples use [H2][link-h2-home] as the relational database.
+The material presented focuses on Slick version 3. Examples use [H2][link-h2-home] as the relational database.
 
-Many thanks to [Dave Gurnell][link-twitter-dave], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
+## Notes on the Early Access Edition {-}
+
+This book is in early access status. The content is incomplete, and may contain typos and errata.
+
+As a early access customer you will receive a free copy of the final text when it is released, plus free
+lifetime updates thereafter.
 
 ## How to Contact Us {-}
 
@@ -27,6 +44,11 @@ You can provide feedback on this text via:
 The [Underscore Newsletter][link-newsletter] contains announcements regarding this and other publications from Underscore.
 
 You can follow us on Twitter as [\@underscoreio][link-twitter-underscore].
+
+## Acknowledgements {-}
+
+Many thanks to [Dave Gurnell][link-twitter-dave], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
+
 
 ## Conventions Used in This Book {-}
 

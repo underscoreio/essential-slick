@@ -1,5 +1,7 @@
 [link-active-record]:        http://guides.rubyonrails.org/active_record_basics.html
 [link-c3p0]:                 http://www.mchange.com/projects/c3p0/
+[link-hikari]:               http://brettwooldridge.github.io/HikariCP/
+[link-config]:               https://github.com/typesafehub/config
 [link-dbcp]:                 http://commons.apache.org/proper/commons-dbcp/
 [link-essential-scala]:      http://underscore.io/training/courses/essential-scala
 [link-example]:              https://github.com/underscoreio/essential-slick-code/tree/2.1
@@ -14,21 +16,25 @@
 [link-mysql]:                http://www.mysql.com/
 [link-postgres-download]:    http://www.postgresql.org/download/
 [link-postgres]:             http://www.postgresql.org/
-[link-ref-dbs]:              http://slick.typesafe.com/doc/2.1.0/introduction.html#supported-database-systems
-[link-ref-gen]:              http://slick.typesafe.com/doc/2.1.0/code-generation.html
-[link-ref-h2driver]:         http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.driver.H2Driver
-[link-ref-orm]:              http://slick.typesafe.com/doc/2.1.0/orm-to-slick.html
+[link-ref-dbs]:              http://slick.typesafe.com/doc/3.0.0/supported-databases.html
+[link-ref-gen]:              http://slick.typesafe.com/doc/3.0.0/code-generation.html
+[link-ref-h2driver]:         http://slick.typesafe.com/doc/3.0.0/api/#slick.driver.H2Driver
+[link-ref-orm]:              http://slick.typesafe.com/doc/3.0.0/orm-to-slick.html
+[link-ref-actions]:          http://slick.typesafe.com/doc/3.1.0-M2/dbio.html
+[link-slick-column-options]: http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.ast.ColumnOption
+[link-slick-hlist]:          http://slick.typesafe.com/doc/3.0.0/api/#slick.collection.heterogenous.HList
+[link-source-dbPublisher]:   http://slick.typesafe.com/doc/3.0.0/api/index.html#slick.backend.DatabasePublisher
+[link-source-extmeth]:       https://github.com/slick/slick/blob/3.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
+
 [link-sbt]:                  http://scala-sbt.org
 [link-sbt-tutorial]:         http://www.scala-sbt.org/0.13/tutorial/index.html
+[link-pins-interop]:         https://www.artima.com/pins1ed/combining-scala-and-java.html#i-855208314-1
 [link-scala-interpolation]:  http://docs.scala-lang.org/overviews/core/string-interpolation.html
 [link-scala-option]:         http://www.scala-lang.org/api/current/#scala.Option
 [link-scala-value-classes]:  http://docs.scala-lang.org/overviews/core/value-classes.html
 [link-sip-named-default]:    http://docs.scala-lang.org/sips/completed/named-and-default-arguments.html
 [link-slf4j]:                http://www.slf4j.org/
-[link-slick-column-options]: http://slick.typesafe.com/doc/2.1.0/api/index.html#scala.slick.ast.ColumnOption
-[link-slick-hlist]:          http://slick.typesafe.com/doc/2.1.0/api/#scala.slick.collection.heterogenous.HList
 [link-slick]:                http://slick.typesafe.com/
-[link-source-extmeth]:       https://github.com/slick/slick/blob/2.1/src/main/scala/scala/slick/lifted/ExtensionMethods.scala
 [link-twitter-jono]:         http://twitter.com/jonoabroad
 [link-twitter-noel]:         http://twitter.com/noelwelsh
 [link-twitter-dave]:         http://twitter.com/davegurnell
@@ -41,3 +47,9 @@
 [link-visual-joins]:         http://blog.codinghorror.com/a-visual-explanation-of-sql-joins/
 [link-wartremover]:          https://github.com/puffnfresh/wartremover
 [link-wikipedia-joins]:      http://en.wikipedia.org/wiki/Join_(SQL)
+[link-reactive-streams]:     http://http://www.reactive-streams.org/
+[link-dw-effect-blog]:       http://danielwestheide.com/blog/2015/06/28/put-your-writes-where-your-master-is-compile-time-restriction-of-slick-effect-types.html
+[link-scala-type-alias-bug]: https://issues.scala-lang.org/browse/SI-7139
+
+[link-akka-streams]:         http://akka.io/docs/
+[link-slick-streaming]:      http://slick.typesafe.com/doc/3.0.0/database.html#streaming
