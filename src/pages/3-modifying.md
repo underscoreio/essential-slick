@@ -1332,7 +1332,7 @@ Why would you need to do something like this?
 One example would be when you have a tree structure represented in a database and need to search it.
 You can follow a link between rows, possibly recording what you find as you follow those links.
 
-As an example, let's pretend the crew's ship a set of rooms, one connected to just one other:
+As an example, let's pretend the crew's ship is a set of rooms, one connected to just one other:
 
 ~~~ scala
 final case class Room(name: String, connectsTo: String)
