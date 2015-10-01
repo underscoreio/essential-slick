@@ -217,7 +217,7 @@ Lifted embedding is the standard way to work with Slick. We will discuss the oth
 We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for managing connections and transactions:
 
 ~~~ scala
-def db = Database.forConfig("chapter01")
+val db = Database.forConfig("chapter01")
 ~~~
 
 The parameter to `Database.forConfig` determines which configuration to use from the `application.conf` file.
@@ -290,6 +290,8 @@ This is a simplification. The more general type is `DBIOAction`, and specificall
 
 But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 </div>
+
+What's important to know is that anything you can run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally): a query, an update, you name it, they are all examples of a Database I/O Action.
 
 Let's run this action:
 
