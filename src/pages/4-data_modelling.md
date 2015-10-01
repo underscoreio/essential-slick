@@ -293,7 +293,7 @@ we're using a _heterogeneous list_.
 
 An HList has a mix of the properties of a list and a tuple.  It has an arbitrary length, just as a list,
 but unlike a list, each element can be a different type, like a tuple.
-As you can see from the `*` definition, an `Hlist` is a kind of shape that Slick knows about.
+As you can see from the `*` definition, an `HList` is a kind of shape that Slick knows about.
 
 This `HList` projection needs to match with the definition of `User` in `Table[User]`. For that, we list the types in a type alias:
 
@@ -344,7 +344,7 @@ users +=
 ~~~
 
 A query will produce an `HList` based `User` instance.  To pull out fields you can use `head`, `apply`, `drop`, `fold`, and the
-appropriate types from the `Hlist` will be preserved:
+appropriate types from the `HList` will be preserved:
 
 ~~~ scala
 val dave = users.first
