@@ -532,7 +532,7 @@ We've defined primary keys by using the class `O` which provides column options:
 def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 ~~~
 
-We combine this with a class class that has a default ID,
+We combine this with a case class that has a default ID,
 knowing that Slick won't insert this value because the field is marked as auto incrementing:
 
 ~~~ scala
