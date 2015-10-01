@@ -1,6 +1,6 @@
 # Selecting Data {#selecting}
 
-The last chapter provided a shallow end-to-end overview of Slick. We saw how to model data, create queries, connect to a database, and run those queries. In the next two chapters we will look in more detail at the various types of query we can perform in Slick.
+The last chapter provided a shallow end-to-end overview of Slick. We saw how to model data, create queries, convert them to actions, and run those actions against a database. In the next two chapters we will look in more detail at the various types of query we can perform in Slick.
 
 This chapter covers *selecting* data using Slick's rich type-safe Scala reflection of SQL. [Chapter 3](#Modifying) covers *modifying* data by inserting, updating, and deleting records.
 
@@ -106,12 +106,12 @@ messages.filter { messageTable: MessageTable =>
 }
 ~~~
 
-This makes sense. `messageTable.sender` is one of the columns we defined in `MessageTable` above,
+This makes sense: `messageTable.sender` is one of the columns we defined in `MessageTable` above,
 and `messageTable.sender === "HAL"` creates a Scala value representing the SQL expression `message.sender = 'HAL'`.
 
 This is the process that allows Slick to type-check our queries.
 `Query`s have access to the type of the `Table` used to create them,
-which allows us to directly reference the columns on the `Table` when we're using combinators like `map` and `filter`.
+allowing us to directly reference the columns on the `Table` when we're using combinators like `map` and `filter`.
 Every column knows its own data type, so Slick can ensure we only compare columns of compatible types.
 If we try to compare `sender` to an `Int`, for example, we get a type error:
 
@@ -147,9 +147,7 @@ us to lift a scalar value to a `Query`.
 A simple query such as `select 1` can be used to confirm we have database connectivity.
 A useful thing to do as an application is starting up and as a heartbeat system check that will consume minimal resources.
 
-We'll see another example of using a `from`-less query in [Chapter 3](#insertOrUpdate).
-
-
+We'll see another example of using a `from`-less query in [Chapter 3](#moreControlOverInserts).
 
 </div>
 
@@ -158,7 +156,7 @@ We'll see another example of using a `from`-less query in [Chapter 3](#insertOrU
 
 ### The *map* Method
 
-Sometimes we don't want to select all of the data in a `Table`.
+Sometimes we don't want to select all of the columns in a `Table`.
 We can use the `map` method on a `Query` to select specific columns for inclusion in the results.
 This changes both the mixed type and the unpacked type of the query:
 
@@ -202,16 +200,11 @@ def exec[T](action: DBIO[T]): T =
 This is included in the example source code for this chapter, in the `main.scala` file. You can run these examples in the REPL to follow along with the text:
 
 ~~~
-$ cd chapter-02
-$ ./sbt.sh
-> console
-Welcome to Scala version 2.11.6 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_40)
+val query = messages.map(_.content)
+// query: slick.lifted.Query[slick.lifted.Rep[String],String,Seq] = Rep(Bind)
 
-scala> val query = messages.map(_.content)
-query: slick.lifted.Query[slick.lifted.Rep[String],String,Seq] = Rep(Bind)
-
-scala> exec(query.result)
-res1: Seq[String] = Vector(Hello, HAL. Do you read me, HAL?, ...etc
+exec(query.result)
+// res1: Seq[String] = Vector(Hello, HAL. Do you read me, HAL?, ...etc
 ~~~
 </div>
 
@@ -293,7 +286,7 @@ val bayMentioned: DBIO[Boolean] =
 ~~~
 
 
-The `containsBay query` returns all messages that mention "bay".
+The `containsBay` query returns all messages that mention "bay".
 We can then use this query in the `bayMentioned` expression to determine what to execute.
 
 The above will generate SQL which looks simliar to this:
@@ -306,29 +299,52 @@ select exists(
 )
 ~~~
 
-We will see a more useful example in [Chapter 3](#insertOrUpdate).
+We will see a more useful example in [Chapter 3](#moreControlOverInserts).
 
 
-## Running Queries
+We can even map sets of columns to Scala data structures using the
+projection operator, `<>`. Don't worry about this too much now---we'll
+cover `<>` in detail in [Chapter 4](#Modelling):
 
-Once we've built a query, we need to run it.
-We run queries by creating programs which the database can then execute.
-Slick calls these programs _actions_ and they have the following signature: `DBIOAction[R, S, E]`.
+~~~ scala
+case class TextOnly(id: Long, content: String)
 
-The three type parameters are:
+val contentQuery = messages.
+  map(t => (t.id, t.content) <> (TextOnly.tupled, TextOnly.unapply))
+// contentQuery: Query[
+//   MappedProjection[Test,(Long, String)],
+//   Test,
+//   Seq] = ...
 
-- `R` is the type of the result of the executed program;
+exec(contentQuery.result)
+// res5: Seq[TextOnly] = Vector(
+//   TextOnly(1,Hello, HAL. Do you read me, HAL?),
+//   TextOnly(2,Affirmative, Dave. I read you.),
+//   TextOnly(3,Open the pod bay doors, HAL.),
+//   ...)
+~~~
+
+## Converting Queries to Actions
+
+Before running a query, we need to convert it to an *action*.
+We typically do this by calling the `result` method on the query.
+Actions represent sequences of queries. We start with actions
+representing single queries and compose them to form multi-action sequences.
+
+Actions have the type signature `DBIOAction[R, S, E]`. The three type parameters are:
+
+- `R` is the type of data we expect to get back from the database (`Message`, `Person`, etc);
 - `S` indicates whether the results are streamed (`Streaming[T]`) or not (`NoStream`); and
 - `E` is the effect type and will be inferred.
 
-In many cases we can simplify the representation of an action to just `DBIO[T]`.  This is an alias for `DBIOAction[T, NoStream, Effect.All]`.
+In many cases we can simplify the representation of an action to just `DBIO[T]`, which is an alias for `DBIOAction[T, NoStream, Effect.All]`.
 
 <div class="callout callout-info">
 **Effects**
 
 Effects are not part of Essential Slick, and we'll be working in terms of `DBIO[T]` for most of this text.
 
-However, broadly speaking, `Effect` is a way to annotate (tag, or mark) an action.
+However, broadly speaking, an `Effect` is a way to annotate (tag, or mark) an action.
 For example, you can write a method that will only accept queries marked as `Read` or `Write`, or a combination such as `Read with Transactional`.
 
 The effects defined in Slick under the `Effect` object are:
@@ -344,7 +360,8 @@ Slick will infer the effect for your queries. For example, `messages.result` wil
 ~~~ scala
 DBIOAction[Seq[String], NoStream, Effect.Read]
 ~~~
-In the next chapter we will look at inserts and updates, and the inferred effect for an update would be: `DBIOAction[Int, NoStream, Effect.Write]`.
+
+In the next chapter we will look at inserts and updates. The inferred effect for an update in this case is: `DBIOAction[Int, NoStream, Effect.Write]`.
 
 You can also add your own `Effect` types by extending the existing types.
 
@@ -355,27 +372,43 @@ If you are interested in learning more about effects, Daniel Westheide has produ
 -->
 </div>
 
-We create actions by calling `result` on our queries.
-To execute the subsequent action, we pass it to one of two methods on our `db` object.
-The first is `db.run`, which we have already seen, and this runs the action and returns all the results.
-These are known at _materalized_ queries.
+## Executing Actions
 
-The other way to run actions is by streaming back the results. We will be working with materialized queries.
+To execute the subsequent action, we pass it to one of two methods on our `db` object:
+
+ - `db.run(...)` runs the action and returns all the results in a single colletion.
+   These are known as a _materalized_ result.
+
+ - `db.stream(...)` runs the action and returns its results in a `Stream`,
+   allowing us to process large datasets incrementally without consuming large amounts of memory.
+
+In this book we will deal exclusively with materialized queries.
+`db.run(...)` returns a `Future` of the final result of our action.
+We need to have an `ExecutionContext` in scope when we make the call:
+
+~~~ scala
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val futureMessages = db.run(halSays.result)
+// futureMessages: Future[Seq[Message]] = ...
+~~~
 
 <div class="callout callout-info">
 **Streaming**
 
-As you can imagine, streaming is great for returning huge datasets without consuming large amounts of memory.
+In this book we will deal exclusively with materialized queries.
+Let's take a quick look at streams now, so we are aware of the alternative.
 
-To stream results we call `stream` on the database object, which returns a [`DatabasePublisher`][link-source-dbPublisher] instead of a `Future`.
-
-`DatabasePublisher` exposes three methods to interact with the stream:
+Calling `db.stream` returns a [`DatabasePublisher`][link-source-dbPublisher]
+object instead of a `Future`. This exposes three methods to interact with the stream:
 
 - `subscribe` which allows integration with Akka;
 - `mapResult` which creates a new `Publisher` that maps the supplied function on the result set from the original publisher; and
 - `foreach`, to perform a side-effect with the results.
 
-For example, we can stream our messages:
+Streaming results can be used to feed [reactive streams][link-reactive-streams],
+or [Akka streams or actors][link-akka-streams]. Alternatively,
+we can do something simple like use `foreach` to `println` our results:
 
 ~~~ scala
 db.stream(messages.result).foreach(println)
@@ -389,6 +422,8 @@ db.stream(messages.result).foreach(println)
 // Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
 // Message(Dave,What if I say 'Pretty please'?,5)
 ~~~
+
+See the [Slick documentation on streaming][link-slick-streaming] for more information.
 </div>
 
 ## Column Expressions
@@ -406,7 +441,7 @@ The `===` and `=!=` methods operate on any type of `Rep` and produce a `Rep[Bool
 Here are some examples:
 
 ~~~ scala
-messages.filter{_.sender === "Dave"}.result.statements
+messages.filter(_.sender === "Dave").result.statements
 //res21: Iterable[String] =
 // List(select x2."sender", x2."content", x2."id"
 //      from "message" x2 where x2."sender" = 'Dave')
@@ -418,7 +453,8 @@ messages.filter(_.sender =!= "Dave").result.statements
 //      where not (x2."sender" = 'Dave'))
 ~~~
 
-The `<`, `>`, `<=`, and `>=` methods also operate on any type of `Rep` (not just numeric columns):
+The `<`, `>`, `<=`, and `>=` methods can operate on any type of `Rep`
+(not just numeric columns):
 
 ~~~ scala
 messages.filter(_.sender < "HAL").result.statements
@@ -708,7 +744,7 @@ from "user" x2
 order by x2."name" nulls first
 ~~~
 
-We cover nullable columns in [Chapter 4](#null-columns) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
+We cover nullable columns in [Chapter 4](#Modelling) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
 </div>
 
 
@@ -728,8 +764,10 @@ We introduced some new terminology:
 * _unpacked_ type, which is the regular Scala types we work with, such as `String`; and
 * _mixed_ type, which is Slick's column representation, such as `Rep[String]`.
 
-We learned that the database action type constructor `DBIOAction` takes three arguments that represent the result, streaming, and effect.
-`DBIO[R]` simplifies this to just the result type.
+We run queries by converting them to actions using the `result` method.
+We run the actions against a database using `db.run`.
+
+The database action type constructor `DBIOAction` takes three arguments that represent the result, streaming mode, and effect. `DBIO[R]` simplifies this to just the result type.
 
 ## Exercises
 
