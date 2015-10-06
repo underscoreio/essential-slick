@@ -4,9 +4,9 @@
 
 Slick is a Scala library for accessing relational databases using an interface similar to the Scala collections library. You can treat queries like collections, transforming and combining them with methods like `map`, `flatMap`, and `filter` before sending them to the database to fetch results. This is how we'll be working with Slick for the majority of this text.
 
-Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also supports *plain SQL queries* that look more like the prepared statements you may be used to from JDBC (Java Database Connectivity).
+Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also supports *plain SQL queries* that allow you to write SQL.
 
-In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC directly, if that's something you're familiar with and find you need.
+In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC (Java Database Connectivity) directly, if that's something you're familiar with and find you need.
 
 This book provides a compact, no-nonsense guide to everything you need to know to use Slick in a commercial setting:
 
@@ -49,7 +49,7 @@ chapter-06
 
 Each chapter of the book is associated with a separate sbt project that provides a combination of examples and exercises. We've bundled everything you need to run sbt in the directory for each chapter.
 
-We'll be using a running example of a chat application, *Slack*, *Flowdock*, or an *IRC* application. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
+We'll be using a running example of a chat application similar to *Slack*, *Gitter*, or *IRC*. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
 
 For now, we will start with a simple conversation between two famous celebrities. Change to the `chapter-01` directory now, use the `sbt.sh` script to start sbt, and compile and run the example to see what happens:
 
@@ -88,7 +88,7 @@ The first time you run sbt, it will download a lot of library dependencies from 
  - you need a working Internet connection to get started; and
  - the first `compile` command you issue could take a while to complete.
 
-If you haven't used sbt before, you may find the [sbt Tutorial](link-sbt-tutorial) useful.
+If you haven't used sbt before, you may find the [sbt Tutorial][link-sbt-tutorial] useful.
 </div>
 
 ## Example: A Sequel Odyssey
@@ -98,7 +98,7 @@ The test application we saw above creates an in-memory database using [H2][link-
 <div class="callout callout-warning">
 **Choice of Database**
 
-All of the examples in this book use the [H2][link-h2-home] database. H2 is written in Java and runs in-process along-side our application code. We've picked H2 because it allows us to forego any system administration and skip to writing Scala code.
+All of the examples in this book use the [H2][link-h2-home] database. H2 is written in Java and runs in-process beside our application code. We've picked H2 because it allows us to forego any system administration and skip to writing Scala.
 
 You might prefer to use *MySQL*, *PostgreSQL*, or some other database---and you can. In [Appendix A](#altdbs) we point you at the changes you'll need to make to work with other databases. However, we recommend sticking with H2 for at least this first chapter so you can build confidence using Slick without running into database-specific complications.
 </div>
@@ -178,7 +178,7 @@ final class MessageTable(tag: Tag)
 
 `MessageTable` defines three `column`s: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
 
-The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in [Chapter 4](#Modelling). For now, all you need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
+The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in [Chapter 4](#Modelling). For now, all we need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
 
 The `tag` is an implementation detail that allows Slick to manage multiple uses of the table in a single query. Think of it like a table alias in SQL. We don't need to provide tags in our user code---Slick takes case of them automatically.
 
@@ -207,17 +207,17 @@ If you're a fan of terminology, know that what we have discussed so far is calle
  - define `Table` objects representing mappings between our data types and the database;
  - define `TableQueries` and combinators to build useful queries before we run them against the database.
 
- Slick provides other querying models, but lifted embedding is the standard way to work with Slick. We will discuss another type of approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
+Lifted embedding is the standard way to work with Slick. We will discuss the other approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
  </div>
 
 
 
-### Connecting to the Database
+### Configuring the Database
 
 We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for managing connections and transactions:
 
 ~~~ scala
-def db = Database.forConfig("chapter01")
+val db = Database.forConfig("chapter01")
 ~~~
 
 The parameter to `Database.forConfig` determines which configuration to use from the `application.conf` file.
@@ -232,9 +232,9 @@ chapter01 = {
 }
 ~~~
 
-This format comes from the [Typesafe Config](link-config) library, which is also used by Akka and the Play framework.
+This syntax comes from the [Typesafe Config][link-config] library, which is also used by Akka and the Play framework.
 
-The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"`.  
+The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"`.
 
 By default the H2 in-memory database is deleted when the last connection is closed. As we will be running multiple connections in our examples, we enable `keepAliveConnection` to keep the data around until our program completes.
 
@@ -264,19 +264,22 @@ messages.schema.createStatements.mkString
 //  create table "message" (
 //   "sender" VARCHAR NOT NULL,
 //   "content" VARCHAR NOT NULL,
-//   "id" BIGINT GENERATED BY DEFAULT AS IDENTITY(START WITH 1) NOT NULL PRIMARY KEY
+//   "id" BIGINT GENERATED BY DEFAULT
+//     AS IDENTITY(START WITH 1)
+//     NOT NULL PRIMARY KEY
 // )
 ~~~
 
 But we've not sent this to the database yet. We've just printed the statement, to check it is what we think it should be.
 
-In Slick, what you run against the database is an _action_. This is how we create an action for the `messages` schema:
+In Slick, what we run against the database is an _action_. This is how we create an action for the `messages` schema:
 
 ~~~ scala
 val action: DBIO[Unit] = messages.schema.create
 ~~~
 
-The result of this `messages.schema.create` expression is an `DBUnit[Unit]`.
+The result of this `messages.schema.create` expression is a `DBIO[Unit]`. This is an object representing a DB action that, when run, completes with a result of type `Unit`. Anything we run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally). This includes queries, updates, schema alterations, and so on.
+
 
 <div class="callout callout-info">
 **DBIO and DBIOAction**
@@ -288,8 +291,7 @@ This is a simplification. The more general type is `DBIOAction`, and specificall
 But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 </div>
 
-
-What's important to know is that anything you can run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally): a query, an update, you name it, they are all examples of a Database I/O Action.  
+What's important to know is that anything you can run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally): a query, an update, you name it, they are all examples of a Database I/O Action.
 
 Let's run this action:
 
@@ -297,36 +299,35 @@ Let's run this action:
 val future: Future[Unit] = db.run(action)
 ~~~
 
-The result of `run` is a `Future[T]`.  As creating the schema is just a side-effect, it's a `Future[Unit]`, matching up with the `DBIO[Unit]` we started with.
+The result of `run` is a `Future[T]`, where `T` is the type of result returned by the database. Creating a schema is a side-effecting operation so the result type is `Future[Unit]`. This matches the type `DBIO[Unit]` of the action we started with.
 
-`Future`s are asynchronous. That's to say, it is place holder for some value that will eventually appear. We say the future _completes_ at some point. For us, this means when working with sample applications, or in the console, we will need to wait for a future to complete to the see the result:
+`Future`s are asynchronous. That's to say, they are place holders for values that will eventually appear. We say that a future _completes_ at some point. In production code, `Future`s allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can simply block until our action completes:
 
 ~~~ scala
 val result = Await.result(future, 2 seconds)
 ~~~
 
-We will have more to say on `Future`s, what you can do with them, and how they compose in Chapter **TODO**.
 
 ### Inserting Data
 
-Once our table is set up, we need to insert some test data. That would also be an action:
+Once our table is set up, we need to insert some test data. This is also an action:
 
 ~~~ scala
-val insert = messages ++= freshTestData
+val insert: DBIO[Option[Int]] = messages ++= freshTestData
 ~~~
 
-The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert` via `db.run`, and when the future completes, our table will be populated with data:
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert` via `db.run`, and when the future completes our table is populated with data:
 
 ~~~ scala
 val result: Future[Option[Int]] = db.run(insert)
 ~~~
 
-The `freshTestData` contains four messages, so the result, when it completes, will be `Some(4)`.  It's optional because this is a batch insert. The underlying Java APIs do not guarantee a count of rows for batch inserts.  We discuss single and batch inserts and updates further in [Chapter 3](#Modifying).
+The result of an insert operation is the number of rows inserted. The `freshTestData` contains four messages, so in this case the result is `Some(4)`.  The result is optional because the underlying Java APIs do not guarantee a count of rows for batch inserts---some databases simply return `None`.  We discuss single and batch inserts and updates further in [Chapter 3](#Modifying).
 
 
 ### Selecting Data
 
-Now our database has a few rows in it, we can start selecting data. We do this by taking a query, such as `messages` or `halSays`, and turning it into an action via the `result` method on a query:
+Now our database has a few rows in it, we can start selecting data. We do this by taking a query, such as `messages` or `halSays`, and turning it into an action via the `result` method:
 
 ~~~ scala
 val messagesAction: DBIO[Seq[Message]] = messages.result
@@ -335,10 +336,10 @@ val messagesFuture: Future[Seq[Message]] = db.run(messagesAction)
 
 val messagesResults = Await.result(messagesFuture, 2 seconds)
 // messagesResults: Seq[Example.Message] = Vector(
-//  Message(Dave,Hello, HAL. Do you read me, HAL?,1),
-//  Message(HAL,Affirmative, Dave. I read you.,2),
-//  Message(Dave,Open the pod bay doors, HAL.,3),
-//  Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//   Message(HAL,Affirmative, Dave. I read you.,2),
+//   Message(Dave,Open the pod bay doors, HAL.,3),
+//   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
 We can see the SQL issued to H2 using the `statements` method on the action:
@@ -349,39 +350,45 @@ messages.result.statements
 ~~~
 
 <div class="callout callout-info">
-**`Await.result` and `exec`**
+**The `exec` helper method**
 
-That `db.run` returns a `Future[R]`, and Slick performs all database communication asynchronously,
-is incredibly useful when building applications that you don't want to block waiting for a database call.
-However, it is  quite annoying when you are trying to explain how to use Slick.
-For this reason we'll be using a method called `exec` to tidy away the detail of working with `Future`s so you can focus on Slick.
+In our application code, we should avoid blocking on `Future`s whenever possible.
+However, in the examples in this book we'll be making heavy use of `Await.result`.
+We will introduce a simple helper method called `exec` to reduce typing
+and make the examples easier to read:
 
 ~~~ scala
 def exec[T](action: DBIO[T]): T =
   Await.result(db.run(action), 2 seconds)
 ~~~
 
-All the `exec` method does is run the action supplied and waits up to two seconds for the program to finish. For example, to run a query we could write:
+All `exec` does is run the supplied action and wait for the result.
+For example, to run a select query we can write:
 
 ~~~ scala
 exec(messages.result)
 ~~~
 
-Outside of the REPL, and outside of the simple applications we provide, you don't tend to wait on futures. In all likelihood the web framework you are using, or other technologies, will accept the future and handle it for you.
+Use of `Await.result` is strongly discouraged in production code.
+Many web frameworks provide direct means of working with `Future`s without blocking.
+In these cases, the best approach is simply to transform the `Future` query result
+to a `Future` of an HTTP response and send that to the client.
 </div>
 
 If we want to retrieve a subset of the messages in our table,
 we simply run a modified version of our query.
-For example, calling `filter` on `messages` creates a modified query with a `WHERE` expression in the SQL that retrieves the expected subset of results:
+For example, calling `filter` on `messages` creates a modified query with
+a `WHERE` expression that retrieves the expected subset of results:
 
 ~~~ scala
-messages.filter(_.sender === "HAL").result.statements
+messages.filter(_.sender === "HAL").result.statements.mkString
 // res3: String = select x2."sender", x2."content", x2."id"
 //                from "message" x2
 //                where x2."sender" = 'HAL'
 ~~~
 
-To run this query, we need to hand it to `db.run` as an action:
+To run this query, we convert it to an action using `result`,
+run it against the database with `db.run`, and await the final result with `exec`:
 
 ~~~ scala
 exec(messages.filter(_.sender === "HAL").result)
@@ -390,7 +397,8 @@ exec(messages.filter(_.sender === "HAL").result)
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-If you remember, we actually generated this query earlier and stored it in the variable `halSays`. We can get exactly the same results from the database by running this stored query instead:
+We actually generated this query earlier and stored it in the variable `halSays`.
+We can get exactly the same results from the database by running this stored query instead:
 
 ~~~ scala
 exec(halSays.result)
@@ -399,7 +407,7 @@ exec(halSays.result)
 //   Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ~~~
 
-The observant among you will remember that we created `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of the `result`:
+Notice that we created our original `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of the `result`:
 
 ~~~ scala
 halSays.map(_.id).result.statements
@@ -409,10 +417,10 @@ exec(halSays.map(_.id).result)
 // res7: Seq[Int] = Vector(2, 4)
 ~~~
 
-### For Comprehensions
+### Combining Queries with For Comprehensions
 
-Queries implement methods called `map`, `flatMap`, `filter`, and `withFilter`, making them compatible with Scala for comprehensions.
-You will often see Slick queries written in this style:
+`Query` is a *monad*. It implements the methods `map`, `flatMap`, `filter`, and `withFilter`, making it compatible with Scala for comprehensions.
+For example, you will often see Slick queries written in this style:
 
 ~~~ scala
 val halSays2 = for {
@@ -431,15 +439,15 @@ exec(halSays2.result)
 
 ### Actions Combine
 
-Like queries, actions can also be composed.
+Like `Query`, `DBIOAction` is also a monad. It implements the same methods described above, and shares the same compatibility with for comprehensions.
 
-We can combine the actions to create the schema, insert the data, and query results into one action.  We can do this before we have a database connection, and we run the action like any other:
+We can combine the actions to create the schema, insert the data, and query results into one action. We can do this before we have a database connection, and we run the action like any other:
 
 ~~~ scala
-val actions =
+val actions: DBIO[Seq[Message]] =
   messages.schema.create       andThen
   (messages ++= freshTestData) andThen
-  messages.result
+  halSays.result
 ~~~
 
 And if you want to get funky, `>>` is another name for `andThen`:
@@ -448,10 +456,26 @@ And if you want to get funky, `>>` is another name for `andThen`:
 val actions =
   messages.schema.create       >>
   (messages ++= freshTestData) >>
-  messages.result
+  halSays.result
 ~~~
 
-One important reason for composing queries and actions is to wrap them inside a transaction. In Chapter **TODO** we'll see this, and also that actions can be composed with for comprehensions, just like queries.
+One important reason for composing queries and actions is to wrap them inside a transaction. In [Chapter 3](#Modifying) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
+
+<div class="callout callout-danger">
+*Queries, Actions, Futures... Oh My!*
+
+The difference between queries, actions, and futures is the biggest point of confusion for newcomers to Slick 3. The three types share many properties: they all have methods like `map`, `flatMap`, and `filter`, they are all compatible with for comprehensions, and they all flow seamlessly into one another through methods in the Slick API. However, their semantics are quite different:
+
+ - `Query` is used to build SQL for a single query. Calls to `map` and `filter` modify clauses to the SQL, but only one query is created.
+
+ - `DBIOAction` is used to build sequences of SQL queries. Calls to `map` and `filter` chain queries together and transform their results once they are retrieved in the JVM. `DBIOAction` is also used to delineate transactions.
+
+ - `Future` is used to transform the asynchronous result of running a `DBIOAction`. Transformations on `Future`s happen after we have finished speaking to the database.
+
+In many cases (for example select queries) we create a `Query` first and convert it to a `DBIOAction` using the `result` method. In other cases (for example insert queries), the Slick API gives us a `DBIOAction` immediately, bypassing `Query`. In all cases, we *run* a `DBIOAction` using `db.run(...)`, turning it into a `Future` of the result.
+
+We recommend taking the time to thoroughly understand `Query`, `DBIOAction`, and `Future`. Learn how they are used, how they are similar, how they differ, what their type parameters represent, and how they flow into one another. This is perhaps the single biggest step you can take towards demystifying Slick 3.
+</div>
 
 ## Take Home Points
 
@@ -460,11 +484,11 @@ In this chapter we've seen a broad overview of the main aspects of Slick, includ
 We typically model data from the database as case classes and tuples that map to rows from a table. We define the mappings between these types and the database using `Table` classes such as `MessageTable`.
 
 We define queries by creating `TableQuery` objects such as `messages` and transforming them with combinators such as `map` and `filter`.
-These transformations look like transformations on collections, but they operate on the parameters of the query rather than the results returned.
+These transformations look like transformations on collections, but they are used to build SQL code rather than manipulate the results returned.
 
-We execute a query by creating an action object, via the `result` method of a query, and passing it to the `run` method of the database object.
+We execute a query by creating an action object via its `result` method. Actions are used to build sequences of related queries and wrap them in transactions.
 
-The result of an action is a `Future[T]`. When the future completes, the result is available.
+Finally, we run the action against the database by passing it to the `run` method of the database object. We are given back a `Future` of the result. When the future completes, the result is available.
 
 The query language is the one of the richest and most significant parts of Slick. We will spend the entire next chapter discussing the various queries and transformations available.
 

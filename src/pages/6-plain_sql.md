@@ -14,9 +14,9 @@ In this section we will see that:
 Let's start with a simple example of returning a list of room IDs.
 
 ~~~ scala
-val query = sql""" select "id" from "room" """.as[Long]
+val action = sql""" select "id" from "room" """.as[Long]
 
-Await.result(db.run(query), 2 seconds)
+Await.result(db.run(action), 2 seconds)
 // Vector(1, 2, 3)
 ~~~
 
@@ -27,7 +27,7 @@ The big difference is with the construction of the query. We supply both the SQL
 The `as[T]` method is pretty flexible.  Let's get back the room ID and room title:
 
 ~~~ scala
-val roomInfoQ = sql""" select "id", "title" from "room" """.as[(Long,String)]
+val roomInfo = sql""" select "id", "title" from "room" """.as[(Long,String)]
 
 // When executed will produce:
 // Vector((1,Air Lock), (2,Pod), (3,Brain Room))
@@ -41,7 +41,7 @@ One of the most useful features of the SQL interpolators is being able to refere
 
 ~~~ scala
 val t = "Pod"
-val podRoomQuery = sql"""
+val podRoomAction = sql"""
   select
     "id", "title"
   from
@@ -49,6 +49,7 @@ val podRoomQuery = sql"""
   where
     "title" = $t """.as[(Long,String)].headOption
 
+// When run will produce:
 // Some((2,Pod))
 ~~~
 
@@ -73,10 +74,10 @@ Another place you can become unstuck is with the `#$` style of substitution. Thi
 
 ~~~ scala
 val table = "message"
-val query = sql""" select "id" from "#$table" """.as[Long]
+val action = sql""" select "id" from "#$table" """.as[Long]
 ~~~
 
-In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"`.  
+In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"` (notice the double quotes and single quotes around the table name, which is not valid SQL).  
 
 However, this means you can produce dangerous SQL with splicing. The golden rule is to never use `#$` with input supplied by a user.
 </div>
@@ -121,7 +122,7 @@ As you've probably guessed, returning a case class from a Plain SQL query means 
 <div class="callout callout-info">
 **Run the Code**
 
-You'll find the example queries for this section in the file _select.sql_ over at [the associated GitHub repository][link-example].
+You'll find the example queries for this section in the file `select.sql` inside the `chapter-06` folder.  This is all in the [example code base on GitHub][link-example].
 </div>
 
 
@@ -177,7 +178,7 @@ This works because we've provided implicits for the components of the case class
 Now we can select into `Message` values:
 
 ~~~ scala
-val query: DBIO[Seq[Message]] =
+val action: DBIO[Seq[Message]] =
   sql""" select * from "message" """.as[Message]
 ~~~
 
@@ -207,11 +208,11 @@ UPDATE "message" SET "content" = CONCAT("content", '!')
 Plain SQL updates will allow us to do this. The interpolator is `sqlu`:
 
 ~~~ scala
-val query =
+val action =
   sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')"""
 ~~~
 
-The `query` we have constructed, just like other queries, is not run until we evaluate it via `db.run`.  But when it is run, it will append the exclamation mark to each row value, which is what we couldn't do as efficiently with the lifted embedded style.
+The `action` we have constructed, just like other actions, is not run until we evaluate it via `db.run`.  But when it is run, it will append the exclamation mark to each row value, which is what we couldn't do as efficiently with the lifted embedded style.
 
 Just like the `sql` interpolator, we also have access to `$` for binding to variables:
 
@@ -290,7 +291,8 @@ tsql = {
   driver = "slick.driver.H2Driver$"
   db {
     connectionPool = disabled
-    url = "jdbc:h2:mem:chapter06;INIT=runscript from 'src/main/resources/integration-schema.sql'"
+    url = "jdbc:h2:mem:chapter06; ↩
+      INIT=runscript from 'src/main/resources/integration-schema.sql'"
     driver = "org.h2.Driver"
     keepAliveConnection = false
   }
@@ -311,7 +313,7 @@ In the example above, and the accompanying example code, we use an in-memory dat
 With the `@StaticDatabaseConfig` in place we can use `tsql`:
 
 ```scala
-val program: DBIO[Seq[String]] =
+val action: DBIO[Seq[String]] =
   tsql"""select "content" from "message""""
 ```  
 
@@ -320,7 +322,7 @@ You can run that query as you would `sql` or `sqlu` query. You can also use cust
 To make this interesting, let's get the query wrong and see what happens:
 
 ```scala
-val program: DBIO[Seq[String]] =
+val action: DBIO[Seq[String]] =
   tsql"""select "content", "id" from "message""""
 ```
 
@@ -335,14 +337,14 @@ type mismatch;
 
 The compiler wants a `String` for each row, because that's what we've declared the result to be. However it is found, via the database, that the query will return `(String,Int)` rows.
 
-If we had omitted the type declaration, the program would have the inferred type of DBIO[Seq[(String,Int)]]. So if you want to catch these kinds of mismatches, it's good practice to declare the type you expect when using `tsql`.
+If we had omitted the type declaration, the action would have the inferred type of `DBIO[Seq[(String,Int)]]`. So if you want to catch these kinds of mismatches, it's good practice to declare the type you expect when using `tsql`.
 
 Let's see other kinds of errors the compiler will find.
 
 How about if the SQL is just wrong:
 
 ~~~scala
-val program: DBIO[Seq[String]] =
+val action: DBIO[Seq[String]] =
   tsql"""select "content" from "message" where"""
 ~~~
 
@@ -358,7 +360,7 @@ exception during macro expansion: ERROR: syntax error at end of input
 And if we get a column name wrong...
 
 ~~~scala
-val program: DBIO[Seq[String]] =
+val action: DBIO[Seq[String]] =
   tsql"""select "text" from "message" where"""
 ~~~
 
@@ -375,7 +377,7 @@ Of course, in addition to selecting rows, you can insert:
 
 ```scala
 val greeting = "Hello"
-val program: DBIO[Seq[Int]] =
+val action: DBIO[Seq[Int]] =
   tsql"""insert into "message" ("content") values ($greeting)"""
 ```
 
@@ -390,16 +392,16 @@ Two main string interpolators for SQL are provided: `sql` and `sqlu`:
 
 - Values can be safely substituted into Plain SQL queries using `${expression}`.
 
-- Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter`(update) is in scope for the type.
+- Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter` (update) is in scope for the type.
 
-- Raw values can be spliced into a query with `$#`, but do so with care. End-user supplied information should always be escaped before being used in a query.
+- Raw values can be spliced into a query with `$#`. Use this with care: end-user supplied information should never be spliced into a query.
 
 The `tsql` interpolator will check Plain SQL queries against a database at compile time.  The database connection is used to validate the query syntax, and also discover the types of the columns being selected. To make best use of this, always declare the type of the query you expect from `tsql`.
 
 
 ## Exercises
 
-The examples for this section are in the _chatper-06_ folder, in the source files `selects.scala`, `updates.scala`, and `tsql.scala`.
+The examples for this section are in the `chatper-06` folder, in the source files `selects.scala`, `updates.scala`, and `tsql.scala`.
 
 
 ### Robert Tables

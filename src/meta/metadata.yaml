@@ -1,7 +1,7 @@
 ---
 title: Essential Slick
 author: Richard Dallaway and Jonathan Ferguson
-date: "Early Access, August 2015"
+date: "Early Access, October 2015"
 filenameStem: "essential-slick-3"
 # Used by Pandoc to generate the PDF cover...
 # see src/css/book.less for HTML/ePub covers:
@@ -9,21 +9,21 @@ coverColor: "F58B40"
 copyright: "2015"
 tocDepth: 3
 pages:
-  - src/pages/preface.md
-  - src/pages/basics.md
-  - src/pages/selecting.md
-  - src/pages/modifying_blank.md
-  - src/pages/data_modelling_blank.md
-  - src/pages/joins.md
-  - src/pages/plain_sql.md
+  - src/pages/0-preface.md
+  - src/pages/1-basics.md
+  - src/pages/2-selecting.md
+  - src/pages/3-modifying.md
+  - src/pages/4-data_modelling.md
+  - src/pages/5-joins.md
+  - src/pages/6-plain_sql.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md
-  - src/pages/databases_blank.md
+  - src/pages/97-databases_blank.md
   - src/pages/solutions.md
 previewPages:
-  - src/pages/preface.md
-  - src/pages/basics.md
-  - src/pages/selecting.md
+  - src/pages/0-preface.md
+  - src/pages/1-basics.md
+  - src/pages/2-selecting.md
   - src/pages/end-of-preview.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md

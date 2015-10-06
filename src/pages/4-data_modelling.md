@@ -9,13 +9,15 @@ In this chapter we will:
 - expand on our knowledge of modelling tables to introduce optional values and foreign keys; and
 - use custom types to avoid working with just low-level database values.
 
-To do this, we'll expand chat application schema to support more than just messages.
+To do this, we'll expand the chat application schema to support more than just messages.
 
 ## Application Structure
 
 Our examples so far have been stand-alone application. That's not how you'd work with Slick for a more substantial project.  We'll explain how to split up an application in this section.
 
 We've also been importing the H2 driver.  We need a driver of course, but it's useful to delay picking the driver until the code needs to be run. This will allow us to switch driver, which can be useful for testing. For example, you might use H2 for unit testing, but PostgresSQL for production.
+
+An example of this pattern can be found in the [example project][link-example], folder _chapter-04_, file _structure.scala_.
 
 ### Pattern Outline
 
@@ -25,15 +27,21 @@ The basic pattern we'll use is as follows:
 
 * Create an instance of our tables using a specific profile.
 
-* Finally, configure a `Database` to obtain a `Session` to work with the table instance.
+* Finally, configure a `Database` to run our `DBIO` actions against..
 
 _Profile_ is a new term for us. When we have previously written...
 
 ~~~ scala
-import scala.slick.driver.H2Driver.simple._
+import slick.driver.H2Driver.api._
 ~~~
 
-...that gave us an H2-specific JDBC driver. That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
+...that gave us an H2-specific JDBC driver. We now write
+
+~~~ scala
+import slick.driver.JdbcProfile
+~~~
+
+That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
 
 ### Working with a Profile
 
@@ -42,7 +50,7 @@ Re-working the example from previous chapters, we have the schema in a trait:
 ~~~ scala
 trait Profile {
   // Place holder for a specific profile
-  val profile: scala.slick.driver.JdbcProfile
+  val profile: JdbcProfile
 }
 
 trait Tables {
@@ -50,7 +58,7 @@ trait Tables {
   this: Profile =>
 
   // Whatever that Profile is, we import it as normal:
-  import profile.simple._
+  import profile.api._
 
   // Row and table definitions here as normal
 }
@@ -65,16 +73,14 @@ class Schema(val profile: JdbcProfile) extends Tables with Profile
 object Main extends App {
 
   // A specific schema with a particular driver:
-  val schema = new Schema(scala.slick.driver.H2Driver)
+  val schema = new Schema(slick.driver.H2Driver)
 
   // Use the schema:
-  import schema._, profile.simple._
+  import schema._, profile.api._
 
-  def db = Database.forURL("jdbc:h2:mem:chapter03", driver="org.h2.Driver")
+  val db = Database.forConfig("chapter04")
 
-  db.withSession {
-    // Work with the database as normal here
-  }
+  // Work with the database as normal here
 }
 ~~~
 
@@ -86,14 +92,41 @@ There is a potential down-side of packaging everything into a single `Schema` an
 
 If you recognise this as a problem, it's time to split your code more finely and take care over importing just what you need.
 
+### Namespacing Queries
+
+We can exploit the expanded form of `TableQuery[T]`, a macro, to provide a location to store queries.
+`TableQuery[T]`'s expanded form is:
+
+~~~ scala
+(new TableQuery(new T(_)))`
+~~~
+
+Using this, we can provide a module to hold `Message` queries:
+
+~~~ scala
+object messages extends TableQuery(new MessageTable(_)) {
+
+  def messagesFrom(name: String) =
+    this.filter(_.sender === name)
+
+  val numSenders = this.map(_.sender).countDistinct
+}
+~~~
+
+This adds values and methods to `messages`:
+
+~~~ scala
+val action =
+  messages.numSenders.result
+~~~
 
 ## Representations for Rows
 
 In previous chapters we modelled rows as case classes.  That's a great choice, and the one we recommend, but you should be aware that Slick is more flexible that that.
 
-There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
+There are in fact three common representations used: tuples, case classes, and an `HList` implementation.
 
-### Case Classes and `<>`
+### Case Classes and `<>` {#projection-operator}
 
 To explore these different representations we'll start with comparing tuples and case classes.
 For a little bit of variety, let's define a `user` table so we no longer have to store names in the `message` table.
@@ -129,14 +162,15 @@ def * = (name, id)
 ...the compiler would tell us:
 
 ~~~
-Type mismatch
- found: (scala.slick.lifted.Column[String], scala.slick.lifted.Column[Long])
- required: scala.slick.lifted.ProvenShape[chapter03.User]
+type mismatch
+ found: (slick.lifted.Rep[String], slick.lifted.Rep[Long])
+ required: slick.lifted.ProvenShape[User]
 ~~~
+
 
 This is good. We've defined the table as a `Table[User]` so we want `User` values, and the compiler has spotted that we've not defined a default projection to supply `User`s.
 
-How do we resolve this? The answer here is to give Slick the rules it needs to prove it can convert from the `Column` values into the shape we want, which is a case class. This is the role of the mapping function, `<>`.
+How do we resolve this? The answer here is to give Slick the rules it needs to prove it can convert from the `Rep` values into the shape we want, which is a case class. This is the role of the mapping function, `<>`.
 
 The two arguments to `<>` are:
 
@@ -165,14 +199,14 @@ We will see this in one of the exercises in this section.
 ### Tuples
 
 You've seen how Slick is able to map between a tuple of columns into case classes.
-However you can use tuples directly if you want, because Slick already knows how to convert from a `Column[T]` into a `T` for a variety of `T`s.
+However you can use tuples directly if you want, because Slick already knows how to convert from a `Rep[T]` into a `T` for a variety of `T`s.
 
 Let's return to the compile error we had above:
 
 ~~~
 Type mismatch
- found: (scala.slick.lifted.Column[String], scala.slick.lifted.Column[Long])
- required: scala.slick.lifted.ProvenShape[chapter03.User]
+ found: (slick.lifted.Rep[String], slick.lifted.Rep[Long])
+ required: slick.lifted.ProvenShape[User]
 ~~~
 
 We fixed this by supplying a mapping to our case class. We could have fixed this error by redefining the table in terms of a tuple:
@@ -205,14 +239,14 @@ We can hide information by excluding it from our row definition. The default pro
 
 ### Heterogeneous Lists
 
-Slick's **experimental** [`HList`][link-slick-hlist] implementation is useful if you need to support tables with more than 22 columns,
+Slick's [`HList`][link-slick-hlist] implementation is useful if you need to support tables with more than 22 columns,
 such as a legacy database.
 
 To motivate this, let's suppose our user table contains lots of columns for all sorts of information about a user:
 
 ~~~ scala
-import scala.slick.collection.heterogenous.{ HList, HCons, HNil }
-import scala.slick.collection.heterogenous.syntax._
+import slick.collection.heterogeneous.{ HList, HCons, HNil }
+import slick.collection.heterogeneous.syntax._
 
 final class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id           = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -255,11 +289,11 @@ I hope you don't have a table that looks like this, but it does happen.
 
 You could try to model this with a case class. Scala 2.11 supports case classes with more than 22 arguments,
 but it does not implement the `unapply` method we'd want to use for mapping.  Instead, in this situation,
-we're using a _hetrogenous list_.
+we're using a _heterogeneous list_.
 
 An HList has a mix of the properties of a list and a tuple.  It has an arbitrary length, just as a list,
 but unlike a list, each element can be a different type, like a tuple.
-As you can see from the `*` definition, an `Hlist` is a kind of shape that Slick knows about.
+As you can see from the `*` definition, an `HList` is a kind of shape that Slick knows about.
 
 This `HList` projection needs to match with the definition of `User` in `Table[User]`. For that, we list the types in a type alias:
 
@@ -310,7 +344,7 @@ users +=
 ~~~
 
 A query will produce an `HList` based `User` instance.  To pull out fields you can use `head`, `apply`, `drop`, `fold`, and the
-appropriate types from the `Hlist` will be preserved:
+appropriate types from the `HList` will be preserved:
 
 ~~~ scala
 val dave = users.first
@@ -323,20 +357,10 @@ However, accessing the `HList` by index is dangerous. If you run off the end of 
 
 The `HList` representation probably won't be the one you choose to use; but you need to know it's there for you when dealing with nasty schemas.
 
-<div class="callout callout-danger">
-**Extra Dependencies**
-
-Some parts of `HList` depend on Scala reflection. Modify your _build.sbt_ to include:
-
-~~~ scala
-"org.scala-lang" % "scala-reflect" % scalaVersion.value
-~~~
-</div>
-
 
 ### Exercises
 
-#### Turning Many Rows into Case Classes
+#### Turning a Row into Many Case Classes
 
 Our `HList` example mapped a table with many columns.
 It's not the only way to deal with lots of columns.
@@ -384,7 +408,7 @@ users += User(
  )
 ~~~
 
-Executing `users.run` will produce:
+Executing `exec(users.result)` will produce:
 
 ~~~ scala
 Vector(
@@ -396,13 +420,13 @@ Vector(
 )
 ~~~
 
-You can continue to select just some fields. For example `users.map(_.email).run` will produce:
+You can continue to select just some fields. For example `users.map(_.email).result` will produce:
 
 ~~~ scala
 Vector(dave@example.org)
 ~~~
 
-However, notice that if you used `users.ddl.create`, only the columns defined in the default projection were created in the H2 database.
+However, notice that if you used `users.schema.create`, only the columns defined in the default projection were created in the H2 database.
 
 </div>
 
@@ -415,7 +439,7 @@ In particular we'll explore nullable columns,
 foreign keys, more about primary keys, composite keys,
 and options you can apply a table.
 
-### Nullable Columns
+### Nullable Columns {#null-columns}
 
 Columns defined in SQL are nullable by default. That is, they can contain `NULL` as a value.
 Slick makes columns not nullable by default, and
@@ -462,7 +486,7 @@ users.filter(_.email === none).list
 
 We have one row in the database without an email address, but the query will produce no results.
 
-Veterans of database administration will be familiar with this interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `true`, whereas the expression `'Dave' = null` evaluates to `null`.
+Veterans of database administration will be familiar with this interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `false`, whereas the expression `'Dave' = null` evaluates to `null`.
 
 The Slick query amounts to:
 
@@ -470,12 +494,12 @@ The Slick query amounts to:
 SELECT * FROM "user" WHERE "email" = NULL
 ~~~
 
-Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Column[Option[A]]`:
+Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Rep[Option[A]]`:
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
 ----------------------- ---------------------------------- ------------------ --------------------------
-`col1.?`                `A`                                `A`                `col1`
+`col1.?`                `A`                                `Option[A]`        `col1`
 
 `col1.isEmpty`          `Option[A]`                        `Boolean`          `col1 is null`
 
@@ -484,13 +508,13 @@ Scala Code              Operand Column Types               Result Type        SQ
 --------------------------------------------------------------------------------------------------------
 
 : Optional column methods.
-  Operand and result types should be interpreted as parameters to `Column[_]`.
+  Operand and result types should be interpreted as parameters to `Rep[_]`.
 
 
 We fix our query with `isEmpty`:
 
 ~~~ scala
-users.filter(_.email.isEmpty).list
+users.filter(_.email.isEmpty).result
 // result: List(User(HAL,None,2))
 ~~~
 
@@ -508,7 +532,7 @@ We've defined primary keys by using the class `O` which provides column options:
 def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 ~~~
 
-We combine this with a class class that has a default ID,
+We combine this with a case class that has a default ID,
 knowing that Slick won't insert this value because the field is marked as auto incrementing:
 
 ~~~ scala
@@ -563,7 +587,7 @@ def pk = primaryKey("pk_id", id)
 
 This separate step doesn't make much of a difference in this case.
 It separates the column definition from the key constraint,
-meaning the DDL will emit:
+meaning the schema will include:
 
 ~~~ sql
 ALTER TABLE "user" ADD CONSTRAINT "pk_id" PRIMARY KEY("id")
@@ -584,7 +608,7 @@ This is a key which is based on the value of two or more columns.
 
 We'll look at this by adding the ability for people to chat in rooms.
 
-The room definition is straight-forward:
+The room definition is straightforward:
 
 ~~~ scala
 // Regular table definition for a chat room:
@@ -636,7 +660,10 @@ CREATE TABLE "occupant" (
   "user" BIGINT NOT NULL
 )
 
-ALTER TABLE "occupant" ADD CONSTRAINT "room_user_pk" ↩
+ALTER TABLE
+  "occupant"
+ADD CONSTRAINT
+  "room_user_pk"
 PRIMARY KEY("room", "user")
 ~~~
 
@@ -671,16 +698,14 @@ To do this we change the definition of `message` to reference an `id` of a `user
 ~~~ scala
 case class Message(senderId: Long,
                    content: String,
-                   ts: DateTime,
                    id: Long = 0L)
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def senderId = column[Long]("sender")
   def content  = column[String]("content")
-  def ts       = column[DateTime]("ts")
 
-  def * = (senderId, content, ts, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
 
   def sender = foreignKey("sender_fk", senderId, users)(_.id)
 }
@@ -693,7 +718,7 @@ which is the foreign key linking the `senderId` to a `user` `id`.
 
 The `foreignKey` gives us two things.
 
-First, in the DDL, if you use it, the appropriate constraint is added:
+First, in the `schema` method, if you use it, the appropriate constraint is added:
 
 ~~~ sql
 ALTER TABLE "message" ADD CONSTRAINT "sender_fk"
@@ -724,9 +749,9 @@ def sender =
   (_.id, onDelete=ForeignKeyAction.Cascade)
 ~~~
 
-Providing Slicks DDL command has been run for the table,
+Providing Slick's `schema` command has been run for the table,
 or the SQL `ON DELETE CASCADE` action has been manually applied to the database,
-the following will remove HAL from the `users` table,
+the following action will remove HAL from the `users` table,
 and all of the messages that HAL sent:
 
 ~~~ scala
@@ -768,11 +793,15 @@ val q = for {
 } yield (usr.name, msg.content)
 ~~~
 
-This is equivalent the the query:
+This is equivalent to the query:
 
 ~~~ sql
-SELECT u."name", m."content" FROM "message" m, "user" u ↩
-WHERE u."id" = m."sender"
+SELECT
+  u."name", m."content"
+FROM
+  "message" m, "user" u
+WHERE
+  u."id" = m."sender"
 ~~~
 
 ...and will produce:
@@ -791,13 +820,39 @@ rather than a `User`:
 ~~~ scala
 case class Message(senderId: Long,
                    content: String,
-                   ts: DateTime,
                    id: Long = 0L)
 ~~~
 
 That's the design approach to take with Slick.
 The row model should reflect the row, not the row plus a bunch of other data from different tables.
 To pull data from across tables, use a query.
+
+
+<div class="callout callout-info">
+**Save your sanity with laziness**
+
+By defining table queries lazily we can reference them as foreign keys without having to worry about code order.
+In the example below we define table queries after `users` is referenced by the `sender` foreign key in the message table.
+
+~~~ scala
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def senderId = column[Long]("sender")
+  def content  = column[String]("content")
+
+  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
+
+  def sender = foreignKey("sender_fk",
+                          senderId,
+                          users)(_.id, onDelete=ForeignKeyAction.Cascade)
+}
+
+lazy val users      = TableQuery[UserTable]
+lazy val messages   = TableQuery[MessageTable]
+lazy val insertUser = users returning users.map(_.id)
+~~~
+
+</div>
 
 
 ### Table and Column Modifiers {#schema-modifiers}
@@ -814,12 +869,15 @@ and as you have seen are accessed via `O`.
 We'll look at `Length`, `DBTYPE`, and `Default` now:
 
 ~~~ scala
-case class User(name: String, avatar: Option[Array[Byte]] = None, id: Long = 0L)
+case class User(name: String,
+                avatar: Option[Array[Byte]] = None,
+                id: Long = 0L)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
-  def name   = column[String]("name", O.Length(64, true), ↩
-                                                O.Default("Anonymous Coward"))
+  def name   = column[String]("name",
+                              O.Length(64, true),
+                              O.Default("Anonymous Coward"))
   def avatar = column[Option[Array[Byte]]]("avatar", O.DBType("BINARY(2048)"))
 
   def * = (name, avatar, id) <> (User.tupled, User.unapply)
@@ -829,7 +887,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 We have modified `name` to fix the maximum length of the column, and give a default value.
 
 `O.Default` gives a default value for rows being inserted.
-Remember it's the DDL commands from `users.ddl` that instruct the database to provide this default.
+Remember it's the DDL commands from `users.schema.create` that instruct the database to provide this default.
 
 `O.Length` takes one parameter you'd expect, one one you might not expect:
 
@@ -847,7 +905,7 @@ Finally, we can add an index to the table:
 def nameIndex = index("name_idx", name, unique=true)
 ~~~
 
-The corresponding DDL statement will be:
+The corresponding DDL statement produced from a called to `schema` will be:
 
 ~~~ sql
 CREATE UNIQUE INDEX "name_idx" ON "user" ("name")
@@ -891,7 +949,7 @@ You don't always have to do everything at the SQL level.
 #### Inside the Option
 
 Build on the last exercise to match rows that start with the supplied optional value.
-Recall that `Column[String]` defines `startsWith`.
+Recall that `Rep[String]` defines `startsWith`.
 
 So this time even `filterByEmail(Some("dave@")).run` will produce one row.
 
@@ -961,7 +1019,7 @@ Go ahead and model this.
 Hint: Remember to include your new table when creating the schema:
 
 ~~~ scala
-(messages.ddl ++ users.ddl ++ bills.dll).create
+(messages.schema ++ users.schema ++ bills.schema).create
 ~~~
 
 Additionally, provide queries to give the full details of users:
@@ -995,13 +1053,13 @@ Exercise the code as follows:
 
 ~~~ scala
 bills += Bill(daveId, 12.00)
-println(bills.list)
+println(exec(bills.result)
 
 // Unique index or primary key violation:
-//bills += Bill(daveId, 24.00)
+// exec(bills += Bill(daveId, 24.00))
 
 // Referential integrity constraint violation: "fk_bill_user:
-//users.filter(_.name === "Dave").delete
+// exec(users.filter(_.name === "Dave").delete)
 
 // Who has a bill?
 val has = for {
@@ -1020,9 +1078,9 @@ val hasNot = for {
 
 ## Custom Column Mappings
 
-We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, `content`, and `ts` fields are mapped into a row representation of `Message`.
+We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, and `content` fields are mapped into a row representation of `Message`.
 
-At a level down from that, we can also control how our types are converted into column values.  For example, we'd like to use [JodaTime][link-jodatime]'s `DateTime` class for anything data and time related. Support for this is not built-in to Slick, but it's painless to map custom types to the database.
+At a level down from that, we can also control how our types are converted into column values.  For example, perhaps we'd like to use [JodaTime][link-jodatime]'s `DateTime` class for anything date and time related. Support for this is not built-in to Slick, but it's painless to map custom types to the database.
 
 The mapping for JodaTime's `DateTime` is:
 
@@ -1048,7 +1106,7 @@ Using the Slick `MappedColumnType.base` call enables this machinery, which is ma
 This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
 
 
-## Value Classes {#value-classes}
+### Value Classes {#value-classes}
 
 In modelling rows we are using `Long`s as primary keys.
 Although that's a good choice for the database, it's not a great choice
@@ -1061,9 +1119,10 @@ val halId:  Long = insertUser += User("HAL")
 val daveId: Long = insertUser += User("Dave")
 
 // Buggy lookup of a sender
-val id = messages.filter(_.senderId === halId).map(_.id).first
-
-val rubbish = messages.filter(_.senderId === id)
+  for {
+    id      <- messages.filter(_.senderId === haldId).map(_.id)
+    rubbish <- messages.filter(_.senderId === id)
+  } yield rubbish
 ~~~
 
 Do you see the problem here? We've looked up a _message_ `id`,
@@ -1100,10 +1159,12 @@ This is just the same as we've previously added for JodaTime:
 
 ~~~ scala
 import PKs._
-implicit val messagePKMapper = MappedColumnType.base[MessagePK, Long]  ↩
-                                                    (_.value, MessagePK(_))
-implicit val userPKMapper    = MappedColumnType.base[UserPK, Long]  ↩
-                                                    (_.value, UserPK(_))
+
+implicit val messagePKMapper =
+  MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
+
+implicit val userPKMapper =
+   MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
 ~~~
 
 Recall that `MappedColumnType.base` is how we define the functions to convert between our classes (`MessagePK`, `UserPK`)
@@ -1115,7 +1176,7 @@ We only need to write...
 
 ~~~ scala
 object PKs {
-  import scala.slick.lifted.MappedTo
+  import slick.lifted.MappedTo
   case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
   case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
 }
@@ -1209,83 +1270,11 @@ lazy val users = TableQuery[UserTable]
 
 We now get type safety without having to define the boiler plate of individual primary key case classes per table.
 Depending on the nature of your application, that might be convenient for you.
+
+The general point is that you have the whole of the Scala type system at your disposal for representing IDs.
 </div>
 
-
-### Exercises
-
-#### Mapping Enumerations
-
-We can use the same trick that we've seen for `DateTime` and value classes to map enumerations.
-
-Here's a Scala Enumeration for a user's role:
-
-~~~ scala
-object UserRole extends Enumeration {
-  type UserRole = Value
-  val Owner   = Value("O")
-  val Regular = Value("R")
-}
-~~~
-
-Modify the `user` table to include a `UserRole`.
-In the database store the role as a single character.
-
-<div class="solution">
-The first step is to supply an implicit to and from the database values:
-
-~~~ scala
-object UserRole extends Enumeration {
-  type UserRole = Value
-  val Owner   = Value("O")
-  val Regular = Value("R")
-}
-
-import UserRole._
-implicit val userRoleMapper =
-  MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
-~~~
-
-Then we can use the `UserRole` in the table definition:
-
-~~~ scala
-case class User(name: String,
-                userRole: UserRole = Regular,
-                id: UserPK = UserPK(0L))
-
-class UserTable(tag: Tag) extends Table[User](tag, "user") {
-  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
-  def name = column[String]("name")
-  def role = column[UserRole]("role", O.Length(1,false))
-
-  def * = (name, role, id) <> (User.tupled, User.unapply)
-}
-~~~
-</div>
-
-
-#### Alternative Enumerations
-
-Modify your solution to the previous exercise to store the value in the database as an integer.
-
-Oh, and by the way, this is a legacy system. If we see an unrecognized user role value, just
-default it to a `UserRole.Regular`.
-
-<div class="solution">
-The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
-
-~~~ scala
-implicit val userRoleMapper =
-  MappedColumnType.base[UserRole, Int](
-  _.id,
-  v => UserRole.values.find(_.id == v) getOrElse Regular)
-~~~
-</div>
-
-
-
-
-## Sum Types
+### Sum Types
 
 We've used case classes extensively for modelling data.
 These are known as _product types_, which form one half of _algebraic data types_ (ADTs).
@@ -1370,11 +1359,80 @@ However, we need to give the compiler a little help:
 messages.filter(_.flag === (Important : Flag)).run
 ~~~
 
-Notice the _type ascription added to the `Important` value.
+Notice the _type_ ascription added to the `Important` value.
 If you find yourself writing that kind of query often, be aware that extension methods allow you to package code like this into `messages.isImportant`  or similar.
 
 
 ### Exercises
+
+#### Mapping Enumerations
+
+We can use the same trick that we've seen for `DateTime` and value classes to map enumerations.
+
+Here's a Scala Enumeration for a user's role:
+
+~~~ scala
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+~~~
+
+Modify the `user` table to include a `UserRole`.
+In the database store the role as a single character.
+
+<div class="solution">
+The first step is to supply an implicit to and from the database values:
+
+~~~ scala
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+
+import UserRole._
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
+~~~
+
+Then we can use the `UserRole` in the table definition:
+
+~~~ scala
+case class User(name: String,
+                userRole: UserRole = Regular,
+                id: UserPK = UserPK(0L))
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def role = column[UserRole]("role", O.Length(1,false))
+
+  def * = (name, role, id) <> (User.tupled, User.unapply)
+}
+~~~
+</div>
+
+
+#### Alternative Enumerations
+
+Modify your solution to the previous exercise to store the value in the database as an integer.
+
+Oh, and by the way, this is a legacy system. If we see an unrecognized user role value, just
+default it to a `UserRole.Regular`.
+
+<div class="solution">
+The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
+
+~~~ scala
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, Int](
+  _.id,
+  v => UserRole.values.find(_.id == v) getOrElse Regular)
+~~~
+</div>
+
 
 #### Custom Boolean
 
