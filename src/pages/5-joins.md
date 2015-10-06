@@ -139,7 +139,7 @@ val results = exec(query.result)
 
 You might prefer to inline `inner` within the `query`. That's fine, but we've separated the parts out here to discuss them. And as queries in Slick compose, this works out nicely.
 
-Let's start with the `inner` part. We're joining `messages` to `users`, and `messages` to `rooms`. We need two `join` (if you are joining _n_ tables you'll need _n-1_ join expressions). Notice that the second `on` method call is given a tuple of `(MessageTable,UserTable)` and `RoomTable`.
+Let's start with the `inner` part. We're joining `messages` to `users`, and `messages` to `rooms`. We need two `join`s - if you are joining _n_ tables you'll need _n-1_ join expressions. Notice that the second `on` method call is given a tuple of `(MessageTable,UserTable)` and `RoomTable`.
 
 We're using a pattern match to make this explicit, and that's the style we prefer.  However, you may see this more concisely expressed as:
 
@@ -199,7 +199,9 @@ This because slick now wraps possibly null value in an `Option`.  So for those o
 
 ### Right Join
 
-In the left join we selected all the records from one side of the join, with possibly `NULL` values from the other tables. The right join (or right outer join) reverses this.
+In the left join we selected all the records from the left side of the join, with possibly `NULL` values from the other tables.
+The right join (or right outer join) swaps this,
+selecting all message from the table on the right side of the join.
 
 We can switch the example for left join and ask for all users, what private messages have they received:
 
