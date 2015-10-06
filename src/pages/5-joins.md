@@ -258,8 +258,8 @@ val msgs = messages.sortBy(_.ts asc)
 val conversations = msgs zip msgs.drop(1)
 
 // Select out just the contents of the first and second messages:
-val query: List[(String,String)] =
-  conversations.map { case (fst, snd) => fst.content -> snd.content }.list
+val zipQuery: List[(String,String)] =
+  conversations.map { case (fst, snd) => fst.content -> snd.content }
 
 exec(zipQuery.result).foreach(println)
 ```
@@ -620,7 +620,7 @@ In this chapter we saw this query:
 ~~~ scala
 val outer = for {
   (usrs, occ) <- users joinLeft occupants on (_.id === _.userId)
-} yield usrs.name -> occ.roomId
+} yield usrs.name -> occ.map(_.roomId)
 ~~~
 
 It would be nicer if we could find another way to express this so it didn't show rooms users don't occupy.
@@ -631,7 +631,7 @@ For a row to exist in the occupant table it must have a room:
 
 ~~~ scala
 val usersRooms = for {
-  (usrs,occ) <- users rightJoin occupants on (_.id === _.userId)
+  (usrs,occ) <- users joinRight occupants on (_.id === _.userId)
 } yield usrs.name -> occ.roomId
 ~~~
 </div>
