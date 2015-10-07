@@ -94,6 +94,7 @@ The cost is that Slick has to translate the monadic expression down to something
 Of course the aim is to always find a way, but that's on-going work ("comprehension fusing" is the term used in the Slick issue tracker).
 
 For that reason we usually prefer applicative joins when you need to build a good meaty join.
+However, it's often convinient to mix monadic and applicative joins.
 
 ## Applicative Joins
 
@@ -229,14 +230,14 @@ val airLockMsgs =
 As with other queries, the filter become a `WHERE` clause in SQL.  Something like this:
 
 ~~~ SQL
-SELECT *
-FROM message
-INNER JOIN user ON message.sender = user.id
-INNER JOIN room ON message.roomId = room.id
-WHERE room.title = 'Air Lock'
-
-TODO: CHECK THE ABOVE!!!!
-
+SELECT
+  "message"."content", "user"."name", "room"."title"
+FROM
+  "message"
+  INNER JOIN "user" ON "message"."sender" = "user"."id"
+  INNER JOIN "room" ON "message"."room"   = "room"."id"
+WHERE
+  "room"."title" = 'Air Lock';
 ~~~
 
 It won't be exactly that query, as we describe later in [Seen Any Scary Queries?](#scary)
