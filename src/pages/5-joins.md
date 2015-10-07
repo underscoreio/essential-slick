@@ -6,19 +6,19 @@ Wrangling data with [joins][link-wikipedia-joins] and aggregates can be painful.
 * different ways to join (inner, outer and zip); and
 * aggregate functions and grouping.
 
-<div class="callout callout-info">
-Joins have changed in Slick 3. Out are _Implicit_ and _Explicit_ joins, in are _Applicative_ and _Monadic_ joins.
+## Two Kinds of Join
 
-If you are new to Slick, don't worry about _Implicit_ and _Explicit_ joins - less to forget.
+There are two styles of join in Slick.
 
-If you are familar with _Implicit_ and _Explicit_ joins, _Applicative_ use _Explicit_ joins under the hood and _Monadic_ use _Implicit_ joins - This might change in the future versions of Slick.
+One, called _applicative_, is based on an explicit `join` method.
+It's a lot like the SQL `JOIN` ... `ON` syntax.
 
-</div>
+The second, _monadic_, makes use of `flatMap` as a way to join tables.
 
 
 ## Monadic Joins
 
-We have seen an example of monadic joins in the last chapter:
+We have seen an example of monadic joins in the previous chapter:
 
 ~~~ scala
 val q = for {
@@ -30,10 +30,27 @@ val q = for {
 Notice how we are using `msg.sender` which is defined as a foreign key:
 
 ``` scala
-def sender = foreignKey("msg_sender_fk", senderId, users)(_.id)
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def senderId = column[Long]("sender")
+  def content  = column[String]("content")
+
+  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
+
+  def sender = foreignKey("sender_fk", senderId, users)(_.id)
+}
 ```
 
-Slick generates something like the following SQL:
+We can express the same query without using a for comprehension:
+
+~~~ scala
+val q =
+ messages.flatMap(msg =>
+  msg.sender.map( usr => (usr.name, msg.content) )
+ )
+~~~
+
+Either way, when we run the query Slick generates something like the following SQL:
 
 ``` sql
 select
@@ -51,7 +68,7 @@ That's the monadic style of query, using foreign key relations.
 
 You'll find the example queries for this section in the file _joins.sql_ over at [the associated GitHub repository][link-example].
 
-From the _chapter-05_ folder, start SBT and at the SBT `>` prompt run:
+From the _chapter-05_ folder start SBT and at the SBT `>` prompt run:
 
 ~~~
 runMain JoinsExample
@@ -59,25 +76,24 @@ runMain JoinsExample
 </div>
 
 
-We can also rewrite the query to control the table relationships ourselves:
+Even if we don't have a foreign key, we can use the same style, but control the join ourselves:
 
 ~~~ scala
 val q = for {
   msg <- messages
-  usr <- users
-  if usr.id === msg.senderId
+  usr <- users if usr.id === msg.senderId
 } yield (usr.name, msg.content)
 ~~~
 
-Note how this time we're using `msg.senderId`, not the foreign key `sender`. This produces the same query when we joined using `sender`.
+Note how this time we're using `msg.senderId`, not the foreign key `sender`.
+This produces the same query when we joined using `sender`.
 
-<div class="callout callout-warning">
-Monadic joins allow for the right-hand-side to depend on the left-hand side, which is not possible in SQL.
-If Slick is unable to compile them into applicative joins a runtime error will occur.
-</div>
+You'll see plenty of examples of this style of join.
+They look straight-forward to read, and are natural to write.
+The cost is that Slick has to translate the monadic expression down to something that SQL is capable of running.
+Of course the aim is to always find a way, but that's on-going work ("comprehension fusing" is the term used in the Slick issue tracker).
 
-**TODO: Can we create an example to show the above failing?**
-
+For that reason we usually prefer applicative joins when you need to build a good meaty join.
 
 ## Applicative Joins
 
@@ -92,8 +108,8 @@ Slick offers the following methods to join two or more tables:
   * `joinRight` --- a right outer join,
   * `joinFull`  --- a full outer join.
 
-As a quick taste of the syntax,
-we can join the `messages` table to the `users` on the `senderId`:
+We will work through examples of these.
+But as a quick taste of the syntax, here's how we can join the `messages` table to the `users` on the `senderId`:
 
 ``` scala
 val q = messages join users on (_.senderId === _.id)
@@ -109,51 +125,121 @@ val q = messages join users on
 
 ...but it reads well without this.
 
+Joins like this are queries which we turn in to actions the usual way:
+
+~~~ scala
+val action: DBIO[Seq[(Message, User)]] =
+  q.result
+~~~
+
 In the rest of this section we'll work through a variety of more involved joins.
 You may find it useful to refer to figure 5.1, which sketches the schema we're using in this chapter.
 
-
-![The database schema for this chapter.  Find this code in the _chat-schema.scala_ file of the example project on GitHub.](src/img/Schema.png)
-
+![
+The database schema for this chapter.
+Find this code in the _chat-schema.scala_ file of the example project on GitHub.
+A _message_ can have a _sender_, which is a join to the _user_ table.
+Also, a _message_ can be in a _room_, which is a join to the _room_ table.
+Finally, a _user_ can be in a _room_, which is a join between _user_ and _room_ via the _occupant_ table.
+](src/img/Schema.png)
 
 
 ### Inner Join
 
 An inner join is where we select records from multiple tables, where those records exist (in some sense) in all tables. We'll look at a chat example where we expect messages that have a sender in the user table, and a room in the rooms table:
 
-```scala
-val inner =
+~~~ scala
+val usersAndRooms =
   messages.
   join(users).on(_.senderId === _.id).
-  join(rooms).on{ case ((msg,user), room) => msg.roomId === room.id}
+  join(rooms).on{case ((msg,user), room) => msg.roomId === room.id}
 
-val query = for {
-  dId <- daveId
-  rId <- airLockId
-  ((msgs, usrs), rms) <- inner
-  if usrs.id === dId && rms.id === rId
-} yield (msgs.content, usrs.name, rms.title)
+// usersAndRooms: slick.lifted.Query[
+//  ((MessageTable, UserTable), RoomTable),
+//  ((MessageTable#TableElementType, UserTable#TableElementType), RoomTable#TableElementType),
+//  Seq
+// ] = Rep(Join Inner)
+~~~
 
-val results = exec(query.result)
-```
+We're joining `messages` to `users`, and `messages` to `rooms`.
+We need two `join`s---if you are joining _n_ tables you'll need _n-1_ join expressions.
 
-You might prefer to inline `inner` within the `query`. That's fine, but we've separated the parts out here to discuss them. And as queries in Slick compose, this works out nicely.
-
-Let's start with the `inner` part. We're joining `messages` to `users`, and `messages` to `rooms`. We need two `join`s - if you are joining _n_ tables you'll need _n-1_ join expressions. Notice that the second `on` method call is given a tuple of `(MessageTable,UserTable)` and `RoomTable`.
-
-We're using a pattern match to make this explicit, and that's the style we prefer.  However, you may see this more concisely expressed as:
+Notice that the second `on` method call is given a tuple of `(MessageTable,UserTable)` and `RoomTable`.
+We're using a pattern match to make this explicit, and that's the style we prefer.
+However, you may see this more concisely expressed as:
 
 ``` scala
-val inner =
+val usersAndRooms =
   messages.
   join(users).on(_.senderId  === _.id).
   join(rooms).on(_._1.roomId === _.id)
 ```
 
-Either way, when it comes to the `query` itself we're using pattern matching again to unpick the results of `inner`, and adding additional guard conditions (which will be a `WHERE` clause in SQL).
+Pattern matching on `((msg,user), room)` is easier for us to read than expressions like `_._1.roomId`.
+However, we'll get the same effect with either version.
 
-Finally, we mapping to the columns we want: content, user name, and room title.
+#### Mapping Joins
 
+We can turn this query into an action as it stands:
+
+~~~ scala
+val action: DBIO[Seq[((Message, User), Room)]] =
+  usersAndRooms.result
+~~~
+
+...but typically you will `map` the query to the type of result you want:
+
+~~~ scala
+val usersAndRooms =
+  messages.
+  join(users).on(_.senderId  === _.id).
+  join(rooms).on{case ((msg,user), room) => msg.roomId === room.id}.
+  map{case ((msg, user), room) => (msg.content, user.name, room.title)}
+
+val action: DBIO[Seq[(String, String, String)]] =
+  usersAndRooms.result
+
+exec(action)
+// res1: Seq[(String, String, String)] =
+// Vector(
+// (Hello, HAL. Do you read me, HAL?, Dave, Air Lock),
+// (Affirmative, Dave. I read you.,   HAL,  Air Lock)
+// ...
+~~~
+
+#### Filter with Joins
+
+We've seen you can use the `map` combinator with `join`.
+As `join`s are queries, we can use the other combinators too.
+
+For example, we can use our `usersAndRooms` query and restrict it by user and room.
+Perhaps we want to just our join for the Air Lock room:
+
+~~~ scala
+val usersAndRooms =
+  messages.
+  join(users).on(_.senderId === _.id).
+  join(rooms).on{case ((msg,user), room) => msg.roomId === room.id}
+
+val airLockMsgs =
+  usersAndRooms.
+  filter{ case (_, room) => room.title === "Air Lock" }
+~~~
+
+As with other queries, the filter become a `WHERE` clause in SQL.  Something like this:
+
+~~~ SQL
+SELECT *
+FROM message
+INNER JOIN user ON message.sender = user.id
+INNER JOIN room ON message.roomId = room.id
+WHERE room.title = 'Air Lock'
+
+TODO: CHECK THE ABOVE!!!!
+
+~~~
+
+It won't be exactly that query, as we describe later in [Seen Any Scary Queries?](#scary)
 
 ### Left Join
 
@@ -318,7 +404,7 @@ The examples above show a join and each time we've used an `on` to constrain the
 Finally, we have shown examples of building queries using either for comprehension or maps and filters. You get to pick which style you prefer.
 
 
-## Seen Any Scary Queries?
+## Seen Any Scary Queries? {#scary}
 
 If you've been following along and running the example joins, you might have noticed large and unusual queries being generated.
 
