@@ -423,7 +423,7 @@ e.g. `_1`. We would recommend using a case statement as it easier to read than w
 The examples above show a join and each time we've used an `on` to constrain the join.  This is optional.  If you omit the `on` call, you end up with an implicit cross join (every row from the left table with every row from the right table).  For example:
 
 ~~~ scala
-(messages leftJoin users).run.foreach(println)
+exec((messages joinLeft users).result).foreach(println)
 ~~~
 
 Finally, we have shown examples of building queries using either for comprehension or maps and filters. You get to pick which style you prefer.
