@@ -312,9 +312,7 @@ From the results this time we can see that just Dave and Frank have seen private
 
 ### Full Outer Join
 
-At the time of writing H2 does not support full outer joins.
-Whereas earlier versions of Slick would throw a runtime exception,
-Slick 3 compiles the query down to something that will run.
+Full outer joins means either side could be `NULL`.
 
 ``` scala
 val outer = for {
@@ -322,7 +320,33 @@ val outer = for {
 } yield room.map(_.title) -> msg.map(_.content)
 ```
 
-That would be the title of all rooms and messages in those rooms. Either side could be `NULL` because messages don't have to be in rooms, and rooms don't have to have any messages.
+That would be the title of all rooms and messages in those rooms.
+Either side could be `NULL` because messages don't have to be in rooms,
+and rooms don't have to have any messages.
+We can see this by running the query against the chapter 5 schema:
+
+```
+(Some(Air Lock),Some(Hello, HAL. Do you read me, HAL?))
+(Some(Air Lock),Some(Affirmative, Dave. I read you.))
+(Some(Air Lock),Some(Open the pod bay doors, HAL.))
+(Some(Air Lock),Some(I'm sorry, Dave. I'm afraid I can't do that.))
+(Some(Pod),Some(Well, whaddya think?))
+(Some(Pod),Some(I'm not sure, what do you think?))
+(Some(Pod),Some(Are you thinking what I'm thinking?))
+(Some(Pod),Some(Maybe))
+(Some(Crew Quarters),None)
+(None,Some(I am a HAL 9000 computer.))
+(None,Some(I became operational at the H.A.L. plant in Urbana, Illinois on the 12th of January 1992.))
+```
+
+`Crew Quarters` has no messages and `HAL` isn't in a room when he gives his final monologue.
+
+
+<div class="callout callout-info">
+At the time of writing H2 does not support full outer joins.
+Whereas earlier versions of Slick would throw a runtime exception,
+Slick 3 compiles the query to something that will run.
+</div>
 
 ## Zip Joins
 
