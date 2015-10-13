@@ -53,3 +53,10 @@
 
 [link-akka-streams]:         http://akka.io/docs/
 [link-slick-streaming]:      http://slick.typesafe.com/doc/3.0.0/database.html#streaming
+
+[link-play]:                 https://www.playframework.com/documentation/2.4.0
+[link-play-slick]:           https://www.playframework.com/documentation/2.4.0/PlaySlick
+[link-essential-play]:       http://underscore.io/training/courses/essential-play/
+[link-play-example]:         https://github.com/underscoreio/play-slick-example
+[link-play-slick-github]:    https://github.com/playframework/play-slick
+[link-play-slick-dbconfig]:  https://www.playframework.com/documentation/2.4.x/PlaySlick#Database-Configuration
