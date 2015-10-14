@@ -18,7 +18,7 @@ pages:
   - src/pages/6-plain_sql.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md
-  - src/pages/97-databases_blank.md
+  - src/pages/7-databases.md
   - src/pages/8-play-slick.md
   - src/pages/solutions.md
 previewPages:
