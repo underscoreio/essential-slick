@@ -14,11 +14,12 @@ pages:
   - src/pages/2-selecting.md
   - src/pages/3-modifying.md
   - src/pages/4-data_modelling.md
-  - src/pages/95-joins_blank.md
+  - src/pages/5-joins.md
   - src/pages/6-plain_sql.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md
-  - src/pages/97-databases_blank.md
+  - src/pages/7-databases.md
+  - src/pages/8-play-slick.md
   - src/pages/solutions.md
 previewPages:
   - src/pages/0-preface.md

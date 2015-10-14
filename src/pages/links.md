@@ -4,7 +4,7 @@
 [link-config]:               https://github.com/typesafehub/config
 [link-dbcp]:                 http://commons.apache.org/proper/commons-dbcp/
 [link-essential-scala]:      http://underscore.io/training/courses/essential-scala
-[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/2.1
+[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/master
 [link-h2-home]:              http://www.h2database.com
 [link-h2-jdbc-url]:          http://www.h2database.com/html/tutorial.html#connecting_using_jdbc
 [link-hibernate]:            http://hibernate.org
@@ -53,3 +53,10 @@
 
 [link-akka-streams]:         http://akka.io/docs/
 [link-slick-streaming]:      http://slick.typesafe.com/doc/3.0.0/database.html#streaming
+
+[link-play]:                 https://www.playframework.com/documentation/2.4.0
+[link-play-slick]:           https://www.playframework.com/documentation/2.4.0/PlaySlick
+[link-essential-play]:       http://underscore.io/training/courses/essential-play/
+[link-play-example]:         https://github.com/underscoreio/play-slick-example
+[link-play-slick-github]:    https://github.com/playframework/play-slick
+[link-play-slick-dbconfig]:  https://www.playframework.com/documentation/2.4.x/PlaySlick#Database-Configuration

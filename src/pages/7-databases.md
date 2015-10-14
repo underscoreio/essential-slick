@@ -2,7 +2,7 @@
 
 As mentioned during the introduction, H2 is used throughout the book for examples. However Slick also supports PostgreSQL, MySQL, Derby, SQLite, Oracle, and Microsoft Access. To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
 
-For MS-SQL users, there is an open source Slick driver in development. You can find out more about this from the [FreeSlick GitHub page](https://github.com/smootoo/freeslick).
+For MS-SQL and Oracle users, there is an open source Slick driver in development. You can find out more about this from the [FreeSlick GitHub page](https://github.com/smootoo/freeslick).
 
 ## Changes
 
@@ -55,31 +55,28 @@ with
 ~~~
 
 If you are already in SBT, type `reload` to load this changed build file.
-
 If you are using an IDE, don't forget to regenerate any IDE project files.
 
 ### Update JDBC References
 
-Replace `Database.forURL` parameters with:
+Replace `application.conf` parameters with:
 
-~~~ scala
-"jdbc:postgresql:chapter-01", user="essential", password="trustno1",  ↩
-                                                driver="org.postgresql.Driver"
+~~~ json
+chapter01 = {
+  connectionPool      = disabled
+  url                 = jdbc:postgresql:chapter-01
+  driver              = org.postgresql.Driver
+  keepAliveConnection = true
+  users               = essential
+  password            = trustno1
+}
 ~~~
 
 ### Update Slick Driver
 
-Change the import from:
+Change the import from `slick.driver.H2Driver.api._`{.scala}
+to `slick.driver.PostgresDriver.api._`{.scala}.
 
-~~~ scala
-import scala.slick.driver.H2Driver.simple._
-~~~
-
-to
-
-~~~ scala
-import scala.slick.driver.PostgresDriver.simple._
-~~~
 
 ## MySQL
 
@@ -117,30 +114,26 @@ with
 ~~~
 
 If you are already in SBT, type `reload` to load this changed build file.
-
 If you are using an IDE, don't forget to regenerate any IDE project files.
 
 ### Update JDBC References
 
 Replace `Database.forURL` parameters with:
 
-~~~ scala
-"jdbc:mysql://localhost:3306/chapter-01&useUnicode=true&amp;       ↩
- characterEncoding=UTF-8&amp;autoReconnect=true",user="essential", ↩
- password="trustno1",driver="com.mysql.jdbc.Driver"
+~~~ json
+chapter01 = {
+  connectionPool      = jdbc:mysql://localhost:3306/chapter-01     ↩
+                                      &useUnicode=true             ↩
+                                      &amp;characterEncoding=UTF-8 ↩
+                                      &amp;autoReconnect=true
+  url                 = jdbc:postgresql:chapter-01
+  driver              = com.mysql.jdbc.Driver
+  keepAliveConnection = true
+  users               = essential
+  password            = trustno1
+}
 ~~~
 
 ### Update Slick Driver
 
-Change the import from
-
-~~~ scala
-import scala.slick.driver.H2Driver.simple._
-~~~
-
-to
-
-~~~ scala
-import scala.slick.driver.MySQLDriver.simple._
-~~~
-
+Change the import from `slick.driver.H2Driver.api._`{.scala} to `slick.driver.MySQLDriver.api._`{.scala}.
