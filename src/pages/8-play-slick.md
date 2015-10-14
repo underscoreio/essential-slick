@@ -72,7 +72,6 @@ chapter05 = {
   keepAliveConnection = true
 }
 ```
-**TODO is nodes the correct term?**
 
 Play Slick expects Slick datasources to be located under `slick.dbs` nodes.
 By convention Play Slick expects the database to lablled `default`.
@@ -216,6 +215,3 @@ object Application extends Controller {
 ```
 
 As the Play Slick plugin has integrated Slick with Plays lifecycle we don't need to worry about sessions.
-
-**TODO: mention database evolution and decide if we need to mention it**
-
