@@ -56,7 +56,7 @@ This is a library dependency added to our `build.sbt`:
 <div class="callout callout-info">
 **Plugin Version**
 
-The [Github project][link-play-slick-github] provides a handy table to determine which version of the plugin is appropriate for your project. For Essential Slick, we are using the latest available version of the plugin - `1.1.0`.
+The [Github project][link-play-slick-github] provides a handy table to determine which version of the plugin is appropriate for your project. For Essential Slick, we are using the latest available version of the plugin --- `1.1.0`.
 </div>
 
 
