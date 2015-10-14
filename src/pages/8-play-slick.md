@@ -218,3 +218,4 @@ object Application extends Controller {
 As the Play Slick plugin has integrated Slick with Plays lifecycle we don't need to worry about sessions.
 
 **TODO: mention database evolution and decide if we need to mention it**
+

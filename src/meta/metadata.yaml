@@ -19,7 +19,7 @@ pages:
   - src/pages/links.md
   - src/pages/start-of-appendix.md
   - src/pages/97-databases_blank.md
-  - src/pages/8-no_home_yet.md
+  - src/pages/8-play-slick.md
   - src/pages/solutions.md
 previewPages:
   - src/pages/0-preface.md
