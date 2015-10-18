@@ -6,77 +6,78 @@ In this chapter we will:
 
 - understand how to structure an application;
 - look at alternatives to modelling rows as case classes;
-- expand on our knowledge of modelling tables to introduce optional values and foreign keys; and
-- use custom types to avoid working with just low-level database values.
+- store richer data types in columns; and
+- expand on our knowledge of modelling tables to introduce optional values and foreign keys.
 
 To do this, we'll expand the chat application schema to support more than just messages.
 
 ## Application Structure
 
-Our examples so far have been stand-alone application. That's not how you'd work with Slick for a more substantial project.  We'll explain how to split up an application in this section.
+So far, all of our examples have been written in a single Scala file. This approach obviously doesn't scale to larger application codebases. In this section we'll explain how to split up application code into testable modules.
 
-We've also been importing the H2 driver.  We need a driver of course, but it's useful to delay picking the driver until the code needs to be run. This will allow us to switch driver, which can be useful for testing. For example, you might use H2 for unit testing, but PostgresSQL for production.
+We've also been exclusively using the H2 driver. When writing real applications it can be useful to delay the choice of driver until we run the application. This allows us to use different drivers for production and test code. For example, we might use PostgreSQL in production and H2 for our tests.
 
 An example of this pattern can be found in the [example project][link-example], folder _chapter-04_, file _structure.scala_.
 
-### Pattern Outline
+### Abstracting over Databases
 
 The basic pattern we'll use is as follows:
 
-* Isolate our schema into a trait (or a few traits) in which the Slick _profile_ is abstract.  We will often refer to this trait as "the tables".
+* Isolate our schema into a trait (or a few traits) in which the Slick _driver_ is abstract.  We will often refer to this trait as "the tables".
 
-* Create an instance of our tables using a specific profile.
+* Create an instance of our tables using a specific driver.
 
-* Finally, configure a `Database` to run our `DBIO` actions against..
+* Finally, configure a `Database` against which we can run our `DBIO` actions.
 
-_Profile_ is a new term for us. When we have previously written...
+When we previously wrote:
 
 ~~~ scala
 import slick.driver.H2Driver.api._
 ~~~
 
-...that gave us an H2-specific JDBC driver. We now write
+we now have to write an import that works for multiple databases. Fortunately, Slick provides a common supertype for the drivers for the most popular databases -- a trait called `JdbcProfile`:
 
 ~~~ scala
 import slick.driver.JdbcProfile
 ~~~
 
-That's a `JdbcProfile`, which in turn is a `RelationalProfile` provided by Slick. It means that Slick could, in principle, be used with non-JDBC-based, or indeed non-relational, databases. In other words, _profile_ is an abstraction above a specific driver.
-
-### Working with a Profile
-
-Re-working the example from previous chapters, we have the schema in a trait:
+We can't import directly from `JdbcProfile` because it isn't a concrete class. Instead, we have to *inject a dependency* of type `JdbcProfile` into our application and import from that. Here's the basic idea:
 
 ~~~ scala
 trait Profile {
-  // Place holder for a specific profile
+  // Place holder for a specific profile:
   val profile: JdbcProfile
 }
 
-trait Tables {
-  // Self-type indicating that our tables must be mixed in with a Profile
+trait GenericDatabaseModule {
+  // Self-type indicating we must extend Profile:
   this: Profile =>
 
-  // Whatever that Profile is, we import it as normal:
+  // Import the API from the profile we're using:
   import profile.api._
 
-  // Row and table definitions here as normal
+  // Slick code goes here as normal...
 }
 ~~~
 
-We currently have a small schema and can get away with putting all the table definitions into a single trait.  However, there's nothing to stop us from splitting the schema into, say `UserTables` and `MessageTables`, and so on.  They can all be brought together with `extends` and `with`:
+The `Profile` trait defines the `profile` on top of which we will write our database code. Simply providing an abstract `val` is enough to write `import profile.api._` in `GenericDatabaseModule` and write the rest of our Slick code as normal.
+
+When we instantiate `GenericDatabaseModule`, we provide a concrete value for `profile` that ties our code to a particular database:
 
 ~~~ scala
 // Bring all the components together:
-class Schema(val profile: JdbcProfile) extends Tables with Profile
+class ConcreteDatabaseModule(val profile: JdbcProfile)
+  extends GenericDatabaseModule
+  with Profile
 
 object Main extends App {
 
-  // A specific schema with a particular driver:
-  val schema = new Schema(slick.driver.H2Driver)
+  // A module with a specific profile:
+  val module = new ConcreteDatabaseModule(slick.driver.PostgresDriver)
 
-  // Use the schema:
-  import schema._, profile.api._
+  // Use the module:
+  import module._,
+  import module.profile.api._
 
   val db = Database.forConfig("chapter04")
 
@@ -84,11 +85,22 @@ object Main extends App {
 }
 ~~~
 
-To work with a different database, create a different `Schema` instance and supply a different driver. The rest of the code does not need to change.
+To work with a different database, we simply create a different `ConcreteDatabaseModule` and supply a different profile:
 
+~~~ scala
+class SomeTestSuite extends TestSuite {
+  val testConcreteDatabaseModule = new Schema(slick.driver.H2Driver)
+
+  // Tests go here...
+}
+~~~
+
+In larger codebases we can split `GenericDatabaseModule` into multiple traits, using self-types and inheritance to relate each module to `Profile` and its peers.
+
+<!--
 ### Additional Considerations
 
-There is a potential down-side of packaging everything into a single `Schema` and performing `import schema._`.  All your case classes, and table queries, custom methods, implicits, and other values are imported into your current namespace.
+There is a potential down-side of packaging everything into a single `ConcreteDatabaseModule` and performing `import module._`.  All your case classes, and table queries, custom methods, implicits, and other values are imported into your current namespace.
 
 If you recognise this as a problem, it's time to split your code more finely and take care over importing just what you need.
 
@@ -119,6 +131,7 @@ This adds values and methods to `messages`:
 val action =
   messages.numSenders.result
 ~~~
+-->
 
 ## Representations for Rows
 
