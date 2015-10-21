@@ -1,6 +1,7 @@
 # Data Modelling {#Modelling}
 
-We can do the basics of connecting to a database, running queries, and changing data. We turn now to richer models of data and how our application hangs together.
+We can do the basics of connecting to a database, running queries, and changing data.
+We turn now to richer models of data and how our application hangs together.
 
 In this chapter we will:
 
@@ -13,89 +14,124 @@ To do this, we'll expand the chat application schema to support more than just m
 
 ## Application Structure
 
-So far, all of our examples have been written in a single Scala file. This approach obviously doesn't scale to larger application codebases. In this section we'll explain how to split up application code into testable modules.
+So far, all of our examples have been written in a single Scala file.
+This approach obviously doesn't scale to larger application codebases.
+In this section we'll explain how to split up application code into testable modules.
 
-We've also been exclusively using the H2 driver. When writing real applications it can be useful to delay the choice of driver until we run the application. This allows us to use different drivers for production and test code. For example, we might use PostgreSQL in production and H2 for our tests.
+Until now we've also been exclusively using Slick's H2 driver.
+When writing real applications we often need to be able to
+switch drivers in different circumstances.
+For example, we may use PostgreSQL in production and H2 in our unit tests.
 
-An example of this pattern can be found in the [example project][link-example], folder _chapter-04_, file _structure.scala_.
+An example of this pattern can be found in the [example project][link-example],
+folder _chapter-04_, file _structure.scala_.
 
 ### Abstracting over Databases
 
-The basic pattern we'll use is as follows:
-
-* Isolate our schema into a trait (or a few traits) in which the Slick _driver_ is abstract.  We will often refer to this trait as "the tables".
-
-* Create an instance of our tables using a specific driver.
-
-* Finally, configure a `Database` against which we can run our `DBIO` actions.
-
+Let's look at how we can write code that works with multiple different database drivers.
 When we previously wrote:
 
 ~~~ scala
 import slick.driver.H2Driver.api._
 ~~~
 
-we now have to write an import that works for multiple databases. Fortunately, Slick provides a common supertype for the drivers for the most popular databases -- a trait called `JdbcProfile`:
+We now have to write an import that works with a variety of drivers.
+Fortunately, Slick provides a common supertype for the drivers
+for the most popular databases -- a trait called `JdbcProfile`:
 
 ~~~ scala
 import slick.driver.JdbcProfile
 ~~~
 
-We can't import directly from `JdbcProfile` because it isn't a concrete class. Instead, we have to *inject a dependency* of type `JdbcProfile` into our application and import from that. Here's the basic idea:
+<div class="callout callout-info">
+*Drivers and Profiles*
+
+Slick uses the words "driver" and "profile" interchangeably.
+We'll start referring to Slick drivers as "profiles" here
+to distinguish them from the JDBC drivers that sit lower in the code.
+</div>
+
+We can't import directly from `JdbcProfile` because it isn't a concrete object.
+Instead, we have to *inject a dependency* of type `JdbcProfile` into our application
+and import from that. The basic pattern we'll use is as follows:
+
+* isolate our database code into a trait (or a few traits);
+* declare the Slick profile as an abstract `val` and import from that;
+* extend our database trait to make the profile concrete.
+
+Here's the simplest form of this pattern:
+
+~~~ scala
+trait DatabaseModule {
+  // Declare an abstract profile:
+  val profile: JdbcProfile
+
+  // Import the Slick API from the profile:
+  import profile.api._
+
+  // Write our database code here...
+}
+
+object Main extends App {
+  // Instantiate the database module, assigning a concrete profile:
+  val databaseLayer = new DatabaseModule {
+    val profile = slick.driver.H2Driver
+  }
+}
+~~~
+
+In this pattern, we declare our profile using an abstract `val`.
+Surprisingly, this is enough to allow us to write `import profile.api._`---the
+compiler knows that the `val` is *going to be* an immutable `JdbcProfile`
+even if we haven't yet said which one.
+When we instantiate the `DatabaseModule` we bind `profile` to our profile of choice.
+
+### Scaling to Larger Codebases
+
+As our applications get bigger,
+we need to split our code up into multiple files to keep it manageable.
+We can do this by extending the pattern above to a family of traits:
 
 ~~~ scala
 trait Profile {
-  // Place holder for a specific profile:
   val profile: JdbcProfile
 }
 
-trait GenericDatabaseModule {
-  // Self-type indicating we must extend Profile:
-  this: Profile =>
-
-  // Import the API from the profile we're using:
+trait DatabaseModule1 { self: Profile =>
   import profile.api._
 
-  // Slick code goes here as normal...
+  // Write database code here
 }
-~~~
 
-The `Profile` trait defines the `profile` on top of which we will write our database code. Simply providing an abstract `val` is enough to write `import profile.api._` in `GenericDatabaseModule` and write the rest of our Slick code as normal.
+trait DatabaseModule2 { self: Profile =>
+  import profile.api._
 
-When we instantiate `GenericDatabaseModule`, we provide a concrete value for `profile` that ties our code to a particular database:
+  // Write more database code here
+}
 
-~~~ scala
-// Bring all the components together:
-class ConcreteDatabaseModule(val profile: JdbcProfile)
-  extends GenericDatabaseModule
-  with Profile
+// Mix the modules together:
+class DatabaseLayer(val profile: JdbcProfile)
+  extends Profile
+  with DatabaseModule1
+  with DatabaseModule2
 
+// Instantiate the modules and inject a profile:
 object Main extends App {
-
-  // A module with a specific profile:
-  val module = new ConcreteDatabaseModule(slick.driver.PostgresDriver)
-
-  // Use the module:
-  import module._,
-  import module.profile.api._
-
-  val db = Database.forConfig("chapter04")
-
-  // Work with the database as normal here
+  val databaseLayer = new DatabaseLayer(slick.driver.H2Driver)
 }
 ~~~
 
-To work with a different database, we simply create a different `ConcreteDatabaseModule` and supply a different profile:
+Here we factor out our `profile` dependency into its own `Profile` trait.
+Each module of database code specifies `Profile` as a self-type,
+meaning it can only be extended by a class that also extends `Profile`.
+This allows us to share the `profile` across our family of modules.
+
+To work with a different database, we simply inject a different profile
+when we instantiate the database code:
 
 ~~~ scala
-class SomeTestSuite extends TestSuite {
-  val testConcreteDatabaseModule = new Schema(slick.driver.H2Driver)
-
-  // Tests go here...
-}
+val anotherDatabaseLayer = new DatabaseLayer(slick.driver.PostgresDriver)
 ~~~
-
-In larger codebases we can split `GenericDatabaseModule` into multiple traits, using self-types and inheritance to relate each module to `Profile` and its peers.
 
 <!--
 ### Additional Considerations
@@ -135,60 +171,96 @@ val action =
 
 ## Representations for Rows
 
-In previous chapters we modelled rows as case classes.  That's a great choice, and the one we recommend, but you should be aware that Slick is more flexible that that.
+In previous chapters we modelled rows as case classes.
+Although this is the most common usage pattern, and the one we recommend,
+there are several representation options available, including tuples,
+case classes, and `HLists`.
+Let's investigate these by looking in more detail
+at how Slick relates columns in our database to fields in our classes.
 
-There are in fact three common representations used: tuples, case classes, and an `HList` implementation.
+### Projections, `ProvenShapes`, and `<>`
 
-### Case Classes and `<>` {#projection-operator}
-
-To explore these different representations we'll start with comparing tuples and case classes.
-For a little bit of variety, let's define a `user` table so we no longer have to store names in the `message` table.
-
-A user will have an ID and a name. The row representation will be:
-
-~~~ scala
-final case class User(name: String, id: Long = 0L)
-~~~
-
-The schema is:
+When we declare a table in Slick, we are required to implement a `*` method
+that specifies a "default projection":
 
 ~~~ scala
-final class UserTable(tag: Tag) extends Table[User](tag, "user") {
- def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
- def name = column[String]("name")
- def * = (name, id) <> (User.tupled, User.unapply)
+final class MyTable(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
+  def column1 = column[String]("column1")
+  def column2 = column[Int]("column2")
+  def * = (column1, column2)
 }
 ~~~
 
-None of this should be a surprise, as it is essentially what we have seen in the first chapter. What we'll do now is look a little bit deeper into how rows are mapped into case classes.
+Projections provide mappings between database columns and Scala values.
+In the code above, the definition of `*` is mapping `column1` and `column2`
+from the database to the `(String, Int)` tuples defined in the `extends Table` clause.
 
-`Table[T]` class requires the `*` method to be defined. This _projection_ is of type `ProvenShape[T]`. A "shape" is a description of how the data in the row is to be structured. Is it to be a case class? A tuple? A combination of these? Something else? Slick provides implicit conversions from various data types into a "shape", allowing it to be sure at compile time that what you have asked for in the projection matches the schema defined.
-
-To explain this, let's work through an example.
-
-If we had simply tried to define the projection as a tuple...
+If we look at the definition of `*` in the `Table` class, we see something confusing:
 
 ~~~ scala
-def * = (name, id)
+abstract class Table[T] {
+  def * : ProvenShape[T]
+}
 ~~~
 
-...the compiler would tell us:
+The type of `*` is actually something called a `ProvenShape`,
+not a tuple of columns as we specified in our example.
+There is clearly some magic here---Slick is using implicit conversions
+to build a `ProvenShape` object from the columns we provided.
 
-~~~
-type mismatch
- found: (slick.lifted.Rep[String], slick.lifted.Rep[Long])
- required: slick.lifted.ProvenShape[User]
-~~~
+If the above is magic, the internal workings of `ProvenShape` are sorcery
+and are certainly beyond the scope of this book,
+suffice to say that Slick can use any Scala type as a projection
+provided it can generate a compatible `ProvenShape`.
+If we look at the rules for `ProvenShape` generation,
+we will get an idea about what data types we can map.
+Here are the three most common use cases:
 
+1. Single `column` definitions produce shapes that map the column contents
+to a value of the column's type parameter.
+For example, a column of `Rep[String]` maps a value of type `String`:
 
-This is good. We've defined the table as a `Table[User]` so we want `User` values, and the compiler has spotted that we've not defined a default projection to supply `User`s.
+  ~~~ scala
+  final class MyTable(tag: Tag) extends Table[String](tag, "mytable") {
+    def column1 = column[String]("column1")
+    def * = column1
+  }
+  ~~~
 
-How do we resolve this? The answer here is to give Slick the rules it needs to prove it can convert from the `Rep` values into the shape we want, which is a case class. This is the role of the mapping function, `<>`.
+2. Tuples of database columns map tuples of their type parameters.
+For example, `(Rep[String], Rep[Int])` is mapped to `(String, Int)`:
 
+  ~~~ scala
+  final class MyTable(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
+    def column1 = column[String]("column1")
+    def column2 = column[Int]("column2")
+    def * = (column1, column2)
+  }
+  ~~~
+
+3. If we have a `ProvenShape[A]`, we can convert it to a `ProvenShape[B]`
+using the "projection operator" `<>`.
+We supply functions to convert each way between `A` and `B`
+and Slick builds the resulting shape:
+
+  ~~~ scala
+  final class UserTable(tag: Tag) extends Table[User](tag, "user") {
+    def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
+    def name = column[String]("name")
+    def * = (name, id) <> (User.tupled, User.unapply)
+  }
+  ~~~
+
+The projection operator `<>` is the secret ingredient that
+allows us to map a wide variety of types.
+As long as we can convert a tuple of columns to/from some type `B`,
+we can store instances of `B` in a database.
 The two arguments to `<>` are:
 
-* a function from `U => R`, which converts from our unpacked row-level encoding into our preferred representation; and
-* a function from `R => Option[U]`, which is going the other way.
+* a function from `A => B`, which converts
+  from the existing shape's unpacked row-level encoding (`(String, Long)`)
+  to our preferred representation (`User`);
+* a function from `R => Option[U]`, which converts the other way.
 
 We can supply these functions by hand if we want:
 
@@ -198,64 +270,73 @@ def intoUser(pair: (String, Long)): User = User(pair._1, pair._2)
 def fromUser(user: User): Option[(String, Long)] = Some((user.name, user.id))
 ~~~
 
-...and write:
+and write:
 
 ~~~ scala
 def * = (name, id) <> (intoUser, fromUser)
 ~~~
 
-Case classes already supply these functions via `User.tupled` and `User.unapply`, so there's no point doing this.
-However it is useful to know, and comes in handy for more elaborate packaging and unpackaging of rows.
+In the `User` example, the case class supplies these functions
+via `User.tupled` and `User.unapply`, so we don't need to build them ourselves.
+However it is useful to remember that we can provide our own functions
+for more elaborate packaging and unpackaging of rows.
 We will see this in one of the exercises in this section.
 
+### Tuples versus Case Classes
 
-### Tuples
+TODO: I AM HERE
 
-You've seen how Slick is able to map between a tuple of columns into case classes.
-However you can use tuples directly if you want, because Slick already knows how to convert from a `Rep[T]` into a `T` for a variety of `T`s.
+We've seen how Slick is able to map case classes and tuples of values.
+But which should we use? In one sense there is little difference
+between case classes and tuples---both represent fixed sets of values.
+However, case classes differ from tuples in two important respects:
 
-Let's return to the compile error we had above:
+1. case classes have field names, which improves code readability:
 
-~~~
-Type mismatch
- found: (slick.lifted.Rep[String], slick.lifted.Rep[Long])
- required: slick.lifted.ProvenShape[User]
-~~~
+   ~~~ scala
+   val user = User("Dave", 0L)
+   user.name // case class field access
 
-We fixed this by supplying a mapping to our case class. We could have fixed this error by redefining the table in terms of a tuple:
+   val tuple = ("Dave", 0L)
+   tuple._1 // tuple field access
+   ~~~
 
-~~~ scala
-type TupleUser = (String, Long)
+2. case classes have types that distinguish them
+   from other case classes with the same field types:
 
-final class UserTable(tag: Tag) extends Table[TupleUser](tag, "user") {
- def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
- def name = column[String]("name")
- def * = (name, id)
-}
-~~~
+   ~~~ scala
+   val user = User("Dave", 0L)
+   val dog  = Dog("Lassie", 0L)
 
-As you can see there is little difference between the case class and the tuple implementations.
+   user == dog // false
+   ~~~
 
-Unless you have a special reason for using tuples, or perhaps just a table with a single value, you'll probably use case classes for the advantages they give:
-
-* we have a simple type to pass around (`User` vs. `(String, Long)`); and
-* the fields have names, which improves readability.
-
+As a general rule, we recommend using case classes to represent database rows
+for these reasons.
 
 <div class="callout callout-info">
 **Expose Only What You Need**
 
-We can hide information by excluding it from our row definition. The default projection controls what is returned, in what order, and it is driven by our row definition. You don't need to project all the rows, for example, when working with a table with legacy columns that aren't being used.
+We can hide information by excluding it from our row definition.
+The default projection controls what is returned, in what order,
+and is driven by our row definition.
+For example, we don't need to map everything
+in a table with legacy columns that aren't being used.
 </div>
-
-
 
 ### Heterogeneous Lists
 
-Slick's [`HList`][link-slick-hlist] implementation is useful if you need to support tables with more than 22 columns,
-such as a legacy database.
+We've seen how Slick can map database tables to tuples and case classes.
+Scala veterans will have identified a key weakness in this approach---tuples
+and case classes don't scale beyond 22 fields.
 
-To motivate this, let's suppose our user table contains lots of columns for all sorts of information about a user:
+Many of us have heard horror stories of legacy tables in enterprise databases
+that have tens or hundreds of columns.
+We can't map everything in these tables using tuples or case classes.
+Fortunately, Slick provides an [`HList`][link-slick-hlist] implementation
+to support tables with more than 22 columns.
+
+To motivate this, let's suppose our `User` table contains a number of extra columns of data:
 
 ~~~ scala
 import slick.collection.heterogeneous.{ HList, HCons, HNil }
@@ -288,27 +369,55 @@ final class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def petName      = column[String]("pet")
   def partnerName  = column[String]("partner")
 
-  def * = name :: age :: gender :: height :: weight :: shoeSize ::
-          email :: phone :: accepted :: sendNews ::
-          street :: city :: country ::
-          faveColor :: faveFood :: faveDrink ::
-          faveTvShow :: faveMovie :: faveSong ::
-          lastPurchase :: lastRating :: tellFriends ::
-          petName :: partnerName :: id :: HNil
+  def * = ??? // we'll fill this in below
 }
 ~~~
 
 I hope you don't have a table that looks like this, but it does happen.
 
-You could try to model this with a case class. Scala 2.11 supports case classes with more than 22 arguments,
-but it does not implement the `unapply` method we'd want to use for mapping.  Instead, in this situation,
-we're using a _heterogeneous list_.
+We could try to model this with a case class.
+Scala 2.11 supports case classes with more than 22 arguments,
+but it does not implement the `unapply` method we need for mapping.
+Instead, in this situation, we can switch to a _heterogenous list_:
 
-An HList has a mix of the properties of a list and a tuple.  It has an arbitrary length, just as a list,
-but unlike a list, each element can be a different type, like a tuple.
-As you can see from the `*` definition, an `HList` is a kind of shape that Slick knows about.
+~~~ scala
+def * = name :: age :: gender :: height :: weight :: shoeSize ::
+        email :: phone :: accepted :: sendNews ::
+        street :: city :: country ::
+        faveColor :: faveFood :: faveDrink ::
+        faveTvShow :: faveMovie :: faveSong ::
+        lastPurchase :: lastRating :: tellFriends ::
+        petName :: partnerName :: id :: HNil
+~~~
 
-This `HList` projection needs to match with the definition of `User` in `Table[User]`. For that, we list the types in a type alias:
+An `HList` has a mix of the properties of a list and a tuple.
+It has an arbitrary length like a `List`,
+but each element can be a different type like a tuple.
+
+Here's an example of a simple `HList`.
+The root of the list is `HNil` as opposed to `Nil`,
+and the `::` operator is specific to `HList` as opposed to `List`.
+Notice that the type mirrors the value---each is the same length
+and each contains data about every item in the list:
+
+~~~ scala
+val myHList = 123 :: "abc" :: true :: HNil
+// myHlist: Int :: String :: Boolean :: HNil =
+//   123 :: "abc" :: true :: HNil
+~~~
+
+As you can see from the `*` definition above,
+Slick is capable of generating a `ProvenShape` for any `HList` of columns.
+The shape maps an `HList` of the column type parameters.
+For example, the shape for a `Rep[Int] :: Rep[String] :: HNil`
+maps values of type `Int :: String :: HNil`.
+
+This `HList` projection needs to match with the definition of `User` in `Table[User]`.
+We can use the `<>` operator to map to a regular class
+or a Scala 2.11 case class with more than 22 fields,
+but we have to provide our own mapping functions in place of `apply` and `unapply`.
+
+For this example we'll simply create `User` as a type alias of our `HList`:
 
 ~~~ scala
 type User =
@@ -320,30 +429,35 @@ type User =
   String :: String  :: Long :: HNil
 ~~~
 
-Typing this in by hand is error prone and likely to drive you crazy. There are two ways to improve on this:
+Typing large `HLists` in by hand is error prone and likely to drive you crazy.
+There are two ways to improve on this:
 
-- The first is to know that Slick can generate this code for you from an existing database.  We expect you'd be needing `HList`s for legacy database structures, and in that case
-code generate is the way to go.
+- The first is to know that Slick can _generate_ this code for us from an existing database.
+  If our main use for `HList`s is to map legacy database tables,
+  code generation is the way to go.
 
-- Second, you can improve the readability of `User` by _value clases_ to replace `String` with a more meaningful type.
-We'll see this in the section on [value classes](#value-classes), later in this chapter.
-
+- Second, we can improve the readability of `User` by using _value classes_ to replace
+  more vanilla types like `String` and `Int`.
+  We'll see this in the section on [value classes](#value-classes), later in this chapter.
 
 <div class="callout callout-info">
 **Code Generation**
 
-Sometimes your code is the definitive description of the schema; other times it's the database itself.
+Sometimes your code is the definitive description of the schema;
+other times it's the database itself.
 The latter is the case when working with legacy databases,
 or database where the schema is managed independently of your Slick application.
 
-When the database is the truth, the [Slick code generator][link-ref-gen] is an important tool.
-It allows you to connect to a database, generate the table definitions, and customize the code produced.
+When the database is considered the source truth in your organisation,
+the [Slick code generator][link-ref-gen] is an important tool.
+It allows you to connect to a database, generate the table definitions,
+and customize the code produced.
 
 Prefer it to manually reverse engineering a schema by hand.
 </div>
 
-
-Once you have an `HList`-based schema, you work with it in much the same way as you would other data representations.
+Once you have an `HList`-based schema,
+you work with it in much the same way as you would other data representations.
 To create an instance of an `HList` we use the cons operator and `HNil`:
 
 ~~~ scala
@@ -356,20 +470,15 @@ users +=
   "HAL" :: "Betty" :: 0L :: HNil
 ~~~
 
-A query will produce an `HList` based `User` instance.  To pull out fields you can use `head`, `apply`, `drop`, `fold`, and the
-appropriate types from the `HList` will be preserved:
+A query will produce an `HList` based `User` instance.
+To pull out fields you can use pattern matching or type-preserving methods
+such as `head`, `apply`, `drop`, and `fold`:
 
 ~~~ scala
-val dave = users.first
-
+val dave: User = users.first
 val name: String = dave.head
 val age: Int = dave.apply(1)
 ~~~
-
-However, accessing the `HList` by index is dangerous. If you run off the end of the list with `dave(99)`, you'll get a run-time exception.
-
-The `HList` representation probably won't be the one you choose to use; but you need to know it's there for you when dealing with nasty schemas.
-
 
 ### Exercises
 
