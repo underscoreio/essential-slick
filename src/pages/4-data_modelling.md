@@ -651,14 +651,15 @@ However, notice that if you used `users.schema.create`, only the columns defined
 ## Table and Column Representation
 
 Now we know how rows can be represented and mapped,
-we will look in more detail at the representation of the table and the columns it comprises.
+let's look in more detail at the representation of the table and the columns it comprises.
 In particular we'll explore nullable columns,
 foreign keys, more about primary keys, composite keys,
 and options you can apply a table.
 
 ### Nullable Columns {#null-columns}
 
-Columns defined in SQL are nullable by default. That is, they can contain `NULL` as a value.
+Columns defined in SQL are nullable by default.
+That is, they can contain `NULL` as a value.
 Slick makes columns non-nullable by default---if
 you want a nullable column you model it naturally in Scala as an `Option[T]`.
 
@@ -686,10 +687,16 @@ val daveId: Long = insertUser += User("Dave", Some("dave@example.org"))
 val halId:  Long = insertUser += User("HAL")
 ~~~
 
-Selecting these users back again produces:
+and retrieve them again with a select query:
 
 ~~~ scala
-List(User(Dave,Some(dave@example.org),1), User(HAL,None,2))
+val myUsers = exec(users.filter { u =>
+  u.id === daveId ||
+  u.id === halId
+}.result)
+// myUsers: Seq[User] = List(
+//   User(Dave,Some(dave@example.org),1),
+//   User(HAL,None,2))
 ~~~
 
 So far, so ordinary.
@@ -698,20 +705,29 @@ What might be a surprise is how you go about selecting all rows that have no ema
 ~~~ scala
 // Don't do this
 val none: Option[String] = None
-users.filter(_.email === none).list
+val myUsers = exec(users.filter(_.email === none).result)
+// myUsers: Seq[User] = Nil
 ~~~
 
-We have one row in the database without an email address, but the query will produce no results.
+Interestingly, despite the fact that we have
+one row in the database no email address,
+this query produces no results.
 
-Veterans of database administration will be familiar with this interesting quirk of SQL: expressions involving `null` themselves evaluate to `null`. For example, the SQL expression `'Dave' = 'HAL'` evaluates to `false`, whereas the expression `'Dave' = null` evaluates to `null`.
+Veterans of database administration will be familiar with this interesting quirk of SQL:
+expressions involving `null` themselves evaluate to `null`.
+For example, the SQL expression `'Dave' = 'HAL'` evaluates to `false`,
+whereas the expression `'Dave' = null` evaluates to `null`.
 
-The Slick query amounts to:
+Our Slick query above amounts to:
 
 ~~~ sql
 SELECT * FROM "user" WHERE "email" = NULL
 ~~~
 
-Null comparison is a classic source of errors for inexperienced SQL developers. No value is actually equal to `null`---the equality check evaluates to `null`. To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`, which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Rep[Option[A]]`:
+The SQL expression `"email" = null` evaluates to `null` for any value of `"email"`.
+SQL's `null` is a falsey value, so this query never returns a value.
+To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`,
+which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Rep[Option[A]]`:
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
@@ -727,42 +743,62 @@ Scala Code              Operand Column Types               Result Type        SQ
 : Optional column methods.
   Operand and result types should be interpreted as parameters to `Rep[_]`.
 
-
-We fix our query with `isEmpty`:
+We can fix our query by replacing our equality check with `isEmpty`:
 
 ~~~ scala
-users.filter(_.email.isEmpty).result
-// result: List(User(HAL,None,2))
+val myUsers = exec(users.filter(_.email.isEmpty).result)
+// myUsers: Seq[User] = List(User(HAL,None,2))
 ~~~
 
+which translates to the following SQL:
 
-That rounds off what you need to know to model optional columns with Slick.
-However, we will meet the subject again when
-dealing with joins in the next chapter, and in a moment when looking at a variation of primary keys.
+~~~ sql
+SELECT * FROM "user" WHERE "email" IS NULL
+~~~
 
 
 ### Primary Keys
 
-We've defined primary keys by using the class `O` which provides column options:
+We had our first introduction to primary keys in Chapter 1,
+where we started setting up `id` fields using
+the `O.PrimaryKey` and `O.AutoEnc` column options:
 
 ~~~ scala
 def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
 ~~~
 
-We combine this with a case class that has a default ID,
-knowing that Slick won't insert this value because the field is marked as auto incrementing:
+These options do two things:
+
+- they modify the SQL generated for DDL statements;
+
+- `O.AutoEnc` removes the corresponding column
+  from the SQL generated for `INSERT` statements,
+  allowing the database to insert an auto-incrementing value.
+
+In Chapter 1 we combined `O.AutoInc` with
+a case class that has a default ID of `0L`,
+knowing that Slick will skip the value in insert statements:
 
 ~~~ scala
 case class User(name: String, email: Option[String] = None, id: Long = 0L)
 ~~~
 
-That's the style that suits us in this book, but you should be aware of alternatives.
-You may find our `id: Long = 0L` default a bit arbitrary.
-Perhaps you'd prefer to model the primary key as an `Option[Long]`.
-It will be `None` until it is assigned, and then `Some[Long]`.
+While the authors like the simplicity of this style,
+some developers prefer to wrap primary key values in `Options`:
 
-We can do that, but we need to know how to convert our non-null primary key into an optional value.
-This is handled by the `?` method on the column:
+~~~ scala
+case class User(name: String, email: Option[String] = None, id: Option[Long] = None)
+~~~
+
+In this model we use `None` as the primary key of an unsaved record
+and `Some` as the primary key of a saved record.
+This approach has advantages and disadvantages:
+
+- on the positive side it's easier to identify unsaved records;
+- on the negative side it's harder to get the value of a primary key for use in a query.
+
+Let's look at the changes we need to make to our `UserTable`
+to make this work:
 
 ~~~ scala
 case class User(id: Option[Long], name: String, email: Option[String] = None)
@@ -776,21 +812,15 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 }
 ~~~
 
-The change is small:
+The key thing to notice here is that
+we *don't* want the primary key to be optional in the database.
+We're using `None` to represent an *unsaved* value---the database
+assigns a primary key for us on insert,
+so we can never retrieve a `None` via a database query.
 
-* the row class, `User`, defines `id` as `Option[Long]`; and
-* the projection has to convert the database non-null `id` into an `Option`, via `?`.
-
-To see why we need this, imagine what would happen if we omitted the call to `id.?`.
-The projection from (`Long`, `String`, `Option[String]`)
-would not match the `Table[User]` definition, which requires `Option[Long]` in
-the first position.  In fact, Slick would report:
-
-~~~
-No matching Shape found. Slick does not know how to map the given types.
-~~~
-
-Given what we know about Slick so far, this is a pretty helpful message.
+We need to map our non-nullable column to an optional value.
+This is handled by the `?` method in the default projection,
+which converts a `Rep[A]` to a `Rep[Option[A]]`.
 
 
 ### Compound Primary Keys
@@ -820,12 +850,11 @@ column which is, implicitly, a primary key as far as H2 is concerned.
 </div>
 
 
-Where `primaryKey` is more useful is when you have a compound key.
-This is a key which is based on the value of two or more columns.
+The `primaryKey` method is more useful for defining *compound* primary keys
+that involve two or more columns.
 
-We'll look at this by adding the ability for people to chat in rooms.
-
-The room definition is straightforward:
+Let's look at this by adding the ability for people to chat in rooms.
+First we need a table for storing rooms, which is straightforward:
 
 ~~~ scala
 // Regular table definition for a chat room:
@@ -841,18 +870,10 @@ lazy val rooms = TableQuery[RoomTable]
 lazy val insertRoom = rooms returning rooms.map(_.id)
 ~~~
 
-<div class="callout callout-info">
-**Benefit of Case Classes**
-
-Now we have `room` and `user` the benefit of case classes over tuples becomes apparent.
-As tuples, both tables would have the same type signature: `(String,Long)`.
-It would get error prone passing around tuples like that.
-</div>
-
-
-To say who is in which room, we will add a table called `occupant`.
-And rather than have an auto-generated primary key for `occupant`,
-we'll make it a compound of the user and the room:
+Next we need a table that relates users to rooms.
+We'll call this the *occupant* table.
+Rather than give this table an auto-generated primary key,
+we'll make it a compound of the user and room IDs:
 
 ~~~ scala
 case class Occupant(roomId: Long, userId: Long)
@@ -869,6 +890,8 @@ class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
 lazy val occupants = TableQuery[OccupantTable]
 ~~~
 
+We can define composite primary keys using tuples of `HLists` of columns
+(Slick generates a `ProvenShape` and inspects it to find the list of columns involved).
 The SQL generated for the `occupant` table is:
 
 ~~~ sql
@@ -877,11 +900,8 @@ CREATE TABLE "occupant" (
   "user" BIGINT NOT NULL
 )
 
-ALTER TABLE
-  "occupant"
-ADD CONSTRAINT
-  "room_user_pk"
-PRIMARY KEY("room", "user")
+ALTER TABLE "occupant"
+ADD CONSTRAINT "room_user_pk" PRIMARY KEY("room", "user")
 ~~~
 
 Using the `occupant` table is no different from any other table:
@@ -894,8 +914,41 @@ val airLockId: Long = insertRoom += Room("Air Lock")
 occupants += Occupant(airLockId, daveId)
 ~~~
 
-Of course, if you try to put Dave in the Air Lock twice, the database
-will complain that the key has been violated.
+Of course, if we try to put Dave in the Air Lock twice,
+the database will complain about duplicate primary keys.
+
+
+### Indices
+
+We can use indices to increase the efficiency of database queries
+at the cost of higher disk usage.
+Creating and using indices is the highest form of database sorcery,
+different for every database application,
+and well beyond the scope of this book.
+However, the syntax for defining an index in Slick is simple:
+
+~~~ scala
+def nameIndex = index("name_idx", name, unique=true)
+~~~
+
+The corresponding DDL statement produced from a called to `schema` will be:
+
+~~~ sql
+CREATE UNIQUE INDEX "name_idx" ON "user" ("name")
+~~~
+
+We can create compound indices on multiple columns
+just like we can with primary keys:
+
+~~~ scala
+def nameIndex = index("sample_idx", (column1, column2), unique=true)
+~~~
+
+In this case the corresponding DDL statement will be:
+
+~~~ sql
+CREATE UNIQUE INDEX "sample_idx" ON "mytable" ("column1", "column2")
+~~~
 
 
 ### Foreign Keys
@@ -907,15 +960,18 @@ The method `foreignKey` takes four required parameters:
  * a name;
  * the column, or columns, that make up the foreign key;
  * the `TableQuery` that the foreign key belongs to; and
- * a function on the supplied `TableQuery[T]` taking the supplied column(s) as parameters and returning an instance of `T`.
+ * a function on the supplied `TableQuery[T]` taking
+   the supplied column(s) as parameters and returning an instance of `T`.
 
-We will step through this by using foreign keys to connect a `message` to a `user`.
-To do this we change the definition of `message` to reference an `id` of a `user`:
+We'll step through this by using foreign keys to connect a `message` to a `user`.
+We do this by changing the definition of `message` to reference
+the `id` of its sender instead of their name:
 
 ~~~ scala
-case class Message(senderId: Long,
-                   content: String,
-                   id: Long = 0L)
+case class Message(
+  senderId: Long,
+  content: String,
+  id: Long = 0L)
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -928,14 +984,12 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 }
 ~~~
 
-The change here is that the column for the message sender is now a `Long`,
-when previously we just had a `String`.
+The column for the sender is now a `Long` instead of a `String`.
 We have also defined a method, `sender`,
-which is the foreign key linking the `senderId` to a `user` `id`.
+providing the foreign key linking the `senderId` to a `user` `id`.
 
 The `foreignKey` gives us two things.
-
-First, in the `schema` method, if you use it, the appropriate constraint is added:
+First, it adds a constraint to the DDL statement generated by Slick:
 
 ~~~ sql
 ALTER TABLE "message" ADD CONSTRAINT "sender_fk"
@@ -999,9 +1053,9 @@ Action          Description
 </div>
 
 
-The second thing we get is a query which we can use in a join.
-We've dedicated the [next chapter](#joins) to looking at joins in detail, but
-to illustrate the foreign key usage, here's a simple join:
+Second, the foreign key gives us a query that we can use in a join.
+We've dedicated the [next chapter](#joins) to looking at joins in detail,
+but here's a simple join to illustrate the use case:
 
 ~~~ scala
 val q = for {
@@ -1013,15 +1067,12 @@ val q = for {
 This is equivalent to the query:
 
 ~~~ sql
-SELECT
-  u."name", m."content"
-FROM
-  "message" m, "user" u
-WHERE
-  u."id" = m."sender"
+SELECT u."name", m."content"
+FROM "message" m, "user" u
+WHERE "id" = m."sender"
 ~~~
 
-...and will produce:
+and produces the following results:
 
 ~~~ scala
 Vector(
@@ -1031,6 +1082,7 @@ Vector(
  (HAL,I'm sorry, Dave. I'm afraid I can't do that.))
 ~~~
 
+<!--
 Notice that we modelled the `Message` row using a `Long` `sender`,
 rather than a `User`:
 
@@ -1043,13 +1095,25 @@ case class Message(senderId: Long,
 That's the design approach to take with Slick.
 The row model should reflect the row, not the row plus a bunch of other data from different tables.
 To pull data from across tables, use a query.
+-->
 
 
 <div class="callout callout-info">
 **Save your sanity with laziness**
 
-By defining table queries lazily we can reference them as foreign keys without having to worry about code order.
-In the example below we define table queries after `users` is referenced by the `sender` foreign key in the message table.
+Defining foreign keys places constraints
+on the order in which we have to define our database tables.
+In the example above, the foreign key from `MessageTable`
+to `UserTable` requires us to place the latter definition above
+the former in our Scala code.
+
+Ordering constraints make complex schemas difficult to write.
+Fortunately, we can work around them using `defs` and `lazy vals`.
+In the example below, the `sender` foreign key is defined above
+the `users` table that it references.
+However, decause `sender` is a `def` and `users` is a `lazy val`,
+the code runs fine without any of the `NullPointerExceptions`
+we would otherwise receive at startup.
 
 ~~~ scala
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
@@ -1059,9 +1123,11 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
   def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
 
-  def sender = foreignKey("sender_fk",
-                          senderId,
-                          users)(_.id, onDelete=ForeignKeyAction.Cascade)
+  def sender = foreignKey(
+    "sender_fk",
+    senderId,
+    users
+  )(_.id, onDelete=ForeignKeyAction.Cascade)
 }
 
 lazy val users      = TableQuery[UserTable]
@@ -1072,61 +1138,52 @@ lazy val insertUser = users returning users.map(_.id)
 </div>
 
 
-### Table and Column Modifiers {#schema-modifiers}
+### Column Options {#schema-modifiers}
 
 We'll round off this section by looking at modifiers for columns and tables.
-These allow you to change default values or sizes for columns,
-and add indexes to a table.
+These allow us to tweak the default values, sizes, and data types for columns
+at the SQL level.
 
-We have already seen examples of these,
+We have already seen two examples of column options,
 namely `O.PrimaryKey` and `O.AutoInc`.
 Column options are defined in [`ColumnOption`][link-slick-column-options],
 and as you have seen are accessed via `O`.
 
-We'll look at `Length`, `DBTYPE`, and `Default` now:
+The following example introduces three new options:
+`O.Length`, `O.DBType`, and `O.Default`.
 
 ~~~ scala
-case class User(name: String,
-                avatar: Option[Array[Byte]] = None,
-                id: Long = 0L)
+case class User(
+  name: String,
+  avatar: Option[Array[Byte]] = None,
+  id: Long = 0L)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name   = column[String]("name",
-                              O.Length(64, true),
-                              O.Default("Anonymous Coward"))
+                O.Length(64, true), O.Default("Anonymous Coward"))
   def avatar = column[Option[Array[Byte]]]("avatar", O.DBType("BINARY(2048)"))
 
   def * = (name, avatar, id) <> (User.tupled, User.unapply)
 }
 ~~~
 
-We have modified `name` to fix the maximum length of the column, and give a default value.
+In this example we've done three things:
 
-`O.Default` gives a default value for rows being inserted.
-Remember it's the DDL commands from `users.schema.create` that instruct the database to provide this default.
+1. We've used `O.Length` to give the `name` column a maximum length.
+   This modifies the type of the column in the DDL statement.
 
-`O.Length` takes one parameter you'd expect, one one you might not expect:
+   The parameters to `O.Length` are an `Int` specifying the maximum length,
+   and a `Boolean` indicating whether the length is variable.
 
- * `Int` - maximum length of the column; and
- * `Boolean` - `true` to use `VARCHAR`, `false` for a SQL `CHAR`.
+   Setting the `Boolean` to `true` sets the SQL column type to `VARCHAR`;
+   setting it to `false` sets the type to `CHAR`.
 
-You may or may not care if a `String` is represented as a `VARCHAR` or `CHAR`. If you're storing strings that are the same length, it can be more efficient to use `CHAR`. But check with the documentation for the relational database you're using.
+2. We've used `O.Default` to give the `name` column a default value;
+   This adds a `DEFAULT` clause to the column definition in the DDL statement.
 
-On the `avatar` column we've used `O.DBType` to control the exact type used by the database.
-Again, the values you use here will depend on the database product in use.
-
-Finally, we can add an index to the table:
-
-~~~ scala
-def nameIndex = index("name_idx", name, unique=true)
-~~~
-
-The corresponding DDL statement produced from a called to `schema` will be:
-
-~~~ sql
-CREATE UNIQUE INDEX "name_idx" ON "user" ("name")
-~~~
+3. We've used `O.DBType` to control the exact type used by the database.
+   The values allowed here depend on the database we're using.
 
 
 ### Exercises
