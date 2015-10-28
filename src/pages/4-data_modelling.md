@@ -346,7 +346,7 @@ To motivate this, let's consider a poorly-designed legacy table
 for storing product attributes:
 
 ~~~ scala
-final class AttrTable(tag: Tag) extends Table[Attr](tag, "attributes") {
+final class AttrTable(tag: Tag) extends Table[Attr](tag, "attrs") {
   def id        = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def productId = column[Long]("product_id")
   def name1     = column[String]("name1")
@@ -430,7 +430,7 @@ Here's what the default projection looks like:
 import slick.collection.heterogeneous.{ HList, HCons, HNil }
 import slick.collection.heterogeneous.syntax._
 
-type AttributeHList =
+type AttrHList =
   Long :: Long ::
   Int :: String :: Int :: String :: Int :: String ::
   Int :: String :: Int :: String :: Int :: String ::
@@ -438,7 +438,7 @@ type AttributeHList =
   Int :: String :: Int :: String :: Int :: String ::
   HNil
 
-final class AttributeTable(tag: Tag) extends Table[AttributeHList](tag, "attributes") {
+final class AttrTable(tag: Tag) extends Table[AttrHList](tag, "attrs") {
   // Column definitions...
 
   def * = id :: productId ::
@@ -449,26 +449,26 @@ final class AttributeTable(tag: Tag) extends Table[AttributeHList](tag, "attribu
           HNil
 }
 
-val AttributeTable = TableQuery[AttributeTable]
+val AttrTable = TableQuery[AttrTable]
 ~~~
 
 Writing `HList` types and values is cumbersome and error prone,
-so we've introduced a type alias for `AttributeHList`
+so we've introduced a type alias for `AttrHList`
 to avoid as much typing as we can.
 
 Working with this table involves inserting, updating, selecting, and modifying
-instances of `AttributeHList`. For example:
+instances of `AttrHList`. For example:
 
 ~~~ scala
-AttributeTable += 0L :: productId ::
+AttrTable += 0L :: productId ::
   "name1" :: 1 :: "name2" :: 2 :: "name3" :: 3 ::
   "name4" :: 4 :: "name5" :: 5 :: "name6" :: 6 ::
   "name7" :: 7 :: "name8" :: 8 :: "name9" :: 9 ::
   "name10" :: 10 :: "name11" :: 11 :: "name12" :: 12 ::
   HNil
 
-val myAttributes: AttributeHList =
-  exec(AttributeTable.find(_.productId === productId).result.head)
+val myAttrs: AttrHList =
+  exec(AttrTable.find(_.productId === productId).result.head)
 ~~~
 
 We can extract values from our query results `HList` using pattern matching
@@ -477,7 +477,7 @@ including `head`, `apply`, `drop`, and `fold`:
 
 ~~~ scala
 // Extracting values using pattern matching...
-myAttributes match {
+myAttrs match {
   case id :: pId :: n1 :: v1 :: n2 :: v2 :: _ =>
     // The types of each member are preserved:
     //  - id and pId are Longs
@@ -486,38 +486,38 @@ myAttributes match {
 }
 
 // Extracting values using methods...
-val id: Long = myAttributes.head
-val productId: Long = myAttributes.tail.head
-val name1: String = myAttributes(2)
-val value1: String = myAttributes(3)
+val id: Long = myAttrs.head
+val productId: Long = myAttrs.tail.head
+val name1: String = myAttrs(2)
+val value1: String = myAttrs(3)
 // And so on...
 ~~~
 
-In practice we'll want to map instances of `AttributeHList`
+In practice we'll want to map instances of `AttrHList`
 to a regular class to make them easier to work with.
 Fortunately Slick's `<>` operator works with `HList` shapes as well as tuple shapes.
 We have to produce our own mapping functions in place of `apply` and `unapply`,
 but otherwise this approach is the same as we've seen for tuples:
 
 ~~~ scala
-case class Attributes(id: Long, productId: Long,
+case class Attrs(id: Long, productId: Long,
   name1: String, value1: Int, name2: String, value2: Int, /* etc */)
 
-object Attributes {
-  type AttributeHList = Long :: Long ::
+object Attrs {
+  type AttrHList = Long :: Long ::
     String :: Int :: String :: Int :: /* etc */ :: HNil
 
-  def hlistApply(hlist: AttributeHList): Attributes = hlist match {
+  def hlistApply(hlist: AttrHList): Attrs = hlist match {
     case id :: pId :: n1 :: v1 :: n2 :: v2 :: /* etc */ :: HNil =>
-      Attributes(id, pId, n1, v1, n2, v2, /* etc */)
+      Attrs(id, pId, n1, v1, n2, v2, /* etc */)
   }
 
-  def hlistUnapply(a: Attributes): Option[AttributeHList] =
+  def hlistUnapply(a: Attrs): Option[AttrHList] =
     Some(a.id :: a.productId ::
       a.name1 :: a.value1 :: a.name2 :: a.value2 :: /* etc */ :: HNil)
 }
 
-final class AttributeTable(tag: Tag) extends Table[Attributes](tag, "attributes") {
+final class AttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
   def id        = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def productId = column[Long]("product_id")
   def name1     = column[String]("name1")
@@ -531,7 +531,7 @@ final class AttributeTable(tag: Tag) extends Table[Attributes](tag, "attributes"
     name7 :: value7 :: name8 :: value8 :: name9 :: value9 ::
     name10 :: value10 :: name11 :: value11 :: name12 :: value12 ::
     HNil
-  ) <> (Attributes.hlistApply, Attributes.hlistUnapply)
+  ) <> (Attrs.hlistApply, Attrs.hlistUnapply)
 }
 ~~~
 
@@ -539,10 +539,10 @@ Now our table is defined on a plain Scala class,
 we can query and modify the data using regular data objects as normal:
 
 ~~~ scala
-AttributeTable += Attributes(0L, productId, "n1", 1, "n2", 2, /* etc */)
+AttrTable += Attrs(0L, productId, "n1", 1, "n2", 2, /* etc */)
 
-val myAttributes: Attributes =
-  exec(AttributeTable.find(_.productId === productId).result.head)
+val myAttrs: Attrs =
+  exec(AttrTable.find(_.productId === productId).result.head)
 ~~~
 
 As you can see, typing all of the code to define `HList` mappings by hand
