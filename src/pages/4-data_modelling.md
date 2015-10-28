@@ -220,36 +220,37 @@ Here are the three most common use cases:
 to a value of the column's type parameter.
 For example, a column of `Rep[String]` maps a value of type `String`:
 
-  ~~~ scala
-  final class MyTable(tag: Tag) extends Table[String](tag, "mytable") {
-    def column1 = column[String]("column1")
-    def * = column1
-  }
-  ~~~
+    ~~~ scala
+    final class MyTable(tag: Tag) extends Table[String](tag, "mytable") {
+      def column1 = column[String]("column1")
+      def * = column1
+    }
+    ~~~
 
 2. Tuples of database columns map tuples of their type parameters.
 For example, `(Rep[String], Rep[Int])` is mapped to `(String, Int)`:
 
-  ~~~ scala
-  final class MyTable(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
-    def column1 = column[String]("column1")
-    def column2 = column[Int]("column2")
-    def * = (column1, column2)
-  }
-  ~~~
+    ~~~ scala
+    final class MyTable(tag: Tag)
+        extends Table[(String, Int)](tag, "mytable") {
+      def column1 = column[String]("column1")
+      def column2 = column[Int]("column2")
+      def * = (column1, column2)
+    }
+    ~~~
 
 3. If we have a `ProvenShape[A]`, we can convert it to a `ProvenShape[B]`
 using the "projection operator" `<>`.
 We supply functions to convert each way between `A` and `B`
 and Slick builds the resulting shape:
 
-  ~~~ scala
-  final class UserTable(tag: Tag) extends Table[User](tag, "user") {
-    def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
-    def name = column[String]("name")
-    def * = (name, id) <> (User.tupled, User.unapply)
-  }
-  ~~~
+    ~~~ scala
+    final class UserTable(tag: Tag) extends Table[User](tag, "user") {
+      def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
+      def name = column[String]("name")
+      def * = (name, id) <> (User.tupled, User.unapply)
+    }
+    ~~~
 
 The projection operator `<>` is the secret ingredient that
 allows us to map a wide variety of types.
@@ -258,16 +259,18 @@ we can store instances of `B` in a database.
 The two arguments to `<>` are:
 
 * a function from `A => B`, which converts
-  from the existing shape's unpacked row-level encoding (`(String, Long)`)
+  from the existing shape's unpacked row-level encoding `(String, Long)`
   to our preferred representation (`User`);
 * a function from `R => Option[U]`, which converts the other way.
 
 We can supply these functions by hand if we want:
 
 ~~~ scala
-def intoUser(pair: (String, Long)): User = User(pair._1, pair._2)
+def intoUser(pair: (String, Long)): User =
+  User(pair._1, pair._2)
 
-def fromUser(user: User): Option[(String, Long)] = Some((user.name, user.id))
+def fromUser(user: User): Option[(String, Long)] =
+  Some((user.name, user.id))
 ~~~
 
 and write:
@@ -284,8 +287,6 @@ We will see this in one of the exercises in this section.
 
 ### Tuples versus Case Classes
 
-TODO: I AM HERE
-
 We've seen how Slick is able to map case classes and tuples of values.
 But which should we use? In one sense there is little difference
 between case classes and tuples---both represent fixed sets of values.
@@ -293,23 +294,23 @@ However, case classes differ from tuples in two important respects:
 
 1. case classes have field names, which improves code readability:
 
-   ~~~ scala
-   val user = User("Dave", 0L)
-   user.name // case class field access
+    ~~~ scala
+    val user = User("Dave", 0L)
+    user.name // case class field access
 
-   val tuple = ("Dave", 0L)
-   tuple._1 // tuple field access
-   ~~~
+    val tuple = ("Dave", 0L)
+    tuple._1 // tuple field access
+    ~~~
 
 2. case classes have types that distinguish them
    from other case classes with the same field types:
 
-   ~~~ scala
-   val user = User("Dave", 0L)
-   val dog  = Dog("Lassie", 0L)
+    ~~~ scala
+    val user = User("Dave", 0L)
+    val dog  = Dog("Lassie", 0L)
 
-   user == dog // false
-   ~~~
+    user == dog // false -- different types
+    ~~~
 
 As a general rule, we recommend using case classes to represent database rows
 for these reasons.
@@ -320,6 +321,7 @@ for these reasons.
 We can hide information by excluding it from our row definition.
 The default projection controls what is returned, in what order,
 and is driven by our row definition.
+
 For example, we don't need to map everything
 in a table with legacy columns that aren't being used.
 </div>
@@ -327,21 +329,22 @@ in a table with legacy columns that aren't being used.
 ### Heterogeneous Lists
 
 We've seen how Slick can map database tables to tuples and case classes.
-Scala veterans will have identified a key weakness in this approach---tuples
-and case classes don't scale beyond 22 fields.
+Scala veterans identify a key weakness in this approach---tuples
+and case classes don't scale beyond 22 fields[^scala211-limit22].
+
+[^scala211-limit22]: Scala 2.11 introduced the ability
+to define case classes with more than 22 fields,
+but tuple and function arities are still limited to 22.
 
 Many of us have heard horror stories of legacy tables in enterprise databases
 that have tens or hundreds of columns.
-We can't map everything in these tables using tuples or case classes.
+We can't map everything in these tables using the tuplebased approach described above.
 Fortunately, Slick provides an [`HList`][link-slick-hlist] implementation
-to support tables with more than 22 columns.
+to support tables with very large numbers of columns.
 
-To motivate this, let's suppose our `User` table contains a number of extra columns of data:
+To motivate this, let's suppose our `User` table contains a number of extra columns:
 
 ~~~ scala
-import slick.collection.heterogeneous.{ HList, HCons, HNil }
-import slick.collection.heterogeneous.syntax._
-
 final class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id           = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name         = column[String]("name")
@@ -373,63 +376,133 @@ final class UserTable(tag: Tag) extends Table[User](tag, "user") {
 }
 ~~~
 
-I hope you don't have a table that looks like this, but it does happen.
+Hopefully you don't have tables that look like this at your organization,
+but accidents do happen.
 
-We could try to model this with a case class.
-Scala 2.11 supports case classes with more than 22 arguments,
-but it does not implement the `unapply` method we need for mapping.
-Instead, in this situation, we can switch to a _heterogenous list_:
-
-~~~ scala
-def * = name :: age :: gender :: height :: weight :: shoeSize ::
-        email :: phone :: accepted :: sendNews ::
-        street :: city :: country ::
-        faveColor :: faveFood :: faveDrink ::
-        faveTvShow :: faveMovie :: faveSong ::
-        lastPurchase :: lastRating :: tellFriends ::
-        petName :: partnerName :: id :: HNil
-~~~
+We can't model this table with tuples and `<>` because the standard library
+doesn't define a `Tuple25` to hold all of our columns.
+Fortunately, Slick provides an alternative representation to tuples
+that scales to arbitrary numbers of columns.
+This new data structure is called a _heterogenous list_ or `HList`.
 
 An `HList` has a mix of the properties of a list and a tuple.
 It has an arbitrary length like a `List`,
 but each element can be a different type like a tuple.
 
-Here's an example of a simple `HList`.
-The root of the list is `HNil` as opposed to `Nil`,
-and the `::` operator is specific to `HList` as opposed to `List`.
-Notice that the type mirrors the value---each is the same length
-and each contains data about every item in the list:
+Here's an example of a simple `HList`:
 
 ~~~ scala
-val myHList = 123 :: "abc" :: true :: HNil
-// myHlist: Int :: String :: Boolean :: HNil =
-//   123 :: "abc" :: true :: HNil
+import slick.collection.heterogeneous.{ HList, HCons, HNil }
+
+val emptyHList: HNil =
+  HNil
+
+val shortHList: Int :: HNil =
+  123 :: HNil
+
+val longerHList: Int :: String :: Boolean :: HNil =
+  123 :: "abc" :: true :: HNil
 ~~~
 
-As you can see from the `*` definition above,
-Slick is capable of generating a `ProvenShape` for any `HList` of columns.
-The shape maps an `HList` of the column type parameters.
+Notice the the types and values of each `HList` mirror each other:
+
+- an empty `HList` is represented by the singleton object `HNil`;
+
+- longer `HLists` are formed by prepending values using the `::`
+  operator, which creates a new list *of a new type*.
+
+Because `HLists` are recursive data structures,
+we can use them to model arbitrary large collections of values.
+And because the types of each element are preserved in the type
+of the overall `HList`, we can write code to takes the precise
+type of `HList` into account.
+
+Slick is able to produce `ProvenShapes`
+to map `HLists` of columns to `HLists` of their values.
 For example, the shape for a `Rep[Int] :: Rep[String] :: HNil`
 maps values of type `Int :: String :: HNil`.
 
-This `HList` projection needs to match with the definition of `User` in `Table[User]`.
-We can use the `<>` operator to map to a regular class
-or a Scala 2.11 case class with more than 22 fields,
-but we have to provide our own mapping functions in place of `apply` and `unapply`.
-
-For this example we'll simply create `User` as a type alias of our `HList`:
+We can use an `HList` to map the large table in our example above.
+Here's what the default projection looks like:
 
 ~~~ scala
-type User =
+import slick.collection.heterogeneous.{ HList, HCons, HNil }
+import slick.collection.heterogeneous.syntax._
+
+type UserHList =
   String :: Int :: Char :: Float :: Float :: Int ::
   String :: String :: Boolean :: Boolean ::
   String :: String :: String :: String :: String :: String ::
   String :: String :: String ::
   String :: Int :: Boolean ::
   String :: String  :: Long :: HNil
+
+final class UserTable(tag: Tag) extends Table[UserHList](tag, "user") {
+  // Column definitions go here...
+
+  def * = name :: age :: gender :: height :: weight :: shoeSize ::
+          email :: phone :: accepted :: sendNews ::
+          street :: city :: country ::
+          faveColor :: faveFood :: faveDrink ::
+          faveTvShow :: faveMovie :: faveSong ::
+          lastPurchase :: lastRating :: tellFriends ::
+          petName :: partnerName :: id :: HNil
+}
 ~~~
 
-Typing large `HLists` in by hand is error prone and likely to drive you crazy.
+Notice the type alias for `UserHList`.
+We've introduced this so we can write `extends Table[UserHList]` in the class header
+without embedding a large `HList` type as the type parameter for `Table`.
+
+In practice we'll want to map instances of `UserHList` to instances of a `User` class.
+Fortunately Slick's `<>` operator works with `HList` mappings as well as tuple mappings.
+We have to produce our own mapping functions in place of `apply` and `unapply`,
+but otherwise this approach is the same as we've seen for tuples:
+
+~~~ scala
+case class User(
+  id           : Long,
+  name         : String,
+  age          : Int,
+  gender       : Char,
+  height       : Float,
+  /* etc */
+)
+
+object User {
+  type UserHList =
+    String :: Int :: Char :: Float :: Float :: Int ::
+    String :: String :: Boolean :: Boolean ::
+    String :: String :: String :: String :: String :: String ::
+    String :: String :: String ::
+    String :: Int :: Boolean ::
+    String :: String  :: Long :: HNil
+
+  def hlistApply(hlist: UserHList): User = hlist match {
+    case id :: name :: age :: gender :: height :: /* etc */ =>
+      User(id, name, age, gender, height, /* etc */)
+  }
+
+  def hlistUnapply(u: User): Option[UserHList] =
+    u.id :: u.name :: u.age :: u.gender :: u.height :: /* etc */ :: HNil
+}
+
+final class UserTable(tag: Tag) extends Table[UserHList](tag, "user") {
+  // Column definitions go here...
+
+  def * = (
+    name :: age :: gender :: height :: weight :: shoeSize ::
+    email :: phone :: accepted :: sendNews ::
+    street :: city :: country ::
+    faveColor :: faveFood :: faveDrink ::
+    faveTvShow :: faveMovie :: faveSong ::
+    lastPurchase :: lastRating :: tellFriends ::
+    petName :: partnerName :: id :: HNil
+  ) <> (User.hlistApply, User.hlistUnapply)
+}
+~~~
+
+As you can see, typing large `HLists` in by hand is error prone and likely to drive you crazy.
 There are two ways to improve on this:
 
 - The first is to know that Slick can _generate_ this code for us from an existing database.
@@ -456,9 +529,22 @@ and customize the code produced.
 Prefer it to manually reverse engineering a schema by hand.
 </div>
 
-Once you have an `HList`-based schema,
-you work with it in much the same way as you would other data representations.
-To create an instance of an `HList` we use the cons operator and `HNil`:
+We work with `HList`-based tables in the same way as we do any other table.
+If we're using `<>` to map the table to a regular class or case class,
+we can insert, update, and delete data using instances of the class as normal:
+
+~~~ scala
+users += User(
+  "Dr. Dave Bowman", 43, 'M', 1.7f, 74.2f, 11,
+  "dave@example.org", "+1555740122", true, true,
+  "123 Some Street", "Any Town", "USA",
+  "Black", "Ice Cream", "Coffee", "Sky at Night", "Silent Running",
+  "Bicycle made for Two", "Acme Space Helmet", 10, true,
+  "HAL", "Betty", 0L)
+~~~
+
+If our table is defined on a plain `HList` type without using `<>`,
+we query and modify the data using `HList` values:
 
 ~~~ scala
 users +=
@@ -470,14 +556,14 @@ users +=
   "HAL" :: "Betty" :: 0L :: HNil
 ~~~
 
-A query will produce an `HList` based `User` instance.
-To pull out fields you can use pattern matching or type-preserving methods
-such as `head`, `apply`, `drop`, and `fold`:
+Select queries will produce `HLists` or instances of the mapped class as expected.
+We can extract values from a plain `HList` using pattern matching or one of
+a variety of type-preserving methogs such as `head`, `apply`, `drop`, and `fold`:
 
 ~~~ scala
-val dave: User = users.first
-val name: String = dave.head
-val age: Int = dave.apply(1)
+val user: UserHList = users.first
+val name: String = user.head
+val age: Int = user(1)
 ~~~
 
 ### Exercises
@@ -556,7 +642,8 @@ However, notice that if you used `users.schema.create`, only the columns defined
 
 ## Table and Column Representation
 
-Now we know how rows can be represented and mapped, we will look in more detail at the representation of the table and the columns that make up a table.
+Now we know how rows can be represented and mapped,
+we will look in more detail at the representation of the table and the columns it comprises.
 In particular we'll explore nullable columns,
 foreign keys, more about primary keys, composite keys,
 and options you can apply a table.
@@ -564,10 +651,10 @@ and options you can apply a table.
 ### Nullable Columns {#null-columns}
 
 Columns defined in SQL are nullable by default. That is, they can contain `NULL` as a value.
-Slick makes columns not nullable by default, and
-if you want a nullable column you model it naturally in Scala as an `Option[T]`.
+Slick makes columns non-nullable by default---if
+you want a nullable column you model it naturally in Scala as an `Option[T]`.
 
-Let's modify `User` to have an optional email address:
+Let's create a simple variant of `User` with an optional email address:
 
 ~~~ scala
 case class User(name: String, email: Option[String] = None, id: Long = 0L)
@@ -591,7 +678,7 @@ val daveId: Long = insertUser += User("Dave", Some("dave@example.org"))
 val halId:  Long = insertUser += User("HAL")
 ~~~
 
-Selecting those rows out produces:
+Selecting these users back again produces:
 
 ~~~ scala
 List(User(Dave,Some(dave@example.org),1), User(HAL,None,2))
