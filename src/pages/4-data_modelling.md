@@ -1610,16 +1610,20 @@ to represent primary keys, foreign keys, rows, and columns from our database.
 This is enormously valuable and should not be overlooked.
 
 
-### Sum Types
+### Modelling Sum Types
 
 <!-- TODO: DAVE IS HERE -->
 
 We've used case classes extensively for modelling data.
-These are known as _product types_, which form one half of _algebraic data types_ (ADTs).
-The other half is known as _sum types_, which we will look at now.
+Using the language of _algebraic data types_,
+case classes are "product types"
+(created from conjunctions of their field types).
+The other common form of algebraic data type is known as a _sum type_,
+formed from a _disjunction_ of other types.
+We'll look at modelling these now.
 
-As an example we will add a flag to messages.
-Perhaps an administrator of the chat will be able to mark messages as important, offensive, or spam.
+As an example let's add a flag to our `Message` class
+to model messages as important, offensive, or spam.
 The natural way to do this is establish a sealed trait
 and a set of case objects:
 
@@ -1628,9 +1632,18 @@ sealed trait Flag
 case object Important extends Flag
 case object Offensive extends Flag
 case object Spam extends Flag
+
+case class Message(
+  senderId:  UserPK,
+  content:   String,
+  timestamp: DateTime,
+  flag:      Option[Flag] = None,
+  id:        MessagePK = MessagePK(0L))
 ~~~
 
-How we store them in the database depends on the mapping. Maybe we want to store them as characters: `!`, `X`, and `$`:
+There are a number of ways we could represent the flags in the database.
+For the sake of the argument, let's as characters: `!`, `X`, and `$`.
+We need a new custom `ColumnType` to manage the mapping:
 
 ~~~ scala
 implicit val flagType =
@@ -1640,7 +1653,7 @@ implicit val flagType =
       case Offensive => 'X'
       case Spam      => '$'
     },
-    ch => ch match {
+    code => code match {
       case '!' => Important
       case 'X' => Offensive
       case '$' => Spam
@@ -1648,23 +1661,16 @@ implicit val flagType =
 ~~~
 
 This is similar to the enumeration pattern from the last set of exercises.
-There is a difference, though, in that sealed traits can be checked by the compiler to
-ensure we have covered all the cases.  That is, if we add a new flag (`OffTopic` perhaps),
-but forget to add it to our `Flag => Char` function,
-the compiler will warn us that we have missed a case.
-(By enabling the Scala compiler's `-Xfatal-warnings` option,
-these warnings will become errors, preventing your program from compiling).
+In this case, however, the compiler can ensure we've covered all the cases.  If we add a new flag (`OffTopic` perhaps),
+the compiler will issue warnings
+until we add it to our `Flag => Char` function.
+We can turn these compiler warnings into errors
+by enabling the Scala compiler's `-Xfatal-warnings` option,
+preventing us shipping the application until we've covered all bases.
 
 Using `Flag` is the same as any other custom type:
 
 ~~~ scala
-case class Message(
-  senderId: UserPK,
-  content:  String,
-  ts:       DateTime,
-  flag:     Option[Flag] = None,
-  id:       MessagePK = MessagePK(0L))
-
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
   def senderId = column[UserPK]("sender")
@@ -1672,34 +1678,58 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def flag     = column[Option[Flag]]("flag")
   def ts       = column[DateTime]("ts")
 
-  def * = (senderId, content, ts, flag, id) <>  ↩
-                                    (Message.tupled, Message.unapply)
+  def * = (senderId, content, ts, flag, id) <> ↩
+    (Message.tupled, Message.unapply)
 
-  def sender =
-    foreignKey("sender_fk", senderId, users)  ↩
-                            (_.id, onDelete=ForeignKeyAction.Cascade)
+  def sender = foreignKey("sender_fk", senderId, users) ↩
+    (_.id, onDelete=ForeignKeyAction.Cascade)
 }
 
 lazy val messages = TableQuery[MessageTable]
 ~~~
 
-And we can add a message with a flag set:
+We can insert a message with a flag easily:
 
 ~~~ scala
 messages +=
   Message(halId, "Just kidding. LOL.", start plusSeconds 20, Some(Important))
 ~~~
 
-When we execute a query, we can work in terms of our meaningful type.
-However, we need to give the compiler a little help:
+We can also query for messages with a particular flag.
+However, we need to give the compiler a little help with the types:
 
 ~~~ scala
 messages.filter(_.flag === (Important : Flag)).run
 ~~~
 
-Notice the _type_ ascription added to the `Important` value.
-If you find yourself writing that kind of query often, be aware that extension methods allow you to package code like this into `messages.isImportant`  or similar.
+The type annotation here is annoying.
+We can work around it easily in two ways:
 
+First, we can define a "smart constructor" method
+for each flag that returns it pre-cast as a `Flag`:
+
+~~~ scala
+object Flag {
+  val important: Flag = Important
+  val offensive: Flag = Offensive
+  val spam: Flag = Spam
+}
+
+exec(messages.filter(_.flag === Flag.important).result)
+~~~
+
+Second, we can define some custom syntax to
+build our filter expressions:
+
+~~~ scala
+implicit class MessageQueryOps(message: MessageTable) {
+  def isImportant = message.filter === (Important : Flag)
+  def isOffensive = message.filter === (Offensive : Flag)
+  def isOffTopic  = message.filter === (OffTopic  : Flag)
+}
+
+exec(messages.filter(_.isImportant).result)
+~~~
 
 ### Exercises
 
@@ -1808,14 +1838,55 @@ implicit val priorityType =
 
 ## Take Home Points
 
-Separate the specific profile (H2, Postgres...) from your schema definition if you need to be portable across databases. In this chapter we looked at a class called `Schema` that pulled together a profile with table definitions, which could then be imported into an application.
+In this Chapter we covered a lot of Slick's features
+for defining database schemas.
+We went into detail about defining tables and columns,
+mapping them to convenient Scala types,
+adding primary keys, foreign keys, and indices,
+and customising Slick's DDL SQL.
+We also discussed writing generic code
+that works with multiple database back-ends,
+and how to structure the database layer of your application
+using traits and self-types.
 
-Rows can be represented in a variety of ways: case classes, tuples, and HLists, for example. You have control over how columns are mapped to a row representation, using `<>`.
+The most important points are:
 
-Nullable columns are represented as `Option[T]` values, and the `?` operator lifts a non-null value into an optional value.
+- We can separate the specific profile for our database (H2, Postgres, etc...)
+  from our schema using *dependency injection*.
+  We assemble a database layer from a number of traits,
+  leaving the profile as an abstract field
+  that can be implemented ("injected") at runtime.
 
-Foreign keys define a constraint, and allow you to link tables in a join.
+- We can represent rows in a variety of ways: tuples, `HLists`,
+  and arbitrary classes and case classes via the `<>` method.
 
-Slick makes it relatively easy to abstract away from raw database types, such as `Long`, to meaningful types such as `UserPK`.  This removes a class of errors in your application, where you could have passed the wrong `Long` key value around.
+- We can represent individual values in columns
+  using arbitrary Scala data types
+  by providing `ColumnTypes` to manage the mappings.
+  We've seen numerous examples supporting
+  typed primary keys such as `UserPK`,
+  sealed traits such as `Flag`, and
+  third party classes such as `DateTime`.
 
-Slick's philosophy is to keep models simple. Model rows as rows, and don't try to include values from different tables.
+- Nullable values are typically represented as `Options` in Scala.
+  We can either define columns to store `Options` directly,
+  or use the `?` method to map non-nullable columns to `Optional` ones.
+
+- We can define simple primary keys using `O.PrimaryKey`
+  and compound keys using the `primaryKey` method.
+
+- We can define `foreignKeys`,
+  which gives us a simple way of linking tables in a join.
+  More on this next chapter.
+
+Slick's philosophy is to keep models simple.
+We model rows as flat case classes, ignoring joins with other tables.
+While this may seem inflexible at first,
+it more than pays for itself in terms of simplicity and transparency.
+Database queries are explicit and type-safe,
+and return values of convenient types
+without lots of glue code to perform ORM-like mappings.
+
+In the next Chapter we will build on the foundations of
+primary and foreign keys and look at writing more
+complex queries involving joins and aggregate functions.
