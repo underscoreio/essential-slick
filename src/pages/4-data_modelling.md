@@ -1352,57 +1352,124 @@ val hasNot = for {
 
 ## Custom Column Mappings
 
-We want to work with types that have meaning to our application. This means moving data from the simple types the database uses into something else. We've already seen one aspect of this where the column values for `id`, `sender`, and `content` fields are mapped into a row representation of `Message`.
+We want to work with types that have meaning to our application.
+This means converting data from the simple types the database uses
+to something more developer-friendly.
 
-At a level down from that, we can also control how our types are converted into column values.  For example, perhaps we'd like to use [JodaTime][link-jodatime]'s `DateTime` class for anything date and time related. Support for this is not built-in to Slick, but it's painless to map custom types to the database.
+We've already seen Slick's ability to map
+tuples and `HLists` of columns to case classes.
+However, so far the fields of our case classes
+have been restricted to simple types such as
+`Int` and `String`,
 
-The mapping for JodaTime's `DateTime` is:
+Slick also lets us control how individual columns are mapped to Scala types.
+For example, perhaps we'd like to use
+[JodaTime][link-jodatime]'s `DateTime` class
+for anything date and time related.
+Slick doesn't provide native support for Joda Time,
+but it's painless for us to implement it via Slick's
+`ColumnType` type class:
 
 ~~~ scala
 import java.sql.Timestamp
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
 
-implicit val jodaDateTimeType =
-  MappedColumnType.base[DateTime, Timestamp](
-    dt => new Timestamp(dt.getMillis),
-    ts => new DateTime(ts.getTime, UTC)
-  )
+object CustomColumnTypes {
+  implicit val jodaDateTimeType =
+    MappedColumnType.base[DateTime, Timestamp](
+      dt => new Timestamp(dt.getMillis),
+      ts => new DateTime(ts.getTime, UTC)
+    )
+}
 ~~~
 
 What we're providing here is two functions:
 
-- one that takes a `DateTime` and turns it into a database-friendly value, namely a `java.sql.Timestamp`; and
-- another that does the reverse, taking a database value and turning it into a `DataTime`.
+- one that takes a `DateTime` and converts it to
+  a database-friendly `java.sql.Timestamp`; and
 
-Using the Slick `MappedColumnType.base` call enables this machinery, which is marked as `implicit` so the Scala compiler can invoke it when we mention a `DateTime`.
+- one that does the reverse, taking a `Timestamp`
+  and converting it to a `DataTime`.
 
-This is something we will emphasis and encourage you to use in your applications: work with meaningful types in your code, and let Slick take care of the mechanics of how those types are turned into database values.
+Once we have declared this custom column type,
+we are free to create columns containing `DateTimes`:
+
+~~~ scala
+case class Message(
+  senderId: Long,
+  content: String,
+  timestamp: DateTime,
+  id: Long = 0L)
+
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+  import CustomColumnTypes._
+
+  def id        = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def senderId  = column[Long]("sender")
+  def content   = column[String]("content")
+  def timestamp = column[DateTime]("timestamp")
+
+  def * = (senderId, content, timestamp, id) <>
+    (Message.tupled, Message.unapply)
+}
+
+lazy val messages      = TableQuery[MessageTable]
+lazy val insertMessage = messages returning messages.map(_.id)
+~~~
+
+Our modified definition of `MessageTable` allows
+us to work directly with `Messages` containing `DateTime` timestamps,
+without having to do cumbersome type conversions by hand:
+
+~~~ scala
+// Insert a Message containing a DateTime:
+val messageId = exec(insertMessage += Message(
+  daveId,
+  "Open the pod bay doors, HAL.",
+  DateTime.now))
+
+// Query Messages containing DateTimes:
+val message = exec(messages.find(_.id === messageId).result.head)
+// message: Message = Message(
+//   1L,
+//   "Open the pod bay doors, HAL.",
+//   1968-05-10T08:59:00.000Z,
+//   2001L)
+~~~
+
+This model of working with semantic types is
+immediately appealing to Scala developers.
+The authors strongly encourage you to use `ColumnTypes` in your applications,
+to help reduce bugs and let Slick take care of cumbersome type conversions.
 
 
 ### Value Classes {#value-classes}
 
-In modelling rows we are using `Long`s as primary keys.
-Although that's a good choice for the database, it's not a great choice
-in our application.
-The problem with it is that we can make some silly mistakes:
+We are currently using `Longs` to model primary keys.
+Although this is a good choice at a database level,
+it's not great for out application code.
+The problem is we can make silly mistakes:
 
 ~~~ scala
-// Users:
-val halId:  Long = insertUser += User("HAL")
-val daveId: Long = insertUser += User("Dave")
-
-// Buggy lookup of a sender
-  for {
-    id      <- messages.filter(_.senderId === haldId).map(_.id)
-    rubbish <- messages.filter(_.senderId === id)
-  } yield rubbish
+// This code will fail:
+for {
+  message <- messages.head
+  rubbish <- users.filter(_.senderId === message.id)
+} yield rubbish
 ~~~
 
-Do you see the problem here? We've looked up a _message_ `id`,
-and then used it to search for a _user_ (via `senderId`) with that `id`.
-It compiles, it runs, and produces nonsense. We can prevent these kinds of problems using Scala's type system.
+Do you see the problem here?
+We've incorrectly used the `id` field of the `message`
+to search for its sender,
+instead of the `senderId` field as would be correct.
 
+This code compiles, runs, and may even find a user
+if there happens to be one with the same ID as our message.
+However, it is clear that the code is incorrect.
+We can prevent these kinds of problems using types.
+
+<!--
 Before showing how, here's another downside of using `Long` as a primary key. You may find yourself writing small helper methods such as:
 
 ~~~ scala
@@ -1414,53 +1481,54 @@ It would be much clearer to document this method using the types, rather than th
 ~~~ scala
 def lookup(id: UserPK) = users.filter(_.id === id)
 ~~~
+-->
 
-We can do that, and have the compiler help us matching up primary keys, by using [value classes][link-scala-value-classes].
-A value class is a compile-time wrapper around a value. At run time, the wrapper goes away,
-leaving no allocation or performance overhead in our running code.
-
-We define value classes like this:
+The essential approach is to model primary keys
+using [value classes][link-scala-value-classes]:
 
 ~~~ scala
-object PKs {
-  case class MessagePK(value: Long) extends AnyVal
-  case class UserPK(value: Long) extends AnyVal
-}
+case class MessagePK(value: Long) extends AnyVal
+case class UserPK(value: Long) extends AnyVal
 ~~~
 
-To be able to use them in our tables, we need to provide Slick with the conversion rules.
-This is just the same as we've previously added for JodaTime:
+A value class is a compile-time wrapper around a value.
+At run time, the wrapper goes away,
+leaving no allocation or performance overhead in our running code.
+
+We need to provide Slick with `ColumnTypes`
+to use these types with our tables.
+This is the same process we used for Joda Time `DateTimes`:
 
 ~~~ scala
-import PKs._
-
-implicit val messagePKMapper =
+implicit val messagePKColumnType =
   MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
 
-implicit val userPKMapper =
+implicit val userPKColumnType =
    MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
 ~~~
 
-Recall that `MappedColumnType.base` is how we define the functions to convert between our classes (`MessagePK`, `UserPK`)
-and the database values (`Long`).
-
-We _can_ do that, but for such a mechanical piece of code,
-Slick provides a macro to take care of this for us.
-We only need to write...
+Defining all these type class instances can be time consuming,
+especially if we're defining one for every table in our schema.
+Fortunately, Slick provides a short-hand called `MappedTo`
+to take care of this for us:
 
 ~~~ scala
-object PKs {
-  import slick.lifted.MappedTo
-  case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
-  case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
-}
+case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
+case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
 ~~~
 
-...and the `MappedTo` macro takes care of creating the `MappedColumnType.base` implicits for us.
+When we use `MappedTo` we don't need to define a separate `ColumnType`.
+`MappedTo` works with any class that:
 
+ - has a method called `value` that
+   returns the underlying database value;
 
-With our value classes and implicits in place,
-we can now use them to give us type checking on our primary and therefore foreign keys:
+ - has a single-parameter constructor to
+   create the Scala value from the database value.
+
+Value classes are a great fit for this pattern.
+
+Let's redefine our tables to use our custom primary key types:
 
 ~~~ scala
 case class User(name: String, id: UserPK = UserPK(0L))
@@ -1471,84 +1539,80 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def * = (name, id) <> (User.tupled, User.unapply)
 }
 
-case class Message(senderId: UserPK,
-                   content: String,
-                   ts: DateTime,
-                   id: MessagePK = MessagePK(0L))
+case class Message(
+  senderId: UserPK,
+  content: String,
+  timestamp: DateTime,
+  id: MessagePK = MessagePK(0L))
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
-  def id       = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
-  def senderId = column[UserPK]("sender")
-  def content  = column[String]("content")
-  def ts       = column[DateTime]("ts")
-  def * = (senderId, content, ts, id) <> (Message.tupled, Message.unapply)
-  def sender = foreignKey("sender_fk", senderId, users)  ↩
-                                 (_.id, onDelete=ForeignKeyAction.Cascade)
+  def id        = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
+  def senderId  = column[UserPK]("sender")
+  def content   = column[String]("content")
+  def timestamp = column[DateTime]("timestamp")
+  def * = (senderId, content, timestamp, id) <>
+    (Message.tupled, Message.unapply)
+  def sender = foreignKey("sender_fk", senderId, users) ↩
+    (_.id, onDelete=ForeignKeyAction.Cascade)
 }
 ~~~
 
-Notice how we're able to be explicit: the user `id` is a `UserPK` and the message sender is also a `UserPK`.
-
-Now, if we try our buggy query again, the compiler catches the problem:
-
-~~~ scala
-Cannot perform option-mapped operation
-     with type: (PKs.UserPK, PKs.MessagePK) => R
- for base type: (PKs.UserPK, PKs.UserPK) => Boolean
-[error] val rubbish = messages.filter(_.senderId === id)
-                                                 ^
-~~~
-
-The compiler is telling us it wanted to compare `UserPK` to another `UserPK`,
-but found a `UserPK` and a `MessagePK`.
-
-Values classes are a reasonable way to make your code safer and more legible.
-The amount of code you need to write is small,
-however for a large database it can become dull writing many such methods.
-In that case, consider either generating the source code rather than writing it
-or by generalising our definition of a primary key, so we only need to define it once.
-
-
-<div class="callout callout-info">
-**An `Id[T]` Class**
-
-Rather than providing a value class definition for each table...
+Notice how we're able to be explicit:
+the user `id` and message `senderId` are `UserPKs`
+and the message `id` is a `MessagePK`.
+Now, if we try our buggy query again,
+the compiler catches the problem:
 
 ~~~ scala
-final case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
+for {
+  message <- messages.head
+  rubbish <- users.filter(_.senderId === message.id)
+} yield rubbish
+
+// Cannot perform option-mapped operation
+//      with type: (PKs.UserPK, PKs.MessagePK) => R
+//  for base type: (PKs.UserPK, PKs.UserPK) => Boolean
+// [error] rubbish <- users.filter(_.senderId === message.id)
 ~~~
 
-...we can supply the table as a type parameter:
+Values classes are a low-cost way to make code safer and more legible.
+The amount of code required is small,
+however for a large database it can still be an overhead.
+We can either use code generation to overcome this,
+or generalise our primary key type by making it generic:
 
 ~~~ scala
 final case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
-~~~
 
-We can then define primary keys in terms of `PK[Table]`:
-
-~~~ scala
-case class User(id: Option[PK[UserTable]],
-                name: String,
-                email: Option[String] = None)
+case class User(
+  name: String,
+  email: Option[String] = None,
+  id: PK[UserTable])
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id    = column[PK[UserTable]]("id", O.AutoInc, O.PrimaryKey)
   def name  = column[String]("name")
   def email = column[Option[String]]("email")
 
-  def * = (id.?, name, email) <> (User.tupled, User.unapply)
+  def * = (name, email, id) <> (User.tupled, User.unapply)
 }
 
 lazy val users = TableQuery[UserTable]
 ~~~
 
-We now get type safety without having to define the boiler plate of individual primary key case classes per table.
-Depending on the nature of your application, that might be convenient for you.
+With this approach we achieve type safety
+without the boiler plate of many primary key type definitions.
+Depending on the nature of your application,
+this may be convenient for you.
 
-The general point is that you have the whole of the Scala type system at your disposal for representing IDs.
-</div>
+The general point is that we can use the whole of the Scala type system
+to represent primary keys, foreign keys, rows, and columns from our database.
+This is enormously valuable and should not be overlooked.
+
 
 ### Sum Types
+
+<!-- TODO: DAVE IS HERE -->
 
 We've used case classes extensively for modelling data.
 These are known as _product types_, which form one half of _algebraic data types_ (ADTs).
