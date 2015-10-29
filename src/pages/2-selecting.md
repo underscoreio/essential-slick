@@ -268,6 +268,13 @@ messages.map(t => t.id * 1000L).result.statements
 // res20: Iterable[String] = List(select x2."id" * 1000 from "message" x2)
 ~~~
 
+<div class="callout callout-info">
+**Query's *flatMap* method**
+
+`Query` also has a `flatMap` method with similar monadic semantics to that of `Option` or `Future`.
+`flatMap` is mostly used for joins, so we'll cover it in [Chapter 5](#joins).
+</div>
+
 ### *exists*
 
 Sometimes we are less interested in the contents of a queries result than if results exist at all.
