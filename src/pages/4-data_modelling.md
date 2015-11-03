@@ -409,7 +409,7 @@ allowing us to model arbitrarily large collections of values:
 
 - an empty `HList` is represented by the singleton object `HNil`;
 
-- longer `HLists` are formed by prepending values using the `::`
+- longer `HList`s are formed by prepending values using the `::`
   operator, which creates a new list *of a new type*.
 
 Notice the the types and values of each `HList` mirror each other:
