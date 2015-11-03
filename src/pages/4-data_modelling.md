@@ -384,7 +384,7 @@ but accidents do happen.
 This table has 26 columns---too many to model using tuples and `<>`.
 Fortunately, Slick provides an alternative mapping representation
 that scales to arbitrary numbers of columns.
-This new representation is called a _heterogenous list_ or `HList`.
+This new representation is called a _heterogeneous list_ or `HList`.
 
 An `HList` is a sort of hybrid of a list and a tuple.
 It has an arbitrary length like a `List`,
