@@ -174,7 +174,7 @@ val action =
 In previous chapters we modelled rows as case classes.
 Although this is the most common usage pattern, and the one we recommend,
 there are several representation options available, including tuples,
-case classes, and `HLists`.
+case classes, and `HList`s.
 Let's investigate these by looking in more detail
 at how Slick relates columns in our database to fields in our classes.
 
@@ -404,7 +404,7 @@ val longerHList: Int :: String :: Boolean :: HNil =
   123 :: "abc" :: true :: HNil
 ~~~
 
-`HLists` are constructed recursively like `Lists`,
+`HList`s are constructed recursively like `Lists`,
 allowing us to model arbitrarily large collections of values:
 
 - an empty `HList` is represented by the singleton object `HNil`;
@@ -419,7 +419,7 @@ Because the element types are preserved,
 we can write code that takes each precise type into account.
 
 Slick is able to produce `ProvenShapes`
-to map `HLists` of columns to `HLists` of their values.
+to map `HList`s of columns to `HList`s of their values.
 For example, the shape for a `Rep[Int] :: Rep[String] :: HNil`
 maps values of type `Int :: String :: HNil`.
 
@@ -552,7 +552,7 @@ is error prone and likely to induce stress. There are two ways to improve on thi
   If our main use for `HList`s is to map legacy database tables,
   code generation is the way to go.
 
-- Second, we can improve the readability of our `HLists`
+- Second, we can improve the readability of our `HList`s
   by using _value classes_ to replace more vanilla column types like `String` and `Int`.
   This can increase verbosity but significantly reduces errors.
   We'll see this in the section on [value classes](#value-classes),
@@ -1357,7 +1357,7 @@ This means converting data from the simple types the database uses
 to something more developer-friendly.
 
 We've already seen Slick's ability to map
-tuples and `HLists` of columns to case classes.
+tuples and `HList`s of columns to case classes.
 However, so far the fields of our case classes
 have been restricted to simple types such as
 `Int` and `String`,
@@ -1419,7 +1419,7 @@ lazy val insertMessage = messages returning messages.map(_.id)
 ~~~
 
 Our modified definition of `MessageTable` allows
-us to work directly with `Messages` containing `DateTime` timestamps,
+us to work directly with `Message`s containing `DateTime` timestamps,
 without having to do cumbersome type conversions by hand:
 
 ~~~ scala
@@ -1446,7 +1446,7 @@ to help reduce bugs and let Slick take care of cumbersome type conversions.
 
 ### Value Classes {#value-classes}
 
-We are currently using `Longs` to model primary keys.
+We are currently using `Long`s to model primary keys.
 Although this is a good choice at a database level,
 it's not great for out application code.
 The problem is we can make silly mistakes:
@@ -1857,7 +1857,7 @@ The most important points are:
   leaving the profile as an abstract field
   that can be implemented ("injected") at runtime.
 
-- We can represent rows in a variety of ways: tuples, `HLists`,
+- We can represent rows in a variety of ways: tuples, `HList`s,
   and arbitrary classes and case classes via the `<>` method.
 
 - We can represent individual values in columns
@@ -1868,8 +1868,8 @@ The most important points are:
   sealed traits such as `Flag`, and
   third party classes such as `DateTime`.
 
-- Nullable values are typically represented as `Options` in Scala.
-  We can either define columns to store `Options` directly,
+- Nullable values are typically represented as `Option`s in Scala.
+  We can either define columns to store `Option`s directly,
   or use the `?` method to map non-nullable columns to `Optional` ones.
 
 - We can define simple primary keys using `O.PrimaryKey`
