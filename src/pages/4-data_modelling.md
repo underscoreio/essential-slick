@@ -1642,7 +1642,7 @@ case class Message(
 ~~~
 
 There are a number of ways we could represent the flags in the database.
-For the sake of the argument, let's as characters: `!`, `X`, and `$`.
+For the sake of the argument, let's use characters: `!`, `X`, and `$`.
 We need a new custom `ColumnType` to manage the mapping:
 
 ~~~ scala
