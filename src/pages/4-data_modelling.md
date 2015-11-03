@@ -1111,7 +1111,7 @@ Ordering constraints make complex schemas difficult to write.
 Fortunately, we can work around them using `defs` and `lazy vals`.
 In the example below, the `sender` foreign key is defined above
 the `users` table that it references.
-However, decause `sender` is a `def` and `users` is a `lazy val`,
+However, because `sender` is a `def` and `users` is a `lazy val`,
 the code runs fine without any of the `NullPointerExceptions`
 we would otherwise receive at startup.
 
