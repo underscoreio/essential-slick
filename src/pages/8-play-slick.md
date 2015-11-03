@@ -1,7 +1,7 @@
 # Play Framework Intergration
 
-You'll probably want to provide a way for people to interact with your lovely schema at some point --- possibly via the internet!
-The [Play Framework][link-play] by Typesafe is a popular tool for developing just such an interface.
+You'll probably want to provide a way for people to interact with your lovely schema at some point---possibly via the internet!
+The [Play Framework][link-play] is a popular tool for developing just such an interface.
 A plugin called [Play Slick][link-play-slick] makes doing so relatively painless.
 
 <div class="callout callout-info">
@@ -27,42 +27,41 @@ Let's look at the steps needed to integrate with Play using the Play Slick Plugi
 
 ### Play
 
-Play has it's own `sbt` plugin which adds the Play console, dependencies and functionality like live reloading.
+Play has its own sbt plugin which adds the Play console, dependencies and functionality like live reloading.
 To include this add the following to `plugins.sbt` in `project`:
 
 ~~~ scala
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.4.3")
 ~~~
 
-<!-- THIS IS AN ASSUMPTION -->
-To have the dependenices added our project we need to enable the plugin in`build.sbt`:
+We also need to enable the plugin in `build.sbt`:
 
 ~~~ scala
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 ~~~
 
-If you interested in knowing more about Play there is an *excellent* book --- [Essential Play][link-essential-play].
+If you interested in learning Play Underscore has an *excellent* an  book---[Essential Play][link-essential-play].
 
 
 ### Play Slick Plugin
 
-Now, onto the bits we care about --- The Play Slick plugin!
+Now, on to the bits we care about---The Play Slick plugin!
 This is a library dependency added to our `build.sbt`:
 
 ~~~ scala
-  "com.typesafe.play"   %% "play-slick"           % "1.1.0"
+  "com.typesafe.play" %% "play-slick" % "1.1.0"
 ~~~
 
 <div class="callout callout-info">
 **Plugin Version**
 
-The [Github project][link-play-slick-github] provides a handy table to determine which version of the plugin is appropriate for your project. For Essential Slick, we are using the latest available version of the plugin --- `1.1.0`.
+The [project][link-play-slick-github] provides a handy table to determine which version of the plugin is appropriate for your project. For Essential Slick, we are using the latest available version of the plugin `1.1.0`.
 </div>
 
 
 ## Configuration
 
-We need to make a few changes to the our `application.conf`, which originally looked like:
+We need to make a few changes to the `application.conf`, which originally looked like:
 
 ``` json
 chapter05 = {
@@ -73,8 +72,7 @@ chapter05 = {
 }
 ```
 
-Play Slick expects Slick datasources to be located under `slick.dbs` nodes.
-By convention Play Slick expects the database to lablled `default`.
+Play Slick expects Slick datasources to be located under `slick.dbs` with the database to labeled `default`.
 This can be changed, see [Database configuration][link-play-slick-dbconfig] for more information on how to override this.
 
 ``` json
@@ -93,7 +91,7 @@ slick {
 
 It is worth noting we needed to declare both the JDBC and Slick drivers.
 
-###Scala changes
+###Scala Changes
 
 Let's review our schema implementation:
 
@@ -108,19 +106,20 @@ Let's review our schema implementation:
 
     import profile.api._
 
-....
+    ...
   }
   case class Schema(val profile: JdbcProfile) extends Tables with Profile
 ```
 
-We have defined a `trait` to hold our slick profile and mixed this into our `Tables` definitions as a self type --- giving us access to the contents of the  profile.
+We have defined a trait to hold our Slick profile and mixed this into our `Tables` definitions as a self type---giving us access to the contents of the  profile.
 We bring the `Profile` and `Tables` traits together in our `Schema` case class which provides a concrete implementation of the profile.
-This is sometimes known as the cake pattern ---  less a bakery of doom and more a boulangerie of tastiness, at least in our case.
+This is sometimes known as the cake pattern---less a bakery of doom and more a boulangerie of tastiness, at least in our case.
 <!-- Feel free to remove the last sentence, it tickled me at the time. -->
 
 
-Using Play Slick we will replace how we signal the expectation the `Tables` trait needs a Slick Profile, using the Play Slick trait `HasDatabaseConfig`.
-We'll also need to update our import, we can see both below:
+Using Play Slick we will replace how we signal the expectation the `Tables` trait needs a Slick Profile,
+using the Play Slick trait `HasDatabaseConfig`.
+We'll also need to update our import. We can see both below:
 
 ``` scala
   trait Tables {
@@ -130,7 +129,7 @@ We'll also need to update our import, we can see both below:
 ```
 
 `HasDatabaseConfig` is doing a little more than our `Profile` case class,
-it provides access to our database via `db` as well as the Slick profile via `driver`.
+provides access to our database via `db` as well as the Slick profile via `driver`.
 
 Our next change, is a little larger, but is mostly content shuffling.
 The recipe for our cake has changed a little,
@@ -138,7 +137,7 @@ our `Schema` is no longer a case class, but a case object.
 This is because we are no longer passing in a Profile,
 but rather mixing in the `HasDatabaseConfig` trait.
 We are also providing a way to get a concrete implemenation of `DatabaseConfig`,
-using  `DatabaseConfigProvider`!
+using  `DatabaseConfigProvider`.
 
 ``` scala
   case object Schema extends HasDatabaseConfig[JdbcProfile] with Tables {
@@ -150,11 +149,11 @@ using  `DatabaseConfigProvider`!
 ```
 
 What is happening in the above snippet?
-We have provide `HasDatabaseConfig` with a profile, by overriding the value `dbConfig`.
+We have provided `HasDatabaseConfig` with a profile, by overriding the value `dbConfig`.
 `DatabaseConfigProvider` is used to retrieve a DatabaseConfig based on `application.conf`.
 
 <div>
-**DatabaseConfigProvider**
+### DatabaseConfigProvider
 
 `Play.current` - is an implicit parameter, and therefore doesn't need to be supplied.
 It does however help us grok where our database configuration from.
@@ -162,7 +161,7 @@ It does however help us grok where our database configuration from.
 `current` the current `Application` instance - meta information about the currently running application,
 including configuration - `application.conf`.
 
-<!-- **TODO:Jesus, wept taht was long winded.**-->
+
 </div>
 
 Finally, we need to provide access to runnable versions of our database queries in our `Schema` case object.
@@ -172,9 +171,9 @@ Finally, we need to provide access to runnable versions of our database queries 
     def msgs        = db.run(namedMessages.result)
 ~~~
 
-With this all in place, we can start using slick in our play application!
+With this all in place, we can start using Slick in our Play application!
 
-** Note **
+**Note**
 
 Our `Profile` trait and `Tables` self type are no longer needed and can be removed.
 
