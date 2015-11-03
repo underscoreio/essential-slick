@@ -890,7 +890,7 @@ class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
 lazy val occupants = TableQuery[OccupantTable]
 ~~~
 
-We can define composite primary keys using tuples of `HLists` of columns
+We can define composite primary keys using tuples of `HList`s of columns
 (Slick generates a `ProvenShape` and inspects it to find the list of columns involved).
 The SQL generated for the `occupant` table is:
 
