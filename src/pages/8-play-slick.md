@@ -1,4 +1,4 @@
-# Play Framework Intergration
+# Play Framework Integration
 
 You'll probably want to provide a way for people to interact with your lovely schema at some point---possibly via the internet!
 The [Play Framework][link-play] is a popular tool for developing just such an interface.
@@ -27,7 +27,7 @@ From there start SBT and at the SBT `>` prompt run:
 ~run
 ~~~
 
-You can then navigate to `http://localhost:9000/`, the tidle means any changes you will be automagically recompiled and you can refresh your browser and see the effect.
+You can then navigate to `http://localhost:9000/`.  The tilde symbol means any changes you make will be automagically recompiled and you can refresh your browser and see the effect.
 </div>
 
 
@@ -147,7 +147,7 @@ The recipe for our cake has changed a little,
 our `Schema` is no longer a case class, but a case object.
 This is because we are no longer passing in a Profile,
 but rather mixing in the `HasDatabaseConfig` trait.
-We are also providing a way to get a concrete implemenation of `DatabaseConfig`,
+We are also providing a way to get a concrete implementation of `DatabaseConfig`,
 using  `DatabaseConfigProvider`.
 
 ``` scala
@@ -189,7 +189,7 @@ Our `Profile` trait and the `Tables` self type are no longer needed and can be r
 
 ### Calling Slick
 
-Let's populate the schema as we have done throughout the book with the standard converstation.
+Let's populate the schema as we have done throughout the book with the standard conversation.
 
 ``` scala
 object Global extends GlobalSettings {
