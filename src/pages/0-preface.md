@@ -2,11 +2,12 @@
 
 [Slick][link-slick] is a Scala library for working with relational databases.
 That means it allows you to model a schema, run queries, insert data, and update data.
+
 You write queries in Scala and they are type checked by the compiler.
-Slick makes working with a database like working with regular Scala collections.
+This makes working with a database like working with regular Scala collections.
 
 We've seen that developers using Slick for the first time often need help getting the most from it.
-For example, key concepts that need to be known about include:
+For example, key concepts that need to be known include:
 
 - _queries_: which compose using combinators such as `map`, `flatMap`, and `filter`;
 
@@ -15,7 +16,6 @@ For example, key concepts that need to be known about include:
 - _futures_: which are the result of actions, and also support a set of combinators.
 
 We've produced _Essential Slick_ as a guide for those who want to get started using Slick.
-
 This material is aimed at beginner-to-intermediate Scala developers. You need:
 
 * a working knowledge of Scala
@@ -29,7 +29,7 @@ The material presented focuses on Slick version 3. Examples use [H2][link-h2-hom
 
 ## Notes on the Early Access Edition {-}
 
-This book is in early access status. The content is incomplete, and may contain typos and errata.
+This book is in early access status. The content is complete, by may contain typos and errata.
 
 As a early access customer you will receive a free copy of the final text when it is released, plus free
 lifetime updates thereafter.
@@ -48,7 +48,6 @@ You can follow us on Twitter as [\@underscoreio][link-twitter-underscore].
 ## Acknowledgements {-}
 
 Many thanks to [Dave Gurnell][link-twitter-dave], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
-
 
 ## Conventions Used in This Book {-}
 

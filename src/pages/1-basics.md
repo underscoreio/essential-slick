@@ -14,8 +14,9 @@ This book provides a compact, no-nonsense guide to everything you need to know t
  - Chapter 2 covers basic select queries, introducing Slick's query language and delving into some of the details of type inference and type checking.
  - Chapter 3 covers queries for inserting, updating, and deleting data.
  - Chapter 4 discusses data modelling, including defining custom column and table types.
- - Chapter 5 explores advanced select queries, including joins and aggregates.
- - Chapter 6 provides a brief overview of _Plain SQL_ queries---a useful tool when you need fine control over the SQL sent to your database.
+ - Chapter 5 looks at actions and how you combine multiple actions together.
+ - Chapter 6 explores advanced select queries, including joins and aggregates.
+ - Chapter 7 provides a brief overview of _Plain SQL_ queries---a useful tool when you need fine control over the SQL sent to your database.
 
 <div class="callout callout-info">
 **Slick isn't an ORM**
@@ -45,6 +46,7 @@ chapter-03
 chapter-04
 chapter-05
 chapter-06
+chapter-07
 ~~~
 
 Each chapter of the book is associated with a separate sbt project that provides a combination of examples and exercises. We've bundled everything you need to run sbt in the directory for each chapter.
@@ -110,12 +112,12 @@ Before diving into Scala code, let's look at the sbt configuration. You'll find 
 ~~~ scala
 name := "essential-slick-chapter-01"
 
-version := "3.0"
+version := "1.0.0"
 
 scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "3.0.0",
+  "com.typesafe.slick" %% "slick"           % "3.1.0",
   "com.h2database"      % "h2"              % "1.4.185",
   "ch.qos.logback"      % "logback-classic" % "1.1.2"
 )
@@ -145,9 +147,9 @@ Our first job is to tell Slick what tables we have in our database and how to ma
 
 ~~~ scala
 final case class Message(
-  sender: String,
+  sender:  String,
   content: String,
-  id: Long = 0L)
+  id:      Long = 0L)
 ~~~
 
 We also define a helper method to create a few test `Messages` for demonstration purposes:
@@ -184,7 +186,8 @@ via the standard `tupled` and `unapply` methods generated as part of the case cl
 We'll cover projections and default projections in detail in [Chapter 5](#Modelling).
 For now, all we need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
 
-The `tag` is an implementation detail that allows Slick to manage multiple uses of the table in a single query. Think of it like a table alias in SQL. We don't need to provide tags in our user code---Slick takes case of them automatically.
+The `tag` on the first line is an implementation detail that allows Slick to manage multiple uses of the table in a single query.
+Think of it like a table alias in SQL. We don't need to provide tags in our user code---Slick takes case of them automatically.
 
 ### Example Queries
 
@@ -211,7 +214,7 @@ If you're a fan of terminology, know that what we have discussed so far is calle
  - define `Table` objects representing mappings between our data types and the database;
  - define `TableQueries` and combinators to build useful queries before we run them against the database.
 
-Lifted embedding is the standard way to work with Slick. We will discuss the other approach, called *Plain SQL querying*, in [Chapter 6](#PlainSQL).
+Lifted embedding is the standard way to work with Slick. We will discuss the other approach, called *Plain SQL querying*, in [Chapter 7](#PlainSQL).
  </div>
 
 
@@ -229,22 +232,28 @@ This file is found in `src/main/resources`. It looks like this:
 
 ~~~ conf
 chapter01 = {
-  connectionPool = disabled
-  url    = "jdbc:h2:mem:chapter01"
   driver = "org.h2.Driver"
+  url    = "jdbc:h2:mem:chapter01"
   keepAliveConnection = true
+  connectionPool = disabled
 }
 ~~~
 
 This syntax comes from the [Typesafe Config][link-config] library, which is also used by Akka and the Play framework.
 
-The parameters we're providing are intended to configure the underlying JDBC layer. The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url], and the `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS. In this case we're creating an in-memory database called `"chapter01"`.
+The parameters we're providing are intended to configure the underlying JDBC layer.
+The `driver` parameter is the fully qualified class name of the JDBC driver for our chosen DBMS.
 
-By default the H2 in-memory database is deleted when the last connection is closed. As we will be running multiple connections in our examples, we enable `keepAliveConnection` to keep the data around until our program completes.
+The `url` parameter is the standard [JDBC connection URL][link-jdbc-connection-url],
+and in this case we're creating an in-memory database called `"chapter01"`.
+
+By default the H2 in-memory database is deleted when the last connection is closed.
+As we will be running multiple connections in our examples,
+we enable `keepAliveConnection` to keep the data around until our program completes.
 
 Slick manages database connections and transactions using auto-commit.
-We'll see how to manually manage starting, committing, and rolling back transactions in [Chapter 3](#Modifying).
-
+We'll look at transactions in [Chapter 4](#combining).
+,
 <div class="callout callout-info">
 **JDBC**
 
@@ -284,18 +293,15 @@ val action: DBIO[Unit] = messages.schema.create
 
 The result of this `messages.schema.create` expression is a `DBIO[Unit]`. This is an object representing a DB action that, when run, completes with a result of type `Unit`. Anything we run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally). This includes queries, updates, schema alterations, and so on.
 
-
 <div class="callout callout-info">
 **DBIO and DBIOAction**
 
-In this chapter we will talk about actions as having the type `DBIO[T]`.
+In this book we will talk about actions as having the type `DBIO[T]`.
 
 This is a simplification. The more general type is `DBIOAction`, and specifically for this example, it is a `DBIOAction[Unit, NoStream, Effect.Schema]`. The details of all of this we will get to later in the book.
 
 But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 </div>
-
-What's important to know is that anything you can run against a database is a `DBIO[T]` (or a `DBIOAction`, more generally): a query, an update, you name it, they are all examples of a Database I/O Action.
 
 Let's run this action:
 
@@ -305,7 +311,7 @@ val future: Future[Unit] = db.run(action)
 
 The result of `run` is a `Future[T]`, where `T` is the type of result returned by the database. Creating a schema is a side-effecting operation so the result type is `Future[Unit]`. This matches the type `DBIO[Unit]` of the action we started with.
 
-`Future`s are asynchronous. That's to say, they are place holders for values that will eventually appear. We say that a future _completes_ at some point. In production code, `Future`s allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can simply block until our action completes:
+`Future`s are asynchronous. That's to say, they are place holders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can simply block until our action completes:
 
 ~~~ scala
 val result = Await.result(future, 2 seconds)
@@ -349,14 +355,14 @@ val messagesResults = Await.result(messagesFuture, 2 seconds)
 We can see the SQL issued to H2 using the `statements` method on the action:
 
 ~~~ scala
-messages.result.statements
+messages.result.statements.mkString
 // res2: String = select x2."sender", x2."content", x2."id" from "message" x2
 ~~~
 
 <div class="callout callout-info">
-**The `exec` helper method**
+**The `exec` Helper Method**
 
-In our application code, we should avoid blocking on `Future`s whenever possible.
+In our applications we should avoid blocking on `Future`s whenever possible.
 However, in the examples in this book we'll be making heavy use of `Await.result`.
 We will introduce a simple helper method called `exec` to reduce typing
 and make the examples easier to read:
@@ -464,7 +470,7 @@ val actions =
 ~~~
 
 One important reason for composing queries and actions is to wrap them inside a transaction.
-In [Chapter 3](#Modifying) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
+In [Chapter 4](#combining) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
 
 <div class="callout callout-danger">
 *Queries, Actions, Futures... Oh My!*
@@ -473,7 +479,7 @@ The difference between queries, actions, and futures is the biggest point of con
 
  - `Query` is used to build SQL for a single query. Calls to `map` and `filter` modify clauses to the SQL, but only one query is created.
 
- - `DBIOAction` is used to build sequences of SQL queries. Calls to `map` and `filter` chain queries together and transform their results once they are retrieved in the JVM. `DBIOAction` is also used to delineate transactions.
+ - `DBIOAction` is used to build sequences of SQL queries. Calls to `map` and `filter` chain queries together and transform their results once they are retrieved in the database. `DBIOAction` is also used to delineate transactions.
 
  - `Future` is used to transform the asynchronous result of running a `DBIOAction`. Transformations on `Future`s happen after we have finished speaking to the database.
 
