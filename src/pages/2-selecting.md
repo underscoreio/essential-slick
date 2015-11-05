@@ -4,7 +4,9 @@ The last chapter provided a shallow end-to-end overview of Slick. We saw how to 
 
 This chapter covers *selecting* data using Slick's rich type-safe Scala reflection of SQL. [Chapter 3](#Modifying) covers *modifying* data by inserting, updating, and deleting records.
 
-Select queries are our main means of retrieving data. In this chapter we'll limit ourselves to simple select queries that operate on a single table. In [Chapter 5](#joins) we'll look at more complex queries involving joins, aggregates, and grouping clauses.
+Select queries are our main means of retrieving data.
+In this chapter we'll limit ourselves to simple select queries that operate on a single table.
+In [Chapter 6](#joins) we'll look at more complex queries involving joins, aggregates, and grouping clauses.
 
 ## Select All The Rows!
 
@@ -272,7 +274,7 @@ messages.map(t => t.id * 1000L).result.statements
 **Query's *flatMap* method**
 
 `Query` also has a `flatMap` method with similar monadic semantics to that of `Option` or `Future`.
-`flatMap` is mostly used for joins, so we'll cover it in [Chapter 5](#joins).
+`flatMap` is mostly used for joins, so we'll cover it in [Chapter 6](#joins).
 </div>
 
 ### *exists*
@@ -311,7 +313,7 @@ We will see a more useful example in [Chapter 3](#moreControlOverInserts).
 
 We can even map sets of columns to Scala data structures using the
 projection operator, `<>`. Don't worry about this too much now---we'll
-cover `<>` in detail in [Chapter 4](#Modelling):
+cover `<>` in detail in [Chapter 5](#Modelling):
 
 ~~~ scala
 case class TextOnly(id: Long, content: String)
@@ -597,7 +599,8 @@ Scala Code              Operand Column Types               Result Type        SQ
 
 ### Option Methods and Type Equivalence {#type_equivalence}
 
-Slick models nullable columns in SQL as `Rep`s with `Option` types.  We'll discuss this in some depth in [Chapter 4](#Modelling).
+Slick models nullable columns in SQL as `Rep`s with `Option` types.
+We'll discuss this in some depth in [Chapter 5](#Modelling).
 However, as a preview, know that if we have a nullable column in our database, we declare it as optional in our `Table`:
 
 ~~~ scala
@@ -751,7 +754,7 @@ from "user" x2
 order by x2."name" nulls first
 ~~~
 
-We cover nullable columns in [Chapter 4](#Modelling) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
+We cover nullable columns in [Chapter 5](#Modelling) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-04_.
 </div>
 
 

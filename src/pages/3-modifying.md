@@ -212,7 +212,8 @@ exec(messages.map(_.sender) += "HAL")
 //   at ...
 ~~~
 
-The query fails at runtime because the `sender` column is non-nullable in our schema. No matter. We'll cover nullable columns when discussing schemas in [Chapter 4](#Modelling).
+The query fails at runtime because the `sender` column is non-nullable in our schema.
+No matter. We'll cover nullable columns when discussing schemas in [Chapter 5](#Modelling).
 
 
 ### Inserting Multiple Rows
@@ -337,7 +338,7 @@ The second time, no rows are affected.
 
 In summary, `forceInsertQuery` provides a way to build-up more complicated inserts.
 If you find situations beyond the power of this method,
-you can always make use of Plain SQL inserts, described in [Chapter 6](#PlainSQL).
+you can always make use of Plain SQL inserts, described in [Chapter 7](#PlainSQL).
 
 
 ## Deleting Rows
@@ -498,7 +499,9 @@ Let's now turn to more interesting updates. How about converting every message t
 update "message" set "content" = CONCAT("content", '!')
 ~~~
 
-This is not currently supported by `update` in Slick, but there are ways to achieve the same result. One such way is to use Plain SQL queries, which we cover in [Chapter 6](#PlainSQL). Another is to perform a *client-side update* by defining a Scala function to capture the change to each row:
+This is not currently supported by `update` in Slick, but there are ways to achieve the same result.
+One such way is to use Plain SQL queries, which we cover in [Chapter 7](#PlainSQL).
+Another is to perform a *client-side update* by defining a Scala function to capture the change to each row:
 
 ~~~ scala
 def exclaim(msg: Message): Message =
@@ -528,7 +531,7 @@ There is also no support for transactions if we `db.run` each action separately.
 
 A better approach is to turn our logic into a single `DBIO` action. This, together with transactions, is the topic of the next chapter.
 
-However, for this particular example, we recommend using Plain SQL ([Chapter 6](#PlainSQL)) instead of client-side updates.
+However, for this particular example, we recommend using Plain SQL ([Chapter 7](#PlainSQL)) instead of client-side updates.
 
 
 ## Logging Queries and Results

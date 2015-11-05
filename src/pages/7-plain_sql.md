@@ -126,7 +126,8 @@ You'll find the example queries for this section in the file `select.sql` inside
 </div>
 
 
-Recall that a message contains: an ID, some content, the sender ID, a timestamp, an optional room ID, and an optional recipient for private messages.  We'll model this as we did in [Chapter 4](#value-classes), by wrapping the `Long` primary keys in the type `Id[Table]`.
+Recall that a message contains: an ID, some content, the sender ID, a timestamp, an optional room ID, and an optional recipient for private messages.
+We'll model this as we did in [Chapter 5](#value-classes), by wrapping the `Long` primary keys in the type `Id[Table]`.
 
 This gives us:
 
@@ -199,7 +200,9 @@ An example: if, outside of Slick, a table is modified to add a column, the resul
 
 ## Updates
 
-Back in [Chapter 4](#UpdatingRows) we saw how to modify rows with the `update` method. We noted that batch updates were challenging when we wanted to use the row's current value. The example we used was appending an exclamation mark to a message's content:
+Back in [Chapter 3](#UpdatingRows) we saw how to modify rows with the `update` method.
+We noted that batch updates were challenging when we wanted to use the row's current value.
+The example we used was appending an exclamation mark to a message's content:
 
 ``` sql
 UPDATE "message" SET "content" = CONCAT("content", '!')
