@@ -13,14 +13,14 @@ pages:
   - src/pages/1-basics.md
   - src/pages/2-selecting.md
   - src/pages/3-modifying.md
-  - src/pages/3.5-combining-actions.md
-  - src/pages/4-data_modelling.md
-  - src/pages/5-joins.md
-  - src/pages/6-plain_sql.md
+  - src/pages/4-combining-actions.md
+  - src/pages/5-data_modelling.md
+  - src/pages/6-joins.md
+  - src/pages/7-plain_sql.md
   - src/pages/links.md
   - src/pages/start-of-appendix.md
-  - src/pages/7-databases.md
-  - src/pages/8-play-slick.md
+  - src/pages/8-databases.md
+  - src/pages/9-play-slick.md
   - src/pages/solutions.md
 previewPages:
   - src/pages/0-preface.md

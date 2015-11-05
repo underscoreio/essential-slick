@@ -137,7 +137,7 @@ Database management systems are not created equal. Different systems support dif
 import slick.driver.H2Driver.api._
 ~~~
 
-Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 4](#Modelling) looks how you can keep a specific database driver out of your code until necessary.
+Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 5](#Modelling) looks how you can keep a specific database driver out of your code until necessary.
 
 ### Defining our Schema
 
@@ -178,7 +178,11 @@ final class MessageTable(tag: Tag)
 
 `MessageTable` defines three `column`s: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
 
-The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`, via the standard `tupled` and `unapply` methods generated as part of the case class. We'll cover projections and default projections in detail in [Chapter 4](#Modelling). For now, all we need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
+The `*` method provides a *default projection* that maps between columns in the table and instances of our case class.
+Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`,
+via the standard `tupled` and `unapply` methods generated as part of the case class.
+We'll cover projections and default projections in detail in [Chapter 5](#Modelling).
+For now, all we need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
 
 The `tag` is an implementation detail that allows Slick to manage multiple uses of the table in a single query. Think of it like a table alias in SQL. We don't need to provide tags in our user code---Slick takes case of them automatically.
 
@@ -459,7 +463,8 @@ val actions =
   halSays.result
 ~~~
 
-One important reason for composing queries and actions is to wrap them inside a transaction. In [Chapter 3](#Modifying) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
+One important reason for composing queries and actions is to wrap them inside a transaction.
+In [Chapter 3](#Modifying) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
 
 <div class="callout callout-danger">
 *Queries, Actions, Futures... Oh My!*
