@@ -437,7 +437,7 @@ The action returns a tuple representing the results of both queries.
 
 The two methods `cleanUp` and `andFinally` act a little like Scala's `catch` and `finally`.
 
-`cleanUp` runs after an action completes, and has access to any error information (if any) as an `Option[Throwable]`:
+`cleanUp` runs after an action completes, and has access to any error information as an `Option[Throwable]`:
 
 ~~~ scala
 // Let's record problems we encounter:
@@ -501,10 +501,12 @@ exec(messages.size.result.asTry)
 
 With actions combined together, it's useful to see the queries that are being executed.
 
-We've seen how to retrieve the SQL of a query using the `insertStatement`, `delete.statements`, and similar methods.
-These are useful for experimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
+We've seen how to retrieve the SQL of a query using `insertStatement` and similar methods on a query,
+or the `statements` method on an action.
+These are useful for experimenting with Slick, but sometimes we want to see all the queries *when Slick executes them*.
+We can do that by configuring logging.
 
-Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
+Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The `build.sbt` files in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
 
 ~~~ xml
 <logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
@@ -524,7 +526,7 @@ Logger                                 Effect
 -------------------------------------  ----------------------------------------------------------
 `slick.jdbc.JdbcBackend.statement`     Logs SQL sent to the database as described above.
 
-`slick.jdbc.StatementInvoker.result`   Logs the results of each query.
+`slick.jdbc.StatementInvoker.result`   Logs the first few results of each query.
 
 `slick.session`                        Logs session events such as opening/closing connections.
 
@@ -536,12 +538,12 @@ Logger                                 Effect
 The `StatementInvoker.result` logger, in particular, is pretty cute:
 
 ~~~
-SI.result - /--------+----------------------+----------------------+----\
-SI.result - | sender | content              | ts                   | id |
-SI.result - +--------+----------------------+----------------------+----+
-SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
-SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
-SI.result - \--------+----------------------+----------------------+----/
+SI.result - /--------+----------------------+----\
+SI.result - | sender | content              | id |
+SI.result - +--------+----------------------+----+
+SI.result - | HAL    | Affirmative, Dave... | 2  |
+SI.result - | HAL    | I'm sorry, Dave. ... | 4  |
+SI.result - \--------+----------------------+----/
 ~~~
 
 
@@ -549,11 +551,11 @@ SI.result - \--------+----------------------+----------------------+----/
 
 ## Transactions
 
-So far, each of the changes we've made to the database have run independently of the others. That is, each insert, update, or delete query, we run can succeed or fail independently of the rest.
+So far each of the changes we've made to the database have run independently of the others. That is, each insert, update, or delete query we run can succeed or fail independently of the rest.
 
 We often want to tie sets of modifications together in a *transaction* so that they either *all* succeed or *all* fail. We can do this in Slick using the `transactionally` method.
 
-As an example, we can re-write the story. We want to make sure the script changes all complete or nothing changes:
+As an example, let's re-write the script. We want to make sure the script changes all complete or nothing changes:
 
 ~~~ scala
 def updateContent(id: Long) =
@@ -591,7 +593,7 @@ exec(willRollback.asTry)
 ~~~
 
 The result of running `willRollback` is that the database won't have changed.
-Inside of transactional block, you would see the inserts until `DBIO.failed` is called.
+Inside of transactional block you would see the inserts until `DBIO.failed` is called.
 
 If we removed the `.transactionally` that is wrapping our combined actions, the first two inserts would succeed,
 even though the combined action failed.
@@ -613,6 +615,12 @@ Finally, we saw that actions that are combined together can also be run inside a
 
 Create a method that will insert a message, but if it is the first message in the database,
 automatically insert the message "First!" before it.
+
+Your method signature should be:
+
+~~~ scala
+def insert(m: Message): DBIO[Int]
+~~~
 
 Use your knowledge of the `flatMap` action combinator to achieve this.
 
@@ -684,7 +692,7 @@ We have an example usage from the ship's marketing department.
 They are happy to report the number of chat messages, but only if that number is at least 100:
 
 ~~~ scala
-exec(
+var marketingCount = exec(
   myFilter(messages.size.result)( _ > 100)(100)
 )
 ~~~
