@@ -16,7 +16,7 @@ To do this, we'll expand the chat application schema to support more than just m
 
 So far, all of our examples have been written in a single Scala file.
 This approach obviously doesn't scale to larger application codebases.
-In this section we'll explain how to split up application code into testable modules.
+In this section we'll explain how to split up application code into modules.
 
 Until now we've also been exclusively using Slick's H2 driver.
 When writing real applications we often need to be able to
@@ -24,7 +24,7 @@ switch drivers in different circumstances.
 For example, we may use PostgreSQL in production and H2 in our unit tests.
 
 An example of this pattern can be found in the [example project][link-example],
-folder _chapter-04_, file _structure.scala_.
+folder _chapter-05_, file _structure.scala_.
 
 ### Abstracting over Databases
 
@@ -37,7 +37,7 @@ import slick.driver.H2Driver.api._
 
 We now have to write an import that works with a variety of drivers.
 Fortunately, Slick provides a common supertype for the drivers
-for the most popular databases -- a trait called `JdbcProfile`:
+for the most popular databases---a trait called `JdbcProfile`:
 
 ~~~ scala
 import slick.driver.JdbcProfile
@@ -56,7 +56,7 @@ Instead, we have to *inject a dependency* of type `JdbcProfile` into our applica
 and import from that. The basic pattern we'll use is as follows:
 
 * isolate our database code into a trait (or a few traits);
-* declare the Slick profile as an abstract `val` and import from that;
+* declare the Slick profile as an abstract `val` and import from that; and
 * extend our database trait to make the profile concrete.
 
 Here's the simplest form of this pattern:
@@ -81,8 +81,8 @@ object Main extends App {
 ~~~
 
 In this pattern, we declare our profile using an abstract `val`.
-Surprisingly, this is enough to allow us to write `import profile.api._`---the
-compiler knows that the `val` is *going to be* an immutable `JdbcProfile`
+Surprisingly, this is enough to allow us to write `import profile.api._`.
+The compiler knows that the `val` is *going to be* an immutable `JdbcProfile`
 even if we haven't yet said which one.
 When we instantiate the `DatabaseModule` we bind `profile` to our profile of choice.
 
@@ -132,6 +132,8 @@ when we instantiate the database code:
 ~~~ scala
 val anotherDatabaseLayer = new DatabaseLayer(slick.driver.PostgresDriver)
 ~~~
+
+This basic pattern is reasonable way of structuring your application.
 
 <!--
 ### Additional Considerations
@@ -209,8 +211,8 @@ There is clearly some magic here---Slick is using implicit conversions
 to build a `ProvenShape` object from the columns we provided.
 
 If the above is magic, the internal workings of `ProvenShape` are sorcery
-and are certainly beyond the scope of this book,
-suffice to say that Slick can use any Scala type as a projection
+and are certainly beyond the scope of this book.
+Suffice to say that Slick can use any Scala type as a projection
 provided it can generate a compatible `ProvenShape`.
 If we look at the rules for `ProvenShape` generation,
 we will get an idea about what data types we can map.
@@ -254,14 +256,15 @@ and Slick builds the resulting shape:
 
 The projection operator `<>` is the secret ingredient that
 allows us to map a wide variety of types.
-As long as we can convert a tuple of columns to/from some type `B`,
+As long as we can convert a tuple of columns to and from some type `B`,
 we can store instances of `B` in a database.
+
 The two arguments to `<>` are:
 
 * a function from `A => B`, which converts
   from the existing shape's unpacked row-level encoding `(String, Long)`
   to our preferred representation (`User`);
-* a function from `R => Option[U]`, which converts the other way.
+* a function from `B => Option[A]`, which converts the other way.
 
 We can supply these functions by hand if we want:
 
@@ -292,7 +295,7 @@ But which should we use? In one sense there is little difference
 between case classes and tuples---both represent fixed sets of values.
 However, case classes differ from tuples in two important respects:
 
-1. case classes have field names, which improves code readability:
+1. Case classes have field names, which improves code readability:
 
     ~~~ scala
     val user = User("Dave", 0L)
@@ -302,7 +305,7 @@ However, case classes differ from tuples in two important respects:
     tuple._1 // tuple field access
     ~~~
 
-2. case classes have types that distinguish them
+2. Case classes have types that distinguish them
    from other case classes with the same field types:
 
     ~~~ scala
@@ -404,7 +407,7 @@ val longerHList: Int :: String :: Boolean :: HNil =
   123 :: "abc" :: true :: HNil
 ~~~
 
-`HList`s are constructed recursively like `Lists`,
+`HList`s are constructed recursively like `List`s,
 allowing us to model arbitrarily large collections of values:
 
 - an empty `HList` is represented by the singleton object `HNil`;
@@ -439,7 +442,7 @@ type AttrHList =
   HNil
 
 final class AttrTable(tag: Tag) extends Table[AttrHList](tag, "attrs") {
-  // Column definitions...
+  // Column definitions omitted
 
   def * = id :: productId ::
           name1 :: value1 :: name2 :: value2 :: name3 :: value3 ::
@@ -593,7 +596,7 @@ case class Address(street: String, city: String, country: String)
 case class User(contact: EmailContact, address: Address, id: Long = 0L)
 ~~~
 
-You'll find a definition of `UserTable` that you can copy and paste in the example code in the folder _chapter-04_.
+You'll find a definition of `UserTable` that you can copy and paste in the example code in the folder _chapter-05_.
 
 <div class="solution">
 A suitable projection is:
@@ -643,7 +646,6 @@ Vector(dave@example.org)
 ~~~
 
 However, notice that if you used `users.schema.create`, only the columns defined in the default projection were created in the H2 database.
-
 </div>
 
 
@@ -683,17 +685,14 @@ lazy val insertUser = users returning users.map(_.id)
 We can insert users with or without an email address:
 
 ~~~ scala
-val daveId: Long = insertUser += User("Dave", Some("dave@example.org"))
-val halId:  Long = insertUser += User("HAL")
+users += User("Dave", Some("dave@example.org"))
+users += User("HAL")
 ~~~
 
 and retrieve them again with a select query:
 
 ~~~ scala
-val myUsers = exec(users.filter { u =>
-  u.id === daveId ||
-  u.id === halId
-}.result)
+val myUsers = exec(users.result)
 // myUsers: Seq[User] = List(
 //   User(Dave,Some(dave@example.org),1),
 //   User(HAL,None,2))
@@ -726,22 +725,24 @@ SELECT * FROM "user" WHERE "email" = NULL
 
 The SQL expression `"email" = null` evaluates to `null` for any value of `"email"`.
 SQL's `null` is a falsey value, so this query never returns a value.
+
 To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`,
 which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Rep[Option[A]]`:
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
 ----------------------- ---------------------------------- ------------------ --------------------------
-`col1.?`                `A`                                `Option[A]`        `col1`
+`col.?`                `A`                                `Option[A]`        `col`
 
-`col1.isEmpty`          `Option[A]`                        `Boolean`          `col1 is null`
+`col.isEmpty`          `Option[A]`                        `Boolean`          `col is null`
 
-`col1.isDefined`        `Option[A]`                        `Boolean`          `col1 is not null`
+`col.isDefined`        `Option[A]`                        `Boolean`          `col is not null`
 
 --------------------------------------------------------------------------------------------------------
 
 : Optional column methods.
   Operand and result types should be interpreted as parameters to `Rep[_]`.
+  The `?` method is described in the next section.
 
 We can fix our query by replacing our equality check with `isEmpty`:
 
@@ -780,14 +781,14 @@ a case class that has a default ID of `0L`,
 knowing that Slick will skip the value in insert statements:
 
 ~~~ scala
-case class User(name: String, email: Option[String] = None, id: Long = 0L)
+case class User(name: String, id: Long = 0L)
 ~~~
 
 While the authors like the simplicity of this style,
 some developers prefer to wrap primary key values in `Options`:
 
 ~~~ scala
-case class User(name: String, email: Option[String] = None, id: Option[Long] = None)
+case class User(name: String, id: Option[Long] = None)
 ~~~
 
 In this model we use `None` as the primary key of an unsaved record
@@ -801,12 +802,11 @@ Let's look at the changes we need to make to our `UserTable`
 to make this work:
 
 ~~~ scala
-case class User(id: Option[Long], name: String, email: Option[String] = None)
+case class User(id: Option[Long], name: String)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name  = column[String]("name")
-  def email = column[Option[String]]("email")
 
   def * = (id.?, name, email) <> (User.tupled, User.unapply)
 }
@@ -890,7 +890,7 @@ class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
 lazy val occupants = TableQuery[OccupantTable]
 ~~~
 
-We can define composite primary keys using tuples of `HList`s of columns
+We can define composite primary keys using tuples or `HList`s of columns
 (Slick generates a `ProvenShape` and inspects it to find the list of columns involved).
 The SQL generated for the `occupant` table is:
 
@@ -970,8 +970,8 @@ the `id` of its sender instead of their name:
 ~~~ scala
 case class Message(
   senderId: Long,
-  content: String,
-  id: Long = 0L)
+  content:  String,
+  id:       Long = 0L)
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -1099,7 +1099,7 @@ To pull data from across tables, use a query.
 
 
 <div class="callout callout-info">
-**Save your sanity with laziness**
+**Save Your Sanity With Laziness**
 
 Defining foreign keys places constraints
 on the order in which we have to define our database tables.
@@ -1154,9 +1154,9 @@ The following example introduces three new options:
 
 ~~~ scala
 case class User(
-  name: String,
+  name:   String,
   avatar: Option[Array[Byte]] = None,
-  id: Long = 0L)
+  id:     Long = 0L)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -1172,14 +1172,12 @@ In this example we've done three things:
 
 1. We've used `O.Length` to give the `name` column a maximum length.
    This modifies the type of the column in the DDL statement.
-
    The parameters to `O.Length` are an `Int` specifying the maximum length,
    and a `Boolean` indicating whether the length is variable.
-
    Setting the `Boolean` to `true` sets the SQL column type to `VARCHAR`;
    setting it to `false` sets the type to `CHAR`.
 
-2. We've used `O.Default` to give the `name` column a default value;
+2. We've used `O.Default` to give the `name` column a default value.
    This adds a `DEFAULT` clause to the column definition in the DDL statement.
 
 3. We've used `O.DBType` to control the exact type used by the database.
@@ -1206,6 +1204,8 @@ Assume we only have two user records: one with an email address of "dave@example
 
 We want `filterByEmail(Some("dave@example.org")).run` to produce one row,
 and `filterByEmail(None).run` to produce two rows.
+
+Tip: you don't need to find a single query to do this.
 
 <div class="solution">
 We can decide on the query to run in the two cases from inside our application:
@@ -1241,7 +1241,7 @@ def filterByEmail(email: Option[String]) =
 
 #### Matching or Undecided
 
-Not everyone has an email address, so perhaps when filtering it would be safer to only exclude rows that don't match our filter criteria.
+Not everyone has an email address, so perhaps when filtering it would be safer to only exclude rows that don't match our filter criteria.  That is, keep `NULL` addresses in the results.
 
 Add Elena to the database...
 
@@ -1251,6 +1251,8 @@ insert += User("Elena", Some("elena@example.org"))
 
 ...and modify `filterByEmail` so when we search for `Some("elena@example.org")` we only
 exclude Dave, as he definitely doesn't match that address.
+
+This time you can do this in one query.
 
 <div class="solution">
 This problem we can represent in SQL, so we can do it with one query:
@@ -1364,7 +1366,7 @@ have been restricted to simple types such as
 
 Slick also lets us control how individual columns are mapped to Scala types.
 For example, perhaps we'd like to use
-[JodaTime][link-jodatime]'s `DateTime` class
+[Joda Time][link-jodatime]'s `DateTime` class
 for anything date and time related.
 Slick doesn't provide native support for Joda Time,
 but it's painless for us to implement it via Slick's
@@ -1397,10 +1399,10 @@ we are free to create columns containing `DateTimes`:
 
 ~~~ scala
 case class Message(
-  senderId: Long,
-  content: String,
+  senderId:  Long,
+  content:   String,
   timestamp: DateTime,
-  id: Long = 0L)
+  id:        Long = 0L)
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   import CustomColumnTypes._
@@ -1440,7 +1442,7 @@ val message = exec(messages.find(_.id === messageId).result.head)
 
 This model of working with semantic types is
 immediately appealing to Scala developers.
-The authors strongly encourage you to use `ColumnTypes` in your applications,
+We strongly encourage you to use `ColumnTypes` in your applications,
 to help reduce bugs and let Slick take care of cumbersome type conversions.
 
 
@@ -1448,7 +1450,7 @@ to help reduce bugs and let Slick take care of cumbersome type conversions.
 
 We are currently using `Long`s to model primary keys.
 Although this is a good choice at a database level,
-it's not great for out application code.
+it's not great for our application code.
 The problem is we can make silly mistakes:
 
 ~~~ scala
@@ -1467,23 +1469,8 @@ instead of the `senderId` field as would be correct.
 This code compiles, runs, and may even find a user
 if there happens to be one with the same ID as our message.
 However, it is clear that the code is incorrect.
-We can prevent these kinds of problems using types.
 
-<!--
-Before showing how, here's another downside of using `Long` as a primary key. You may find yourself writing small helper methods such as:
-
-~~~ scala
-def lookupByUserId(id: Long) = users.filter(_.id === id)
-~~~
-
-It would be much clearer to document this method using the types, rather than the method name:
-
-~~~ scala
-def lookup(id: UserPK) = users.filter(_.id === id)
-~~~
--->
-
-The essential approach is to model primary keys
+We can prevent these kinds of problems using types.The essential approach is to model primary keys
 using [value classes][link-scala-value-classes]:
 
 ~~~ scala
@@ -1493,9 +1480,11 @@ case class UserPK(value: Long) extends AnyVal
 
 A value class is a compile-time wrapper around a value.
 At run time, the wrapper goes away,
-leaving no allocation or performance overhead in our running code.
+leaving no allocation or performance overhead[^vcpoly] in our running code.
 
-We need to provide Slick with `ColumnTypes`
+[^vcpoly]: It's not totally cost free: there [are situations where a value will need allocation][link-scala-value-classes], such as when passed to a polymorphic method.
+
+To use a value class we need to provide Slick with `ColumnTypes`
 to use these types with our tables.
 This is the same process we used for Joda Time `DateTimes`:
 
@@ -1526,7 +1515,7 @@ When we use `MappedTo` we don't need to define a separate `ColumnType`.
  - has a single-parameter constructor to
    create the Scala value from the database value.
 
-Value classes are a great fit for this pattern.
+Value classes are a great fit for the `MappedTo` pattern.
 
 Let's redefine our tables to use our custom primary key types:
 
@@ -1540,17 +1529,15 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 }
 
 case class Message(
-  senderId: UserPK,
-  content: String,
-  timestamp: DateTime,
+  senderId:  UserPK,
+  content:   String,
   id: MessagePK = MessagePK(0L))
 
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id        = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
   def senderId  = column[UserPK]("sender")
   def content   = column[String]("content")
-  def timestamp = column[DateTime]("timestamp")
-  def * = (senderId, content, timestamp, id) <>
+  def * = (senderId, content, id) <>
     (Message.tupled, Message.unapply)
   def sender = foreignKey("sender_fk", senderId, users) ↩
     (_.id, onDelete=ForeignKeyAction.Cascade)
@@ -1558,8 +1545,8 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 ~~~
 
 Notice how we're able to be explicit:
-the user `id` and message `senderId` are `UserPKs`
-and the message `id` is a `MessagePK`.
+the `User.id` and `Message.senderId` are `UserPKs`
+and the `Message.id` is a `MessagePK`.
 Now, if we try our buggy query again,
 the compiler catches the problem:
 
@@ -1585,16 +1572,14 @@ or generalise our primary key type by making it generic:
 final case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
 
 case class User(
-  name: String,
-  email: Option[String] = None,
-  id: PK[UserTable])
+  name:  String,
+  id:    PK[UserTable])
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id    = column[PK[UserTable]]("id", O.AutoInc, O.PrimaryKey)
   def name  = column[String]("name")
-  def email = column[Option[String]]("email")
 
-  def * = (name, email, id) <> (User.tupled, User.unapply)
+  def * = (name, id) <> (User.tupled, User.unapply)
 }
 
 lazy val users = TableQuery[UserTable]
@@ -1636,7 +1621,6 @@ case object Spam extends Flag
 case class Message(
   senderId:  UserPK,
   content:   String,
-  timestamp: DateTime,
   flag:      Option[Flag] = None,
   id:        MessagePK = MessagePK(0L))
 ~~~
@@ -1676,9 +1660,8 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def senderId = column[UserPK]("sender")
   def content  = column[String]("content")
   def flag     = column[Option[Flag]]("flag")
-  def ts       = column[DateTime]("ts")
 
-  def * = (senderId, content, ts, flag, id) <> ↩
+  def * = (senderId, content, flag, id) <> ↩
     (Message.tupled, Message.unapply)
 
   def sender = foreignKey("sender_fk", senderId, users) ↩
@@ -1692,17 +1675,17 @@ We can insert a message with a flag easily:
 
 ~~~ scala
 messages +=
-  Message(halId, "Just kidding. LOL.", start plusSeconds 20, Some(Important))
+  Message(halId, "Just kidding. LOL.", Some(Important))
 ~~~
 
 We can also query for messages with a particular flag.
 However, we need to give the compiler a little help with the types:
 
 ~~~ scala
-messages.filter(_.flag === (Important : Flag)).run
+messages.filter(_.flag === (Important : Flag))
 ~~~
 
-The type annotation here is annoying.
+The _type annotation_ here is annoying.
 We can work around it easily in two ways:
 
 First, we can define a "smart constructor" method
@@ -1715,7 +1698,7 @@ object Flag {
   val spam: Flag = Spam
 }
 
-exec(messages.filter(_.flag === Flag.important).result)
+messages.filter(_.flag === Flag.important).result
 ~~~
 
 Second, we can define some custom syntax to
@@ -1728,7 +1711,7 @@ implicit class MessageQueryOps(message: MessageTable) {
   def isOffTopic  = message.filter === (OffTopic  : Flag)
 }
 
-exec(messages.filter(_.isImportant).result)
+messages.filter(_.isImportant).result
 ~~~
 
 ### Exercises
@@ -1814,7 +1797,6 @@ Go ahead and model this with a sum type.
 This is similar to the `Flag` example above,
 except we need to handle multiple values from the database.
 
-
 ~~~ scala
 sealed trait Priority
 case object HighPriority extends Priority
@@ -1831,9 +1813,7 @@ implicit val priorityType =
       case "N" | "n" | "-" | "lo"   | "low" => LowPriority
   })
 ~~~
-
 </div>
-
 
 
 ## Take Home Points
@@ -1884,9 +1864,8 @@ We model rows as flat case classes, ignoring joins with other tables.
 While this may seem inflexible at first,
 it more than pays for itself in terms of simplicity and transparency.
 Database queries are explicit and type-safe,
-and return values of convenient types
-without lots of glue code to perform ORM-like mappings.
+and return values of convenient types.
 
-In the next Chapter we will build on the foundations of
+In the next chapter we will build on the foundations of
 primary and foreign keys and look at writing more
 complex queries involving joins and aggregate functions.
