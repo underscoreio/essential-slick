@@ -518,6 +518,56 @@ exec(messages.size.result.asTry)
 ~~~
 
 
+## Logging Queries and Results
+
+With actions combined together, it's useful to see the queries that are being executed.
+
+We've seen how to retrieve the SQL of a query using the `insertStatement`, `delete.statements`, and similar methods.
+These are useful for experimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
+
+Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
+
+~~~ xml
+<logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
+~~~
+
+This causes Slick to log every query, even modifications to the schema:
+
+~~~
+DEBUG slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
+  delete from "message" where "message"."sender" = 'HAL'
+~~~
+
+We can change the level of various loggers, as shown in the table below:
+
+-------------------------------------------------------------------------------------------------------------------
+Logger                                 Effect
+-------------------------------------  ----------------------------------------------------------
+`slick.jdbc.JdbcBackend.statement`     Logs SQL sent to the database as described above.
+
+`slick.jdbc.StatementInvoker.result`   Logs the results of each query.
+
+`slick.session`                        Logs session events such as opening/closing connections.
+
+`slick`                                Logs everything! Equivalent to changing all of the above.
+-------------------------------------  ----------------------------------------------------------
+
+: Slick loggers and their effects.
+
+The `StatementInvoker.result` logger, in particular, is pretty cute:
+
+~~~
+SI.result - /--------+----------------------+----------------------+----\
+SI.result - | sender | content              | ts                   | id |
+SI.result - +--------+----------------------+----------------------+----+
+SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
+SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
+SI.result - \--------+----------------------+----------------------+----/
+~~~
+
+
+
+
 ## Transactions
 
 So far, each of the changes we've made to the database have run independently of the others. That is, each insert, update, or delete query, we run can succeed or fail independently of the rest.
@@ -574,8 +624,9 @@ This is a powerful way to sequence actions, and make actions depend on the resul
 
 Combining actions avoid having to deal with awaiting results or having to sequence `Future`s yourself.
 
-Actions that are combined together can also be run inside a transction.
+We saw that the SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
 
+Finally, we saw that actions that are combined together can also be run inside a transaction.
 
 ## Exercises
 
