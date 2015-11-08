@@ -110,40 +110,27 @@ This is rather like combining the actions with `andThen`, but even the last valu
 Mapping over an action is a way to set up a transformation of a value from the database.
 The transformation will run on the result of the action when it is returned by the database.
 
-As an example, we can create an action to return the text field from a message:
+As an example, we can create an action to return the content of a message, but reverse the text:
 
 ~~~ scala
 val text: DBIO[Option[String]] =
   messages.map(_.content).result.headOption
+
+val backwards: DBIO[Option[String]] =
+  text.map( optionalContent => optionalContent.map(_.reverse) )
+
+exec(backwards)
+// res1: Option[String] =  
+//  Option[String] = Some(?LAH ,em daer uoy oD .LAH ,olleH)
 ~~~
 
-We can now take this action and transform it so the text is obfuscated:
+Here we have created an action called `backwards` that, when run, ensures a function
+is applied to the result of the `text` action.
+In this case the function is to apply `reverse` to an optional `String`.
 
-~~~ scala
-import scala.concurrent.ExecutionContext.Implicits.global
+Note that we have made three uses of `map` in this example:
 
-// From: http://rosettacode.org/wiki/Rot-13#Scala
-def rot13(s: String) = s map {
-  case c if 'a' <= c.toLower && c.toLower <= 'm' => c + 13 toChar
-  case c if 'n' <= c.toLower && c.toLower <= 'z' => c - 13 toChar
-  case c => c
-}
-
-val action: DBIO[Option[String]] =
-  text map { optionText => optionText.map(rot13) }
-
-exec(action)
-// res1: Option[String] =
-//  Some(Uryyb, UNY. Qb lbh ernq zr, UNY?!)
-~~~
-
-Here we have created an action that, when run, ensures our `rot13` function
-is applied to the result.
-
-Note that we have made four uses of `map` in this example:
-
-- `String`'s `map` to obfuscate text in `rot13`;
-- an `Option` `map` to apply `rot13` to our `Option[String]` result;
+- an `Option` `map` to apply `reverse` to our `Option[String]` result;
 - a `map` on a query to select just the `content` column; and
 - `map` on our action so that the result will be transform when the action is run.
 
@@ -164,8 +151,9 @@ text.map(os => os.map(_.length))// res2: slick.dbio.DBIOAction[
 **Execution Context Required**
 
 Some methods require an execution context and some don't. For example, `map` does, but `andThen` does not.
+What gives?
 
-The reason for this is that `map` allows you to call arbitrary code when joining the actions together.
+The reason is that `map` allows you to call arbitrary code when joining the actions together.
 Slick cannot allow that code to be run on its own execution context,
 because it has no way to know if you are going to tie up Slicks threads for a long time.
 
