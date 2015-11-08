@@ -140,7 +140,8 @@ This example transformed an `Option[String]` to another `Option[String]`.
 As you may expect if `map` changes the type of a value, the type of `DBIO` changes too:
 
 ~~~ scala
-text.map(os => os.map(_.length))// res2: slick.dbio.DBIOAction[
+text.map(os => os.map(_.length))
+// res2: slick.dbio.DBIOAction[
 //   Option[Int],
 //   slick.dbio.NoStream,
 //   slick.dbio.Effect.All
@@ -311,7 +312,8 @@ It takes a sequence of `DBIO`s and gives back a `DBIO` of a sequence.
 That's a bit of a mouthful, but an example may help.
 
 At the end of the last chapter we attempted to update rows based on their current value.
-Here we'll say we want to reverse the text of every message:
+Here we'll say we want to reverse the text of every message.
+We start with this:
 
 ~~~ scala
 def reverse(msg: Message): DBIO[Int] =
@@ -330,12 +332,14 @@ val updates: DBIO[Seq[DBIO[Int]]] =
   map(msgs => msgs.map(reverse))
 ~~~
 
-...which will give us an action that returns actions! Note the crazy type signature there.
-You can find yourself in this situation when you're trying to do something like a join, but not quite.
+...which will give us an action that returns actions!
+Note the crazy type signature.
+
+You can find yourself in this awkward situation when you're trying to do something like a join, but not quite.
 The puzzle is how to run this kind of a beast.
 
 This is where `DBIO.sequence` saves us.
-Rather than produce many actions via `msgs.map(reverse)` we return a single action:
+Rather than produce many actions via `msgs.map(reverse)` we use `DBIO.sequence` to return a single action:
 
 ~~~ scala
 val updates: DBIO[Seq[Int]] =
@@ -343,8 +347,11 @@ val updates: DBIO[Seq[Int]] =
   flatMap(msgs => DBIO.sequence(msgs.map(reverse)))
 ~~~
 
-The difference is that we've wrapped the `Seq[DBIO]` with `DBIO.sequence` to give a single `DBIO[Seq[Int]]`.
-We use `flatMap` to combine the sequence with the original query.
+The difference is:
+
+- we've wrapped the `Seq[DBIO]` with `DBIO.sequence` to give a single `DBIO[Seq[Int]]`; and
+- we use `flatMap` to combine the sequence with the original query.
+
 The end result is a sane type which we can run like any other action.
 
 Of course this one action turns into many SQL statements:
@@ -370,53 +377,37 @@ List(3,5,7).fold(1) { (a,b) => a * b }
 You can do the same kind of thing in Slick:
 when you need to run a sequence of actions, and reduce the results down to a value, you use `fold`.
 
-As an example, let's suppose we have a complicated way of measuring the sentiment of the crews' messages:
+As an example, suppose we have a number of reports to run.
+We want to summarize all these reports to a single number.
 
 ~~~ scala
-// Feel free to implement a more realistic measure!
-def sentiment(m: Message): Int =
-  scala.util.Random.nextInt(100)
+val report1: DBIO[Int] = ...
+val report2: DBIO[Int] = ...
+
+val reports: List[DBIO[Int]] =
+  report1 :: report2 :: Nil
 ~~~
 
-Let's start measuring the sentiment of each crew member, but just gather the happy messages.
-Let's say any score above 50 is happy:
+We can `fold` those `reports` with a function.
+
+But we also need to consider our starting position:
 
 ~~~ scala
-def isHappy(message: Message): Boolean =
-  sentiment(message) > 50
+val default: Int = 0
 ~~~
 
-We're going to ask for each crew members mesages in turn:
+Finally we can produce an action to summarize the reports:
 
 ~~~ scala
-def sayingsOf(crewName: String): DBIO[Seq[Message]] =
-  messages.filter(_.sender === crewName).result
-
-// An action for each crew member:
-val actions: List[DBIO[Seq[Message]]] =
-  sayingsOf("Dave") :: sayingsOf("HAL") :: Nil
-~~~
-
-To find the happy messages we `fold` those `actions` with a function.
-
-But we also need to consider our starting position.
-There might be no happy messages:
-
-~~~ scala
-val default: Seq[Message] = Seq.empty
-~~~
-
-Finally we can produce an action to give us just the happy crew messages:
-
-~~~ scala
-val roseTinted: DBIO[Seq[Message]] =
-  DBIO.fold(actions, default) {
-    (happy, crewMessages) => crewMessages.filter(isHappy) ++ happy
+val summary: DBIO[Int] =
+  DBIO.fold(reports, default) {
+    (total, report) => total + report
 }
 ~~~
 
 `DBIO.fold` is a way to combine actions, such that the results are combined by a function you supply.
-As with other combinators, your function isn't run until we execute the `roseTinged` action itself.
+As with other combinators, your function isn't run until we execute the action itself.
+In this case all our reports are run, and the sum of the values reported.
 
 
 ### `zip`
