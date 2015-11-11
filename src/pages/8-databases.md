@@ -11,6 +11,7 @@ you will need to make changes detailed below.
 
 In summary you will need to ensure that:
 
+ * you have installed the database (details beyond the scope of this book);
  * a database is available with the correct name;
  * the `build.sbt` file has the correct dependency;
  * the correct JDBC driver is referenced in the code; and
