@@ -1,6 +1,7 @@
 # Joins and Aggregates {#joins}
 
-Wrangling data with [joins][link-wikipedia-joins] and aggregates can be painful.  In this chapter we'll try to ease that pain by exploring:
+Wrangling data with [joins][link-wikipedia-joins] and aggregates can be painful.
+In this chapter we'll try to ease that pain by exploring:
 
 * different styles of join (monadic and applicative);
 * different ways to join (inner, outer and zip); and
@@ -72,9 +73,9 @@ That's the monadic style of query, using foreign key relationships.
 <div class="callout callout-info">
 **Run the Code**
 
-You'll find the example queries for this section in the file _joins.sql_ over at [the associated GitHub repository][link-example].
+You'll find the example queries for this section in the file `joins.sql` over at [the associated GitHub repository][link-example].
 
-From the _chapter-05_ folder start SBT and at the SBT `>` prompt run:
+From the `chapter-06` folder start SBT and at the SBT `>` prompt run:
 
 ~~~
 runMain JoinsExample
@@ -130,8 +131,7 @@ val q: Query[(MessageTable, UserTable), (Message, User), Seq] =
     ( (m: MessageTable, u: UserTable) =>  m.senderId === u.id )
 ```
 
-We can also write the join condition as a unary function
-that accepts a tuple as a parameter:
+We can also write the join condition using pattern matching:
 
 ``` scala
 val q: Query[(MessageTable, UserTable), (Message, User), Seq] =
@@ -146,7 +146,7 @@ val action: DBIO[Seq[(Message, User)]] =
 ~~~
 
 In the rest of this section we'll work through a variety of more involved joins.
-You may find it useful to refer to figure 5.1, which sketches the schema we're using in this chapter.
+You may find it useful to refer to figure 6.1, which sketches the schema we're using in this chapter.
 
 ![
 The database schema for this chapter.
@@ -159,7 +159,12 @@ Finally, a _user_ can be in a _room_, which is a join between _user_ and _room_ 
 
 ### Inner Join
 
-An inner join is where we select records from multiple tables, where those records exist (in some sense) in all tables. We'll look at a chat example where we expect messages that have a sender in the user table, and a room in the rooms table:
+An inner join selects data from multiple tables, where the rows in each table match up in some way.
+Typically the matching up is by comparing primary keys.
+If there are rows that don't match up, they won't appear in the join results.
+
+We'll look at an example of an inner join in Slick with a chat example.
+Let's lookup messages that have a sender in the user table, and a room in the rooms table:
 
 ~~~ scala
 val usersAndRooms =
@@ -180,9 +185,9 @@ We need two `join`s---if you are joining _n_ tables you'll need _n-1_ join expre
 Notice that we're supplying a binary function to first call to `on`
 and a pattern matching function on our second call.
 Because each join results in a query of a tuple,
-successive joins result in nested tuples of.
+successive joins result in nested tuples.
 Pattern matching is our preferred syntax for unpacking these tuples
-because it explicitly clarifies makes the structure of the query.
+because it explicitly clarifies the structure of the query.
 However, you may see this more concisely expressed as a binary function:
 
 ``` scala
@@ -201,8 +206,9 @@ val action: DBIO[Seq[((Message, User), Room)]] =
   usersAndRooms.result
 ~~~
 
-...but the nested tuples will come back again later on in our code..
-Typically we want to `map` over the query to flatten the results and
+...but our results will contain nested tuples.
+That's OK, if that's what you want.
+But typically we want to `map` over the query to flatten the results and
 select the columns we want:
 
 ~~~ scala
@@ -264,7 +270,7 @@ WHERE
 ### Left Join
 
 A left join (a.k.a. left outer join), adds an extra twist.
-Now we are selecting all the records from a table,
+Now we are selecting _all_ the records from a table,
 and matching records from another table _if they exist_.
 If we find no matching record on the left,
 we will end up with `NULL` values in our results.
@@ -274,7 +280,7 @@ observe that messages can optionally be sent privately
 to another user via the `toId` column:
 
 ~~~ scala
-// Abbreviate table:
+// Abbreviated table:
 class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Id[MessageTable]]("id", O.PrimaryKey, O.AutoInc)
   def senderId = column[Id[UserTable]]("sender")
@@ -290,6 +296,9 @@ Visually the left outer join is as shown below:
 ![
 A visualization of the left outer join example. Selecting messages and associated recipients (users). For similar diagrams, see [A Visual Explanation of SQL Joins][link-visual-joins], _Coding Horror_, 11 Oct 2007.
 ](src/img/left-outer.png)
+
+That is, we are going to select all the data from the messages table,
+plus data from the user table for those users that have been sent messages.
 
 The join would be:
 
@@ -328,9 +337,9 @@ val left =
 
 Because the `user` element is optional,
 we naturally extract the `name` element using `Option.map`:
-`u.map(_.name)`.
+`user.map(_.name)`.
 
-The type of this query becomes:
+The type of this query then becomes:
 
 ``` scala
 Query[
@@ -342,7 +351,7 @@ Query[
 The types `String` and `Option[String]` correspond to
 the sender name and the recipient name.
 
-The sample data in _joins.sql_ in the _chapter05_ folder
+The sample data in _joins.sql_ in the _chapter06_ folder
 contains just two private messages (between Frank and Dave).
 The rest are public. So our query results are:
 
@@ -414,10 +423,11 @@ Query[
   Seq]
 ```
 
-We can see this by running the query against the chapter 5 schema:
+We can see this by running the query against the `chapter-06` example data in `chat_schema.scala`:
 
 ``` scala
 exec(outer.result).foreach(println)
+
 // (Some(Air Lock),Some(Hello, HAL. Do you read me, HAL?))
 // (Some(Air Lock),Some(Affirmative, Dave. I read you.))
 // (Some(Air Lock),Some(Open the pod bay doors, HAL.))
@@ -566,6 +576,10 @@ We've seen how to construct the arguments to `on` methods,
 either with a binary join condition
 or by deconstructing a tuple with pattern matching.
 
+Each join step produces a tuple.
+Using pattern matching in `map` and `filter` allows us to clearly name each part of the tuple,
+especially when the tuple is deeply nested.
+
 We've also explored inner and outer joins, zip joins, and cross joins.
 We saw that each type of join is a query,
 making it compatible with combinators such as `map` and `filter`
@@ -604,7 +618,9 @@ We will look at this in [Chapter 7](#PlainSQL).
 
 ## Aggregation
 
-Aggregate functions are all about computing a single value from some set of rows. A simple example is `count`. This section looks at aggregation, and also at grouping rows, and computing values on those groups.
+Aggregate functions are all about computing a single value from some set of rows.
+A simple example is `count`.
+This section looks at aggregation, and also at grouping rows, and computing values on those groups.
 
 ### Functions
 
@@ -641,12 +657,17 @@ val firstSent: DBIO[Option[DateTime]] =
   messages.map(_.ts).min.result
 ```
 
-While `length` and `countDistinct` return an `Int`, the other functions return an `Option`. This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
+While `length` and `countDistinct` return an `Int`, the other functions return an `Option`.
+This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
 
 
 ### Grouping
 
-You may find you use the aggregate functions with column grouping. For example, how many messages has each user sent?  Slick provides `groupBy` which will group rows by some expression. Here's an example:
+Aggregate functions are often used with column grouping.
+For example, how many messages has each user sent?
+That's a grouping (by user) of a aggregate (count).
+
+Slick provides `groupBy` which will group rows by some expression. Here's an example:
 
 ``` scala
 val msgPerUser =
@@ -655,7 +676,15 @@ val msgPerUser =
   result
 ```
 
-That'll work, but it will be in terms of a user's primary key. That is, the type of `msgPerUser` is:
+That'll work, but it will be in terms of a user's primary key.
+
+In the sample code for this chapter we're using a primary key of:
+
+~~~ scala
+case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
+~~~
+
+...to keep our keys usefully typed. So the type of `msgPerUser` query is:
 
 ~~~ scala
 DBIO[Seq[(PK[UserTable], Int)]]
@@ -677,12 +706,21 @@ The results would be:
 Vector((Frank,2), (HAL,2), (Dave,4))
 ```
 
-So what's happened here? What `groupBy` has given us is a way to place rows into groups, according to some function we supply. In this example, the function is to group rows based on the user's name. It doesn't have to be a `String`, it could be any type in the table.
+So what's happened here?
+What `groupBy` has given us is a way to place rows into groups according to some function we supply.
+In this example the function is to group rows based on the user's name.
+It doesn't have to be a `String`, it could be any type in the table.
 
-When it comes to mapping, we now have the key to the group (the user's name in our case), and the corresponding group rows _as a query_.  Because we've joined messages and users, our group is a query of those two tables.  In this example we don't care what the query is because we're just counting the number of rows.  But sometimes we will need to know more about the query.
+When it comes to mapping, we now have the key to the group (the user's name in our case),
+and the corresponding group rows _as a query_.
 
+Because we've joined messages and users, our group is a query of those two tables.
+In this example we don't care what the query is because we're just counting the number of rows.
+But sometimes we will need to know more about the query.
 
-Let's look at a more involved example by collecting some statistics about our messages. We want to find, for each user, how many messages they sent, and the date of their first message.  We want a result something like this:
+Let's look at a more involved example by collecting some statistics about our messages.
+We want to find, for each user, how many messages they sent, and the date of their first message.
+We want a result something like this:
 
 ``` scala
 Vector(
@@ -703,7 +741,8 @@ val stats =
    }
 ```
 
-We've now started to create a bit of a monster query. We can simplify this, but before doing so, it may help to clarify that this query is equivalent to the following SQL:
+We've now started to create a bit of a monster query.
+We can simplify this, but before doing so, it may help to clarify that this query is equivalent to the following SQL:
 
 ``` sql
 select
@@ -720,9 +759,13 @@ Convince yourself the Slick and SQL queries are equivalent, by comparing:
 * the `join` to the SQL `INNER JOIN`; and
 * the `groupBy` to the SQL `GROUP` expression.
 
-If you do that you'll see the Slick expression makes sense. But when seeing these kinds of queries in code it may help to simplify by introducing intermediate functions with meaningful names.
+If you do that you'll see the Slick expression makes sense.
+But when seeing these kinds of queries in code it may help to simplify by introducing intermediate functions with meaningful names.
 
-There are a few ways to go at simplifying this, but the lowest hanging fruit is that `min` expression inside the `map`.  The issue here is that the `group` pattern is a `Query` of `(MessageTable, UserTable)` as that's our join. That leads to us having to split it further to access the message's timestamp field.
+There are a few ways to go at simplifying this,
+but the lowest hanging fruit is that `min` expression inside the `map`.
+The issue here is that the `group` pattern is a `Query` of `(MessageTable, UserTable)` as that's our join.
+That leads to us having to split it further to access the message's timestamp field.
 
 Let's pull that part out as a method:
 
@@ -734,9 +777,12 @@ def timestampOf[S[_]]
     group.map { case (msg, user) => msg.ts }
 ```
 
-What we've done here is introduced a method to work on the group query, using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.
+What we've done here is introduced a method to work on the group query,
+using the knowledge of the `Query` type introduced in [The Query and TableQuery Types](#queryTypes) section of Chapter 2.
 
-The query (`group`) is parameterized by the join, the unpacked values, and the container for the results. By container we mean something like `Seq[T]`.  We don't really care what our results go into, but we do care we're working with messages and users.
+The query (`group`) is parameterized by the join, the unpacked values, and the container for the results.
+By container we mean something like `Seq[T]`.
+We don't really care what our results go into, but we do care we're working with messages and users.
 
 With this little piece of domain specific language in place, the query becomes:
 
@@ -747,7 +793,10 @@ val nicerStats =
    map     { case (name, group) => (name, group.length, timestampOf(group).min) }
 ```
 
-We think these small changes make code more maintainable and, quite frankly, less scary. It may be marginal in this case, but real world queries can become large. Your team mileage may vary, but if you see Slick queries that are hard to understand, try pulling the query apart into named methods.
+We think these small changes make code more maintainable and, quite frankly, less scary.
+It may be marginal in this case, but real world queries can become large.
+Your team mileage may vary, but if you see Slick queries that are hard to understand,
+try pulling the query apart into named methods.
 
 
 <div class="callout callout-info">
@@ -770,12 +819,16 @@ messages.filter(_.content like "%read%").map(_.ts).min
 But you want both `min` and `max` in one query. This is where `groupBy { _ => true}` comes into play:
 
 ``` scala
-messages.filter(_.content like "%read%").groupBy(_ => true).map {
+messages.
+ filter(_.content like "%read%").
+ groupBy(_ => true).
+ map {
   case (_, msgs) => (msgs.map(_.ts).min, msgs.map(_.ts).max)
 }
 ```
 
-The effect here is to group all rows into the same group! This allows us to reuse the `msgs` collection, and obtain the result we want.
+The effect here is to group all rows into the same group!
+This allows us to reuse the `msgs` query, and obtain the result we want.
 </div>
 
 #### Grouping by Multiple Columns
