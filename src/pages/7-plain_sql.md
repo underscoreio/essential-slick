@@ -20,7 +20,7 @@ Await.result(db.run(action), 2 seconds)
 // Vector(1, 2, 3)
 ~~~
 
-Running a plain SQL query looks similar to other queries we've seen in this book: just call hand it to `db.run` as usual.
+Running a plain SQL query looks similar to other queries we've seen in this book: just call `db.run` as usual.
 
 The big difference is with the construction of the query. We supply both the SQL we want to run and specify the expected result type using `as[T]`.
 
@@ -40,20 +40,22 @@ Using `as[T]` we can build up arbitrary result types.  Later we'll see how we ca
 One of the most useful features of the SQL interpolators is being able to reference Scala values in a query:
 
 ~~~ scala
-val t = "Pod"
+val roomName = "Pod"
 val podRoomAction = sql"""
   select
     "id", "title"
   from
     "room"
   where
-    "title" = $t """.as[(Long,String)].headOption
+    "title" = $roomName """.as[(Long,String)].headOption
 
 // When run will produce:
 // Some((2,Pod))
 ~~~
 
-Notice how `$t` is used to reference a Scala value `t`. This value is incorporated safely into the query.  That is, you don't have to worry about SQL injection attacks when you use the SQL interpolators in this way.
+Notice how `$roomName` is used to reference a Scala value `roomName`.
+This value is incorporated safely into the query.
+That is, you don't have to worry about SQL injection attacks when you use the SQL interpolators in this way.
 
 <div class="callout callout-warning">
 **The Danger of Strings**
@@ -80,6 +82,8 @@ val action = sql""" select "id" from "#$table" """.as[Long]
 In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"` (notice the double quotes and single quotes around the table name, which is not valid SQL).  
 
 However, this means you can produce dangerous SQL with splicing. The golden rule is to never use `#$` with input supplied by a user.
+
+To be sure you remember it, say it again with us:  never use `#$` with input supplied by a user.
 </div>
 
 
@@ -122,7 +126,8 @@ As you've probably guessed, returning a case class from a Plain SQL query means 
 <div class="callout callout-info">
 **Run the Code**
 
-You'll find the example queries for this section in the file `select.sql` inside the `chapter-06` folder.  This is all in the [example code base on GitHub][link-example].
+You'll find the example queries for this section in the file `select.sql` inside the `chapter-07` folder.
+This is all in the [example code base on GitHub][link-example].
 </div>
 
 
@@ -143,7 +148,7 @@ case class Message(
 
 To provide a `GetResult[Message]` we need all the types inside the `Message` to have `GetResult` instances.  We've already tackled `DateTime`.  That leaves  `Id[MessageTable]`, `Id[UserTable]`, `Option[Id[UserTable]`, and `Option[Id[RoomTable]`.
 
-Dealing with the two non-option IDs is straight-forward:
+Dealing with the two non-option IDs is straightforward:
 
 ~~~ scala
 implicit val GetUserId    = GetResult(r => Id[UserTable](r.nextLong))
@@ -302,7 +307,7 @@ tsql = {
 }
 ```
 
-Note the `$` in the driver class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of Programming in Scala][link-pins-interop].
+Note the `$` in the driver class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of _Programming in Scala_][link-pins-interop].
 
 You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick driver (`slicker.driver.H2Driver$`) and the JDBC driver (`org.h2.Drvier`) in one entry.
 

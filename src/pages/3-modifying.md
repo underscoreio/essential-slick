@@ -10,11 +10,11 @@ The result is an action that can be made up of multiple updates, selects, delete
 
 ## Inserting Rows
 
-As we saw in [Chapter 1](#Basics), adding new data a table looks like a destructive append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
+As we saw in [Chapter 1](#Basics), adding new data looks like an append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
 
 ### Inserting Single Rows
 
-To insert a single row into a table we use the `+=` method. Note that, unlike previous examples, this creates a `DBIOAction` immediately without an intermediate `Query`:
+To insert a single row into a table we use the `+=` method. Note that, unlike the select queries we've seen, this creates a `DBIOAction` immediately without an intermediate `Query`:
 
 ~~~ scala
 val action: DBIO[Int] =
@@ -28,7 +28,7 @@ The result of the action is the number of rows inserted. However, it is often us
 
 ### Primary Key Allocation
 
-When inserting data, we need to tell the database whether or not to allocate primary keys for the new rows. It is common practice to declare "auto-incrementing primary keys", allowing the database to allocate values automatically if we don't manually specify them in the SQL.
+When inserting data, we need to tell the database whether or not to allocate primary keys for the new rows. It is common practice to declare auto-incrementing primary keys, allowing the database to allocate values automatically if we don't manually specify them in the SQL.
 
 Slick allows us to allocate auto-incrementing primary keys via an option on the column definition. Recall the definition of `MessageTable` from Chapter 1, which looked like this:
 
@@ -66,7 +66,7 @@ final case class Message(
 Message("Dave", "You're off my Christmas card list.")
 ~~~
 
-There is nothing special about our default value of `0L`---it's simply a default value for the field. It is the `O.AutoInc` option that determins the behaviour of `+=`.
+There is nothing special about our default value of `0L`---it's simply a default value for the field. It is the `O.AutoInc` option that determines the behaviour of `+=`.
 
 Sometimes we want to override the database's default auto-incrementing behaviour and specify our own primary key. Slick provides a `forceInsert` method that does just this:
 
@@ -96,8 +96,7 @@ exec(messages.filter(_.id === 1000L).result)
 
 ### Retrieving Primary Keys on Insert
 
-It is often convenient to allow the database to allocate primary keys for us.
-In these cases, it is useful if we can get the allocated keys back as the result of the query.
+When the database allocates primary keys for us sit's often the case that we want get the key back as after an insert.
 Slick supports this via the `returning` method:
 
 ~~~ scala
@@ -108,7 +107,10 @@ exec(insert)
 // res5: Long = 1001
 ~~~
 
-The argument to `messages returning` is a `Query` over the same table, which is why `messages.map(_.id)` makes sense here. The query specifies a what data we'd like the database to return once the insert has finished. We can show that the return value is a primary key by looking up the record we just inserted:
+The argument to `messages returning` is a `Query` over the same table, which is why `messages.map(_.id)` makes sense here.
+The query specifies what data we'd like the database to return once the insert has finished.
+
+We can demonstrate that the return value is a primary key by looking up the record we just inserted:
 
 ~~~ scala
 exec(messages.filter(_.id === 1001L).result.headOption)
@@ -116,29 +118,7 @@ exec(messages.filter(_.id === 1001L).result.headOption)
 //   Some(Message(Dave,Point taken.,1001))
 ~~~
 
-### Retrieving Rows on Insert
-
-Not all databases provide complete support for the `returning` method. H2 only allows us to retrieve the primary key from an insert. However, some databases allow us to retrieve the complete inserted record. For example, we could ask for the whole `Message` back:
-
-~~~ scala
-exec(messages returning messages +=
- Message("Dave", "So... what do we do now?" ))
-
-// res7: Message = ...
-~~~
-
-If we tried this with H2, we get a runtime error:
-
-~~~ scala
-exec(messages returning messages +=
-      Message("Dave", "So... what do we do now?" ))
-// scala.slick.SlickException:
-//   This DBMS allows only a single AutoInc column ↩
-//     to be returned from an INSERT
-//   at ...
-~~~
-
-This is a shame, but getting the primary key is often all we need. For convenience, we can easily define a query specifically for inserts to save a few keystrokes:
+For convenience, we can save a few keystrokes and define an insert query that always returns the primary key:
 
 ~~~ scala
 lazy val messagesReturningId = messages returning messages.map(_.id)
@@ -153,6 +133,33 @@ exec(messagesReturningId += Message("HAL", "I don't know. I guess we wait."))
 
 Using `messagesReturningId` will return us the `id`, rather than the count of the number of rows inserted.
 
+### Retrieving Rows on Insert
+
+Some databases allow us to retrieve the complete inserted record, not just the primary key.
+For example, we could ask for the whole `Message` back:
+
+~~~ scala
+exec(messages returning messages +=
+ Message("Dave", "So... what do we do now?" ))
+
+// res7: Message = ...
+~~~
+
+Not all databases provide complete support for the `returning` method.
+H2 only allows us to retrieve the primary key from an insert.
+
+If we tried this with H2, we get a runtime error:
+
+~~~ scala
+exec(messages returning messages +=
+      Message("Dave", "So... what do we do now?" ))
+// scala.slick.SlickException:
+//   This DBMS allows only a single AutoInc column ↩
+//     to be returned from an INSERT
+//   at ...
+~~~
+
+This is a shame, but getting the primary key is often all we need.
 
 <div class="callout callout-info">
 **Driver Capabilities**
@@ -199,7 +206,10 @@ The parameter type of the `+=` method is matched to the *unpacked* type of the q
 
 ~~~ scala
 messages.map(_.sender)
-// res11: slick.lifted.Query[slick.lifted.Rep[String],String,Seq] = Rep(Bind)
+// res11: slick.lifted.Query[
+//  slick.lifted.Rep[String],
+//  String,
+//  Seq] = Rep(Bind)
 ~~~
 
 ... so we execute this query by passing it a `String` for the `sender`:
@@ -235,7 +245,9 @@ exec(messages ++= testMessages)
 // res11: Option[Int] = Some(4)
 ~~~
 
-This code prepares one SQL statement and uses it for each row in the `Seq`. This can result in a significant boost in performance when inserting many records.
+This code prepares one SQL statement and uses it for each row in the `Seq`.
+In principle Slick could optimize this insert further using database-specific featues.
+This can result in a significant boost in performance when inserting many records.
 
 As we saw earlier this chapter, the default return value of a single insert is the number of rows inserted. The multi-row insert above is also returning the number of rows, except this time the type is `Option[Int]`. The reason for this is that the JDBC specification permits the underlying database driver to indicate that the number of rows inserted is unknown.
 
@@ -351,7 +363,7 @@ val removeHal: DBIO[Int] =
   messages.filter(_.sender === "HAL").delete
 
 exec(removeHal)
-// res1: Int = 2
+// res1: Int = 4
 ~~~
 
 The return value is the number of rows affected.
@@ -479,7 +491,7 @@ messages.
 //   where "message"."id" = 4
 ~~~
 
-We can even use the projection operator, `<>`, to manipulate the type of the parameter to `update`. Again, we discuss `<>` in more in the next chapter:
+We can even use the projection operator, `<>`, to manipulate the type of the parameter to `update`:
 
 ~~~ scala
 case class NameText(name: String, text: String)
@@ -490,6 +502,8 @@ messages.
     (NameText.tupled, NameText.unapply)).
   update(NameText("Dave", "Now I totally don't trust you."))
 ~~~
+
+We discuss `<>` in [Chapter 5](#Modelling).
 
 ### Updating with a Computed Value
 
@@ -527,73 +541,25 @@ This will have the desired effect, but at some cost.
 What we have done there is use our own `exec` method which will wait for results.
 We use it to fetch all rows, and then we use it on each row to modify the row.
 That's a lot of waiting.
-There is also no support for transactions if we `db.run` each action separately.
+There is also no support for transactions as we `db.run` each action separately.
 
-A better approach is to turn our logic into a single `DBIO` action. This, together with transactions, is the topic of the next chapter.
+A better approach is to turn our logic into a single `DBIO` action using _action combinators_.
+This, together with transactions, is the topic of the next chapter.
 
 However, for this particular example, we recommend using Plain SQL ([Chapter 7](#PlainSQL)) instead of client-side updates.
 
-
-## Logging Queries and Results
-
-With actions combined together, it's useful to see the queries that are being executed.
-
-We've seen how to retrieve the SQL of a query using the `insertStatement`, `delete.statements`, and similar methods.
-These are useful for experimenting with Slick, but sometimes we want to see all the queries, fully populated with parameter data, *when Slick executes them*. We can do that by configuring logging.
-
-Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this to capture information about the queries being run. The SBT builds in the exercises use an SLF4J-compatible logging back-end called [Logback][link-logback], which is configured in the file *src/main/resources/logback.xml*. In that file we can enable statement logging by turning up the logging to debug level:
-
-~~~ xml
-<logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
-~~~
-
-This causes Slick to log every query, even modifications to the schema:
-
-~~~
-DEBUG slick.jdbc.JdbcBackend.statement - Preparing statement: ↩
-  delete from "message" where "message"."sender" = 'HAL'
-~~~
-
-We can change the level of various loggers, as shown in the table below:
-
--------------------------------------------------------------------------------------------------------------------
-Logger                                 Effect
--------------------------------------  ----------------------------------------------------------
-`slick.jdbc.JdbcBackend.statement`     Logs SQL sent to the database as described above.
-
-`slick.jdbc.StatementInvoker.result`   Logs the results of each query.
-
-`slick.session`                        Logs session events such as opening/closing connections.
-
-`slick`                                Logs everything! Equivalent to changing all of the above.
--------------------------------------  ----------------------------------------------------------
-
-: Slick loggers and their effects.
-
-The `StatementInvoker.result` logger, in particular, is pretty cute:
-
-~~~
-SI.result - /--------+----------------------+----------------------+----\
-SI.result - | sender | content              | ts                   | id |
-SI.result - +--------+----------------------+----------------------+----+
-SI.result - | HAL    | Affirmative, Dave... | 2001-02-17 10:22:... | 2  |
-SI.result - | HAL    | I'm sorry, Dave. ... | 2001-02-17 10:22:... | 4  |
-SI.result - \--------+----------------------+----------------------+----/
-~~~
 
 ## Take Home Points
 
 For modifying the rows in the database we have seen that:
 
-* inserts are via a  `+=` or `++=` call on a table.
+* inserts are via a  `+=` or `++=` call on a table;
 * updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
-* deletes are via a  `delete` call to a query;
+* deletes are via a  `delete` call to a query.
 
 Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
 
 Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
-
-Finally, we saw that the SQL statements executed and the result returned from the database can be monitored by configuring the logging system.
 
 
 ## Exercises
@@ -619,8 +585,8 @@ Rewrite the update statement below to use a for comprehension.
 ~~~ scala
 val rowsAffected = messages.
   filter(_.sender === "HAL").
-  map(msg => (msg.sender, msg.ts)).
-  update("HAL 9000", DateTime.now)
+  map(msg => (msg.sender, msg.content)).
+  update("HAL 9000", "Rebooting, please wait...")
 ~~~
 
 Which style do you prefer?
@@ -630,9 +596,9 @@ Which style do you prefer?
 val query = for {
   message <- messages
   if message.sender === "HAL"
-} yield (message.sender, message.ts)
+} yield (message.sender, message.content)
 
-val rowsAffected = query.update("HAL 9000", DateTime.now)
+val rowsAffected = query.update("HAL 9000", "Rebooting, please wait...")
 ~~~
 </div>
 
@@ -668,7 +634,8 @@ WHERE (
   > 1
 ~~~
 
-To translate that into a Slick query, first figure out how to select those rows.
+Hint: start by figuring out to count the messages.
+Then try to select the rows to delete.
 That is, don't worry about deleting those rows, just try to select them.
 
 <div class="solution">
@@ -695,6 +662,3 @@ val zap: DBIO[Int] =
   }.delete
 ~~~
 </div>
-
-
-
