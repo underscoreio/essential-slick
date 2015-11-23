@@ -77,6 +77,16 @@ Method       Arguments                       Result Type                    Note
 
 ## Combinators in Detail
 
+
+<div class="callout callout-warning">
+**Combined Actions do not use a common transaction**
+
+It is important to note that by default combined actions run in their own transactions.
+
+We'll see how to tell Slick to do this a little later in the [Transactions][Transactions] section.
+</div>
+
+
 ### `andThen` (or `>>`)
 
 The simplest way to run one action after another is perhaps `andThen`.
@@ -549,7 +559,7 @@ SI.result - \--------+----------------------+----/
 
 
 
-## Transactions
+## Transactions {#Transactions}
 
 So far each of the changes we've made to the database have run independently of the others. That is, each insert, update, or delete query we run can succeed or fail independently of the rest.
 
