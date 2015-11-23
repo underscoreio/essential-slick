@@ -25,7 +25,7 @@ We recommend you avoid that whenever you can.
 Instead, focus on the actions and how they combine together, not on the messy details of running them.
 Slick provides a set of combinators to make this possible.
 
-Before we getting into the detail, take a look at the two tables below. They list out the key methods available on an action,
+Before getting into the detail, take a look at the two tables below. They list out the key methods available on an action,
 and also the combinators available on `DBIO`.
 
 
@@ -60,7 +60,7 @@ Method              Arguments                       Result Type      Notes
 ----------------------------------------------------------------------------------------------------------
 Method       Arguments                       Result Type                    Notes
 ------------ ------------------------------- ------------------------------ ------------------------------
-`sequence`   `TraversableOnce[DBIO[T]]`      `DBIO[TraversableOnce[T]]`     
+`sequence`   `TraversableOnce[DBIO[T]]`      `DBIO[TraversableOnce[T]]`
 
 `seq`        `DBIO[_]*`                      `DBIO[Unit]`                   Combines actions, ignores results
 
@@ -120,7 +120,7 @@ val backwards: DBIO[Option[String]] =
   text.map( optionalContent => optionalContent.map(_.reverse) )
 
 exec(backwards)
-// res1: Option[String] =  
+// res1: Option[String] =
 //  Option[String] = Some(?LAH ,em daer uoy oD .LAH ,olleH)
 ~~~
 
