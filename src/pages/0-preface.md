@@ -47,7 +47,7 @@ You can follow us on Twitter as [\@underscoreio][link-twitter-underscore].
 
 ## Acknowledgements {-}
 
-Many thanks to [Dave Gurnell][link-twitter-dave], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
+Many thanks to [Renato Cavalcanti ][link-renato], [Joseph Ottinger][link-ottinger],[Kevin Meredith][link-meredith], [Dave Gurnell][link-twitter-dave], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
 
 ## Conventions Used in This Book {-}
 
