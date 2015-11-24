@@ -89,7 +89,7 @@ If you recognise this as a problem, it's time to split your code more finely and
 
 ## Representations for Rows
 
-In previous chapters we modelled rows as case classes.  That's a great choice, and the one we recommend, but you should be aware that Slick is more flexible that that.
+In previous chapters we modelled rows as case classes.  That's a great choice, and the one we recommend, but you should be aware that Slick is more flexible than that.
 
 There are in fact three common representations used: tuples, case classes, and an experimental `HList` implementation.
 
