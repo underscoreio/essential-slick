@@ -950,14 +950,15 @@ For Alice, `head` will throw a run-time exception as we are trying to return the
 
 In the previous exercise you returned the first message HAL sent.
 This time find the next five messages HAL sent.
-What is the result set and why?
+What messages are returned?
+
 What if we'd asked for HAL's tenth through to twentieth message?
 
 <div class="solution">
-It's paginations friends `drop` and `take` to the rescue:
+It's pagination's friends `drop` and `take` to the rescue:
 
 ~~~ scala
-val msg1 = messages.filter(_.sender === "HAL").drop(1).take(5).result
+val msgs = messages.filter(_.sender === "HAL").drop(1).take(5).result
 ~~~
 
 Our result set should contain two messages, as HAL had only three messages.
@@ -967,7 +968,7 @@ Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
 Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,6)
 ~~~
 
-As HAL only has three messages if we'd ask for it's 10th through 20th message we'd get an empty `Seq`.
+As HAL only has three messages if we'd asked for its 10th through 20th message we'd get an empty collection.
 
 </div>
 
