@@ -17,7 +17,7 @@ As we saw in [Chapter 1](#Basics), adding new data looks like an append operatio
 To insert a single row into a table we use the `+=` method. Note that, unlike the select queries we've seen, this creates a `DBIOAction` immediately without an intermediate `Query`:
 
 ~~~ scala
-val action: DBIO[Int] =
+val action =
   messages += Message("HAL", "No. Seriously, Dave, I can't let you in.")
 
 exec(action)
