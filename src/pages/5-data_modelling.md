@@ -1205,7 +1205,7 @@ Assume we only have two user records: one with an email address of "dave@example
 We want `filterByEmail(Some("dave@example.org")).run` to produce one row,
 and `filterByEmail(None).run` to produce two rows.
 
-Tip: you don't need to find a single query to do this.
+Tip: it's OK to use multiple queries.
 
 <div class="solution">
 We can decide on the query to run in the two cases from inside our application:
