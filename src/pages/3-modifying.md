@@ -222,7 +222,7 @@ exec(messages.map(_.sender) += "HAL")
 //   at ...
 ~~~
 
-The query fails at runtime because the `sender` column is non-nullable in our schema.
+The query fails at runtime because the `content` column is non-nullable in our schema.
 No matter. We'll cover nullable columns when discussing schemas in [Chapter 5](#Modelling).
 
 
