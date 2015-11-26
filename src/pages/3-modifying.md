@@ -294,7 +294,7 @@ where
 That looks quite involved, but we can build it up gradually.
 
 The tricky part of this is the `select 'Stanley', 'Cut!'` part, as there is no `FROM` clause there.
-We saw an example of how to create that in Chapter 2, with `Query.apply`. For this situation it would be:
+We saw an example of how to create that in [Chapter 2](#constantQueries), with `Query.apply`. For this situation it would be:
 
 ~~~ scala
 val data = Query(("Stanley", "Cut!"))
