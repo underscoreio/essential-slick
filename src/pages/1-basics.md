@@ -306,6 +306,8 @@ But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 Let's run this action:
 
 ~~~ scala
+import scala.concurrent.Future
+
 val future: Future[Unit] = db.run(action)
 ~~~
 
@@ -314,6 +316,9 @@ The result of `run` is a `Future[T]`, where `T` is the type of result returned b
 `Future`s are asynchronous. That's to say, they are place holders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can simply block until our action completes:
 
 ~~~ scala
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 val result = Await.result(future, 2 seconds)
 ~~~
 
@@ -454,19 +459,21 @@ Like `Query`, `DBIOAction` is also a monad. It implements the same methods descr
 We can combine the actions to create the schema, insert the data, and query results into one action. We can do this before we have a database connection, and we run the action like any other:
 
 ~~~ scala
-val actions: DBIO[Seq[Message]] =
+val actions: DBIO[Seq[Message]] = (
   messages.schema.create       andThen
   (messages ++= freshTestData) andThen
   halSays.result
+)
 ~~~
 
 And if you want to get funky, `>>` is another name for `andThen`:
 
 ~~~ scala
-val actions =
+val actions = (
   messages.schema.create       >>
   (messages ++= freshTestData) >>
   halSays.result
+)
 ~~~
 
 One important reason for composing queries and actions is to wrap them inside a transaction.
