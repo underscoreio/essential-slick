@@ -400,7 +400,7 @@ exec(right.result).foreach(println)
 ```
 
 
-### Full Outer Join
+### Full Outer Join {#fullouterjoin}
 
 Full outer joins mean either side can be `NULL`.
 
@@ -909,30 +909,12 @@ val msgsPerUser =
 Running this on the data in _aggregates.scala_ produces:
 
 ~~~ scala
-Vector((Dave,4))
-~~~
-</div>
-
-
-### User Rooms
-
-In this chapter we saw this query:
-
-~~~ scala
-val outer = for {
-  (usrs, occ) <- users joinLeft occupants on (_.id === _.userId)
-} yield usrs.name -> occ.map(_.roomId)
+Vector((Frank,2), (HAL,4), (Dave,4))
 ~~~
 
-It would be nicer if we could find another way to express this so it didn't show rooms users don't occupy.
-
-<div class="solution">
-A right join between users and occupants can help us here.
-For a row to exist in the occupant table it must have a room:
+Running it in the REPL, which has less data set up by default, produces:
 
 ~~~ scala
-val usersRooms = for {
-  (usrs,occ) <- users joinRight occupants on (_.id === _.userId)
-} yield usrs.name -> occ.roomId
+Vector((HAL,4), (Dave,4))
 ~~~
 </div>
