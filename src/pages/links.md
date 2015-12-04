@@ -1,4 +1,4 @@
-[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/master
+[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/3.0
 
 [link-slick]:                http://slick.typesafe.com/
 [link-ref-dbs]:              http://slick.typesafe.com/doc/3.1.0/supported-databases.html
