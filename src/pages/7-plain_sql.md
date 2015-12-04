@@ -230,7 +230,8 @@ val query =
   sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
 ~~~
 
-This gives us two benefits: the compiler will point out typos in variables names, but also the input is sanitized against SQL injection attacks.
+This gives us two benefits: the compiler will point out typos in variables names,
+but also the input is sanitized against [SQL injection attacks][link-wikipedia-injection].
 
 
 ### Updating with Custom Types
