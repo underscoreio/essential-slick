@@ -1063,11 +1063,3 @@ def userMessages: DBIO[Map[User,Seq[Message]]] =
 ~~~
 </div>
 
-### ???
-
-<div class="solution">
-
-~~~ scala
-~~~
-</div>
-
