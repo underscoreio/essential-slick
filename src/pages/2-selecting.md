@@ -870,7 +870,7 @@ where x2."id" = 1
 From this we see how `filter` corresponds to a SQL `where` clause.
 </div>
 
-### Is HAL real?
+### Is HAL Real?
 
 Find if there are any messages by HAL in the database,
 but only return a boolean value from the database.
@@ -961,15 +961,21 @@ It's pagination's friends `drop` and `take` to the rescue:
 val msgs = messages.filter(_.sender === "HAL").drop(1).take(5).result
 ~~~
 
-Our result set should contain two messages, as HAL had only three messages.
+HAL has only three messages in total.
+Therefore our result set should contain two messages:
 
 ~~~ scala
 Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
 Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,6)
 ~~~
 
-As HAL only has three messages if we'd asked for its 10th through 20th message we'd get an empty collection.
+And asking for any more messages will result in an empty collection.
 
+~~~ scala
+val msgs = exec(messages.filter(_.sender === "HAL").drop(10).take(10).result)
+// msgs: Seq[Example.MessageTable#TableElementType] = Vector()
+
+~~~
 </div>
 
 
