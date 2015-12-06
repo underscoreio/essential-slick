@@ -767,7 +767,8 @@ The expressions we use in queries are defined in extension methods,
 and include `===`, `=!=`, `like`, `&&` and so on, depending on the type of the `Rep`.
 Comparisons to `Option` types are made easy for us as Slick will compare `Rep[T]` and `Rep[Option[T]]` automatically.
 
-We've seen that `map` acts like a SQL `select`, and `filter` is like a `WHERE`. We'll see the Slick representation of `GROUP` and `JOIN` in [Chapter 6](#joins).
+We've seen that `map` acts like a SQL `select`, and `filter` is like a `WHERE`.
+We'll see the Slick representation of `GROUP` and `JOIN` in [Chapter 6](#joins).
 
 We introduced some new terminology:
 
@@ -777,7 +778,8 @@ We introduced some new terminology:
 We run queries by converting them to actions using the `result` method.
 We run the actions against a database using `db.run`.
 
-The database action type constructor `DBIOAction` takes three arguments that represent the result, streaming mode, and effect. `DBIO[R]` simplifies this to just the result type.
+The database action type constructor `DBIOAction` takes three arguments that represent the result, streaming mode, and effect.
+`DBIO[R]` simplifies this to just the result type.
 
 ## Exercises
 
@@ -868,6 +870,37 @@ where x2."id" = 1
 From this we see how `filter` corresponds to a SQL `where` clause.
 </div>
 
+### Is HAL Real?
+
+Find if there are any messages by HAL in the database,
+but only return a boolean value from the database.
+
+<div class="solution">
+
+That's right, we want to know if HAL `exists`:
+
+~~~ scala
+val query = messages.filter(_.sender === "HAL").exists
+
+
+println(s"The query is:  ${query.result.statements}")
+println(s"The result is: ${exec(query.result)}")
+~~~
+
+
+The query will return `true` as we do have records from HAL,
+and Slick will generate the following SQL:
+
+~~~ SQL
+select exists(
+  select "sender", "content", "id"
+  from "message"
+  where "sender" = 'HAL'
+)
+~~~
+</div>
+
+
 ### Selecting Columns
 
 So far we have been returning `Message` classes or counts.
@@ -911,6 +944,38 @@ val msg1 = messages.filter(_.sender === "HAL").map(_.content).result.head
 You should get an action that produces "Affirmative, Dave. I read you."
 
 For Alice, `head` will throw a run-time exception as we are trying to return the head of an empty collection. Using `headOption` will prevent the exception.
+</div>
+
+### Then the Rest
+
+In the previous exercise you returned the first message HAL sent.
+This time find the next five messages HAL sent.
+What messages are returned?
+
+What if we'd asked for HAL's tenth through to twentieth message?
+
+<div class="solution">
+It's pagination's friends `drop` and `take` to the rescue:
+
+~~~ scala
+val msgs = messages.filter(_.sender === "HAL").drop(1).take(5).result
+~~~
+
+HAL has only three messages in total.
+Therefore our result set should contain two messages:
+
+~~~ scala
+Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
+Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,6)
+~~~
+
+And asking for any more messages will result in an empty collection.
+
+~~~ scala
+val msgs = exec(messages.filter(_.sender === "HAL").drop(10).take(10).result)
+// msgs: Seq[Example.MessageTable#TableElementType] = Vector()
+
+~~~
 </div>
 
 
