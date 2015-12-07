@@ -79,7 +79,7 @@ val table = "message"
 val action = sql""" select "id" from "#$table" """.as[Long]
 ~~~
 
-In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"` (notice the double quotes and single quotes around the table name, which is not valid SQL).  
+In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"` (notice the double quotes and single quotes around the table name, which is not valid SQL).
 
 However, this means you can produce dangerous SQL with splicing. The golden rule is to never use `#$` with input supplied by a user.
 
@@ -323,7 +323,7 @@ With the `@StaticDatabaseConfig` in place we can use `tsql`:
 ```scala
 val action: DBIO[Seq[String]] =
   tsql"""select "content" from "message""""
-```  
+```
 
 You can run that query as you would `sql` or `sqlu` query. You can also use custom types via `SetParameter` type class. However, `GetResult` type classes are not supported for `tsql`.
 
@@ -338,9 +338,11 @@ Do you see what's wrong? If not, don't worry because the compiler will find the 
 
 ```
 type mismatch;
-[error]  found   : SqlStreamingAction[Vector[(String, Int)],(String, Int),Effect]
-[error]  required: DBIO[Seq[String]]
-[error]     (which expands to)  DBIOAction[Seq[String],NoStream,Effect.All]
+[error]  found    : SqlStreamingAction[               ↩
+            Vector[(String, Int)],(String, Int),Effect]
+[error]  required : DBIO[Seq[String]]
+[error]    (which expands to)                         ↩
+            DBIOAction[Seq[String],NoStream,Effect.All]
 ```
 
 The compiler wants a `String` for each row, because that's what we've declared the result to be. However it is found, via the database, that the query will return `(String,Int)` rows.
@@ -394,7 +396,7 @@ Note that at run time, when we execute the query, a new row will be inserted. At
 
 ## Take Home Points
 
-Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  
+Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.
 
 Two main string interpolators for SQL are provided: `sql` and `sqlu`:
 
@@ -464,7 +466,8 @@ Convert the following lifted embedded query to a Plain SQL query.
 ~~~ scala
 val whoSaidThat =
   messages.join(users).on(_.senderId === _.id).
-  filter{ case (message,user) => message.content === "Open the pod bay doors, HAL."}.
+  filter{ case (message,user) =>
+    message.content === "Open the pod bay doors, HAL."}.
   map{ case (message,user) => user.name }
 
 exec(whoSaidThat.result)
@@ -481,7 +484,7 @@ Tips:
 There are various ways to implement this query in SQL.  Here's one of them...
 
 ~~~ scala
-val whoSaidThat = sql"""  
+val whoSaidThat = sql"""
   select
     "name" from "user" u
   join
@@ -515,7 +518,7 @@ The solution just requires the use of a `$` substitution:
 
 ~~~ scala
 def whoSaid(content: String): DBIO[Seq[String]] =
-  sql"""  
+  sql"""
     select
       "name" from "user" u
     join
@@ -538,7 +541,10 @@ exec(whoSaid("Affirmative, Dave. I read you."))
 This H2 query returns the alphabetically first and last messages:
 
 ~~~ scala
-exec(sql""" select min("content"), max("content") from "message" """.as[(String,String)])
+exec(sql"""
+      select min("content"), max("content")
+      from "message" """.
+      as[(String,String)])
 // res1: Vector[(String, String)] = Vector(
 //   (Affirmative, Dave. I read you., Well, whaddya think?)
 // )
@@ -568,7 +574,15 @@ implicit val GetFirstAndLast =
   GetResult[FirstAndLast](r => FirstAndLast(r.nextString, r.nextString))
 // GetFirstAndLast: slick.jdbc.GetResult[FirstAndLast] = <function1>
 
-exec(sql""" select min("content"), max("content") from "message" """.as[FirstAndLast])
+
+val query =  sql""" select min("content"), max("content")
+                    from "message" """.as[FirstAndLast]
+// query: slick.profile.SqlStreamingAction[
+//  Vector[FirstAndLast],FirstAndLast,slick.dbio.Effect
+// ] = slick.jdbc.SQLActionBuilder$$anon$1@1fb692f9
+
+
+exec(query)
 // res1: Vector[FirstAndLast] = Vector(
 //   FirstAndLast(Affirmative, Dave. I read you.,Well, whaddya think?)
 // )
@@ -591,7 +605,8 @@ For modifications we use `sqlu`, not `sql`:
 exec(sqlu""" create table "jukebox" ("title" text) """)
 // res1: Int = 0
 
-exec(sqlu""" insert into "jukebox"("title") values ('Bicycle Built for Two') """)
+exec(sqlu""" insert into "jukebox"("title")
+             values ('Bicycle Built for Two') """)
 // res2: Int = 1
 
 exec(sql""" select "title" from "jukebox" """.as[String])
