@@ -93,6 +93,52 @@ The first time you run sbt, it will download a lot of library dependencies from 
 If you haven't used sbt before, you may find the [sbt Tutorial][link-sbt-tutorial] useful.
 </div>
 
+## Working Interactively in the sbt Console
+
+
+To get you up to speed quickly,
+we've created an `exec` method and imported the base requirements to run examples from the console.
+You can see this by starting `sbt` and then running the `console` command.
+Which will give output similar to:
+
+~~~ scala
+> console
+[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/essential-slick-code/chapter-01/target/scala-2.11/classes...
+[info] Starting scala interpreter...
+[info]
+import slick.driver.H2Driver.api._
+import Example._
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
+db: slick.driver.H2Driver.backend.Database = slick.jdbc.JdbcBackend$DatabaseDef@75028b56
+exec: [T](program: slick.driver.H2Driver.api.DBIO[T])T
+res0: Option[Int] = Some(4)
+Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_25).
+Type in expressions to have them evaluated.
+Type :help for more information.
+
+scala>
+~~~
+
+This means we can focus on Slick, rather than the boilerplate.
+There is a complete explanation of `exec` later in the chapter.
+For now, a small example showing its usuage and output:
+
+~~~ scala
+
+scala> exec(messages.result)
+//res1: Seq[Example.MessageTable#TableElementType] =
+//Vector(Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+//       Message(HAL,Affirmative, Dave. I read you.,2),
+//       Message(Dave,Open the pod bay doors, HAL.,3),
+//       Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+
+~~~
+
+Note: We reference the `messages` table and due to the import in the previous code snippet there was no reason to qualify it with as  `Example.messages`.
+
+
 ## Example: A Sequel Odyssey
 
 The test application we saw above creates an in-memory database using [H2][link-h2-home], creates a single table, populates it with test data, and then runs some example queries. The rest of this section will walk you through the code and provide an overview of things to come. We'll reproduce the essential parts of the code in the text, but you can follow along in the codebase for the exercises as well.
