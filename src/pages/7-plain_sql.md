@@ -1,10 +1,10 @@
 # Plain SQL {#PlainSQL}
 
-Slick supports plain SQL queries in addition to the lifted embedded style we've seen up to this point. Plain queries don't compose as nicely as lifted, or offer quite the same type safely.  But they enable you to execute essentially arbitrary SQL when you need to. If you're unhappy with a particular query produced by Slick, dropping into Plain SQL is the way to go.
+Slick supports Plain SQL queries in addition to the lifted embedded style we've seen up to this point. Plain queries don't compose as nicely as lifted, or offer quite the same type safely.  But they enable you to execute essentially arbitrary SQL when you need to. If you're unhappy with a particular query produced by Slick, dropping into Plain SQL is the way to go.
 
 In this section we will see that:
 
-- the [interpolators][link-scala-interpolation] `sql` (for select) and `sqlu` (for updates) are used to create plain SQL queries;
+- the [interpolators][link-scala-interpolation] `sql` (for select) and `sqlu` (for updates) are used to create Plain SQL queries;
 - values can be safely substituted into queries using a `${expresson}` syntax;
 - custom types can be used in Plain SQL, as long as there is a converter in scope; and
 - the `tsql` interpolator can be used to check the syntax and types of a query via a database at compile time.
@@ -20,7 +20,7 @@ Await.result(db.run(action), 2 seconds)
 // Vector(1, 2, 3)
 ~~~
 
-Running a plain SQL query looks similar to other queries we've seen in this book: just call `db.run` as usual.
+Running a Plain SQL query looks similar to other queries we've seen in this book: just call `db.run` as usual.
 
 The big difference is with the construction of the query. We supply both the SQL we want to run and specify the expected result type using `as[T]`.
 
@@ -79,7 +79,7 @@ val table = "message"
 val action = sql""" select "id" from "#$table" """.as[Long]
 ~~~
 
-In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"` (notice the double quotes and single quotes around the table name, which is not valid SQL).  
+In this situation we do not want the value of `table` to be treated as a `String`. If you did, you'd end up with the invalid query: `select "id" from "'message'"` (notice the double quotes and single quotes around the table name, which is not valid SQL).
 
 However, this means you can produce dangerous SQL with splicing. The golden rule is to never use `#$` with input supplied by a user.
 
@@ -260,7 +260,7 @@ There's further symmetry with `GetResuts` in that we could have used `>>` in our
 (dt, pp) => pp >> new Timestamp(dt.getMillis)
 ~~~
 
-With this in place we can construct plain SQL updates using `DateTime` instances:
+With this in place we can construct Plain SQL updates using `DateTime` instances:
 
 ``` scala
 val now =
@@ -324,7 +324,7 @@ With the `@StaticDatabaseConfig` in place we can use `tsql`:
 ```scala
 val action: DBIO[Seq[String]] =
   tsql"""select "content" from "message""""
-```  
+```
 
 You can run that query as you would `sql` or `sqlu` query. You can also use custom types via `SetParameter` type class. However, `GetResult` type classes are not supported for `tsql`.
 
@@ -339,9 +339,11 @@ Do you see what's wrong? If not, don't worry because the compiler will find the 
 
 ```
 type mismatch;
-[error]  found   : SqlStreamingAction[Vector[(String, Int)],(String, Int),Effect]
-[error]  required: DBIO[Seq[String]]
-[error]     (which expands to)  DBIOAction[Seq[String],NoStream,Effect.All]
+[error]  found    : SqlStreamingAction[               ↩
+            Vector[(String, Int)],(String, Int),Effect]
+[error]  required : DBIO[Seq[String]]
+[error]    (which expands to)                         ↩
+            DBIOAction[Seq[String],NoStream,Effect.All]
 ```
 
 The compiler wants a `String` for each row, because that's what we've declared the result to be. However it is found, via the database, that the query will return `(String,Int)` rows.
@@ -395,7 +397,7 @@ Note that at run time, when we execute the query, a new row will be inserted. At
 
 ## Take Home Points
 
-Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.  
+Plain SQL allows you a way out of any limitations you find with Slick's lifted embedded style of querying.
 
 Two main string interpolators for SQL are provided: `sql` and `sqlu`:
 
@@ -410,7 +412,208 @@ The `tsql` interpolator will check Plain SQL queries against a database at compi
 
 ## Exercises
 
-The examples for this section are in the `chatper-06` folder, in the source files `selects.scala`, `updates.scala`, and `tsql.scala`.
+The examples for this section are in the `chapter-07` folder, in the source files `selects.scala`, `updates.scala`, and `tsql.scala`.  Familiarise yourself with the schema and example data from `chat_schema.scala`.
+
+### Plain Selects
+
+Let's get warmed up some some simple exercises.
+
+Write the following four queries as Plain SQL queries:
+
+- Count the number of rows in the message table.
+- Select the content from the messages table.
+- Select the length of each message ("content") in the messages table.
+- Select the content and length of each message.
+
+Tips:
+
+- Remember that you need to use double quotes around table and column names in the SQL.
+- We gave the database tables names which are singular: `message`, `user`, etc.
+
+<div class="solution">
+The SQL statements are relatively simple. You need to take care to make the `as[T]` align to the result of the query.
+
+~~~ scala
+exec(sql""" select count(*) from "message" """.as[Int])
+// res1: Vector[Int] = Vector(8)
+
+exec(sql""" select "content" from "message" """.as[String])
+// res2: Vector[String] = Vector(
+//   Hello, HAL. Do you read me, HAL?,
+//   Affirmative, Dave. I read you.,
+//   Open the pod bay doors, HAL.,
+//   I'm sorry, Dave. I'm afraid I can't do that.,
+//   Well, whaddya think?,
+//   I'm not sure, what do you think?,
+//   Are you thinking what I'm thinking?,
+//   Maybe)
+
+exec(sql""" select length("content") from "message" """.as[String])
+// res3: Vector[String] = Vector(32, 30, 28, 44, 20, 32, 35, 5)
+
+exec(sql""" select "content", length("content") from "message" """.as[(String,Int)])
+// res4: Vector[(String, Int)] = Vector(
+//  (Hello, HAL. Do you read me, HAL?,32),
+//  (Affirmative, Dave. I read you.,30),
+//  (Open the pod bay doors, HAL.,28),
+// ...
+~~~
+</div>
+
+### Conversion
+
+Convert the following lifted embedded query to a Plain SQL query.
+
+~~~ scala
+val whoSaidThat =
+  messages.join(users).on(_.senderId === _.id).
+  filter{ case (message,user) =>
+    message.content === "Open the pod bay doors, HAL."}.
+  map{ case (message,user) => user.name }
+
+exec(whoSaidThat.result)
+// res1: Seq[String] = Vector(Dave)
+~~~
+
+Tips:
+
+- If you're not familiar with SQL syntax, you can peak at the `whoSaidThat.result.statements`.
+- Remember that strings in SQL are wrapped in single quotes, not double quotes.
+- In the database the `senderId` is in a column called `sender`.
+
+<div class="solution">
+There are various ways to implement this query in SQL.  Here's one of them...
+
+~~~ scala
+val whoSaidThat = sql"""
+  select
+    "name" from "user" u
+  join
+    "message" m on u."id" = m."sender"
+  where
+    m."content" = 'Open the pod bay doors, HAL.'
+  """.as[String]
+
+exec(whoSaidThat)
+// res1: Seq[String] = Vector(Dave)
+~~~
+</div>
+
+
+### Substitution
+
+Complete the implementation of this method using a Plain SQL query:
+
+~~~ scala
+def whoSaid(content: String): DBIO[Seq[String]] =
+  ???
+
+exec(whoSaid("Open the pod bay doors, HAL."))
+// res1: Seq[String] = Vector(Dave)
+~~~
+
+This should be a small change to your solution to the last exercise.
+
+<div class="solution">
+The solution just requires the use of a `$` substitution:
+
+~~~ scala
+def whoSaid(content: String): DBIO[Seq[String]] =
+  sql"""
+    select
+      "name" from "user" u
+    join
+      "message" m on u."id" = m."sender"
+    where
+      m."content" = $content
+    """.as[String]
+
+exec(whoSaid("Open the pod bay doors, HAL."))
+// res1: Seq[String] = Vector(Dave)
+
+exec(whoSaid("Affirmative, Dave. I read you."))
+//res2: Seq[String] = Vector(HAL)
+~~~
+</div>
+
+
+### First and Last
+
+This H2 query returns the alphabetically first and last messages:
+
+~~~ scala
+exec(sql"""
+      select min("content"), max("content")
+      from "message" """.
+      as[(String,String)])
+// res1: Vector[(String, String)] = Vector(
+//   (Affirmative, Dave. I read you., Well, whaddya think?)
+// )
+~~~
+
+In this exercise we want you to write a `GetResult` type class instance so that the result of the query is one of these:
+
+~~~ scala
+case class FirstAndLast(first: String, last: String)
+~~~
+
+The steps are:
+
+1. Remember to `import slick.jdbc.GetResult`.
+2. Provide an implicit value for `GetResult[FirstAndLast]`
+3. Make the query use `as[FirstAndLast]`
+
+<div class="solution">
+~~~ scala
+import slick.jdbc.GetResult
+// import slick.jdbc.GetResult
+
+case class FirstAndLast(first: String, last: String)
+// defined class FirstAndLast
+
+implicit val GetFirstAndLast =
+  GetResult[FirstAndLast](r => FirstAndLast(r.nextString, r.nextString))
+// GetFirstAndLast: slick.jdbc.GetResult[FirstAndLast] = <function1>
+
+
+val query =  sql""" select min("content"), max("content")
+                    from "message" """.as[FirstAndLast]
+// query: slick.profile.SqlStreamingAction[
+//  Vector[FirstAndLast],FirstAndLast,slick.dbio.Effect
+// ] = slick.jdbc.SQLActionBuilder$$anon$1@1fb692f9
+
+
+exec(query)
+// res1: Vector[FirstAndLast] = Vector(
+//   FirstAndLast(Affirmative, Dave. I read you.,Well, whaddya think?)
+// )
+~~~
+</div>
+
+
+### Plain Change
+
+We can use Plain SQL to modify the database.
+That means inserting rows, updating rows, deleting rows, and also modifying the schema.
+
+Go ahead and create a new table, using Plain SQL, to store the crew's jukebox playlist.
+Just store a song title. Insert a row into the table.
+
+<div class="solution">
+For modifications we use `sqlu`, not `sql`:
+
+~~~ scala
+exec(sqlu""" create table "jukebox" ("title" text) """)
+// res1: Int = 0
+
+exec(sqlu""" insert into "jukebox"("title")
+             values ('Bicycle Built for Two') """)
+// res2: Int = 1
+
+exec(sql""" select "title" from "jukebox" """.as[String])
+// res3: Vector[String] = Vector(Bicycle Built for Two)
+~~~
+</div>
 
 
 ### Robert Tables
@@ -419,10 +622,11 @@ We're building a web site that allows searching for users by their email address
 
 ~~~ scala
 def lookup(email: String) =
-  sql"""select id from "user" where "user"."email" = '#${email}'"""
+  sql"""select "id" from "user" where "user"."email" = '#${email}'"""
 
 // Example use:
-lookup("dave@example.org").as[Long].headOption
+exec(lookup("dave@example.org").as[Long].headOption)
+// res1: Option[Long] = Some(1)
 ~~~
 
 What the problem with this code?
@@ -451,9 +655,15 @@ DROP TABLE "user";
 
 Trying to access the users table after this will produce:
 
-~~~
-org.h2.jdbc.JdbcSQLException: Table "user" not found
+~~~ scala
+exec(users.result)
+// org.h2.jdbc.JdbcSQLException: Table "user" not found; SQL statement:
+// select "id", "name", "email" from "user" [42102-185]
+//  at org.h2.message.DbException.getJdbcSQLException(DbException.java:345)
+// ...
 ~~~
 
 Yes, the table was dropped by the query.
+
+Never use `#$` with user supplied input.
 </div>
