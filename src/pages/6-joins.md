@@ -667,6 +667,8 @@ Aggregate functions are often used with column grouping.
 For example, how many messages has each user sent?
 That's a grouping (by user) of a aggregate (count).
 
+#### `groupBy`
+
 Slick provides `groupBy` which will group rows by some expression. Here's an example:
 
 ``` scala
@@ -676,9 +678,10 @@ val msgPerUser =
   result
 ```
 
-That'll work, but it will be in terms of a user's primary key.
+A `groupBy` must be followed by a `map`.
+The input to the `map` will be the grouping key (`senderId`) and a query for the group.
 
-In the sample code for this chapter we're using a primary key of:
+In the sample code for this chapter we're using a primary key of...
 
 ~~~ scala
 case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
@@ -690,12 +693,22 @@ case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
 DBIO[Seq[(PK[UserTable], Int)]]
 ~~~
 
+When we run the query, it'll work, but it will be in terms of a user's primary key:
+
+~~~ scala
+exec(msgPerUser)
+// res1: Seq[(ChatSchema.PK[schema.UserTable], Int)] =
+//  Vector((PK(1),4), (PK(2),4), (PK(4),2))  
+~~~
+
+#### Groups and Joins
+
 It'd be nicer to see the user's name. We can do that using our join skills:
 
 ``` scala
 val msgsPerUser =
    messages.join(users).on(_.senderId === _.id).
-   groupBy { case (msg, user)  => user.name }.
+   groupBy { case (msg, user)   => user.name }.
    map     { case (name, group) => name -> group.length }.
    result
 ```
@@ -703,7 +716,7 @@ val msgsPerUser =
 The results would be:
 
 ``` scala
-Vector((Frank,2), (HAL,2), (Dave,4))
+Vector((Frank,2), (HAL,4), (Dave,4))
 ```
 
 So what's happened here?
@@ -718,6 +731,9 @@ Because we've joined messages and users, our group is a query of those two table
 In this example we don't care what the query is because we're just counting the number of rows.
 But sometimes we will need to know more about the query.
 
+
+#### More Complicated Grouping
+
 Let's look at a more involved example by collecting some statistics about our messages.
 We want to find, for each user, how many messages they sent, and the date of their first message.
 We want a result something like this:
@@ -725,7 +741,7 @@ We want a result something like this:
 ``` scala
 Vector(
   (Frank, 2, Some(2001-02-16T20:55:00.000Z)),
-  (HAL,   2, Some(2001-02-17T10:22:52.000Z)),
+  (HAL,   4, Some(2001-02-17T10:22:52.000Z)),
   (Dave,  4, Some(2001-02-16T20:55:04.000Z)))
 ```
 
@@ -881,10 +897,78 @@ Slick expects the database query engine to perform optimisation. If you find slo
 
 ## Exercises
 
-### `HAVING` Many Messages
+Because these exercises are all about multiple tables, take a moment to remind yourself of the schema.
+You'll find this in the example code, `chatper-06`, in the source file `chat_schema.scala`.
+
+### Name of the Sender
+
+Each message is sent by someone.
+That is, the `messages.senderId` will have a matching row via `users.id`.
+
+Please...
+
+- Write a monadic join to return all `Message` rows and the associated `User` record for each of them.
+- Change your answer to just return the content of a message and the name of the sender.
+- Modify the query to return the results in name order.
+- Re-write the query as an applicative join.
+
+These exercises will get your fingers familiar with writing joins.
+
+<div class="solution">
+~~~ scala
+val ex1 = for {
+  m <- messages
+  u <- users
+  if u.id === m.senderId
+} yield (m, u)
+
+val ex2 = for {
+  m <- messages
+  u <- users
+  if u.id === m.senderId
+} yield (m.content, u.name)
+
+val ex3 = ex2.sortBy{ case (content, name) => name }
+
+val ex4 =
+  messages.
+   join(users).on(_.senderId === _.id).
+   map    { case (msg, usr)     => (msg.content, usr.name) }.
+   sortBy { case (content,name) => name }
+~~~
+</div>
+
+### Messages of the Sender
+
+Write a method to fetch all the message sent by a particular user.
+The signature is:
+
+~~~ scala
+def findByName(name: String): Query[Rep[Message], Message, Seq] = ???
+~~~
+
+<div class="solution">
+~~~ scala
+def findByName(name: String): Query[Rep[Message], Message, Seq] = for {
+  u <- users    if u.name === name
+  m <- messages if m.senderId === u.id
+} yield m
+~~~
+
+...or...
+
+~~~ scala
+def findByName(name: String): Query[Rep[Message], Message, Seq] =
+  users.filter(_.name === name).
+  join(messages).on(_.id === _.senderId).
+  map{ case (user, msg) => msg }
+~~~
+</div>
+
+
+### Having Many Messages
 
 Modify the `msgsPerUser` query...
-
 
 ~~~ scala
 val msgsPerUser =
@@ -896,7 +980,7 @@ val msgsPerUser =
 ...to return the counts for just those users with more than 2 messages.
 
 <div class="solution">
-SQL distinguishes between `WHERE` and `HAVING`. In Slick, you just use `filter`:
+SQL distinguishes between `WHERE` and `HAVING`. In Slick you just use `filter`:
 
 ~~~ scala
 val msgsPerUser =
@@ -918,3 +1002,64 @@ Running it in the REPL, which has less data set up by default, produces:
 Vector((HAL,4), (Dave,4))
 ~~~
 </div>
+
+### Collecting Results
+
+A join on messages and senders will produce a row for every message.
+Each row will be a tuple of the user and message:
+
+~~~ scala
+users.join(messages).on(_.id === _.senderId)
+// res1: slick.lifted.Query[
+//  (UserTable, MessageTable),
+//  (UserTable#TableElementType, MessageTable#TableElementType),
+//  Seq] = Rep(Join Inner)
+~~~
+
+Sometimes you'll really want something like a `Map[User, Seq[Message]]`.
+
+There's no built-in way to do that in Slick, but you can do it in Scala using the collections `groupBy` method.
+
+~~~ scala
+Seq(
+  ("HAL"  -> "Hello"),
+  ("Dave" -> "How are you?"),
+  ("HAL"  -> "I have terrible pain in all the diodes")
+  ).groupBy{ case (name, message) => name }
+// res2: Map[String,Seq[(String, String)]] = Map(
+//  HAL  -> List((HAL,Hello), (HAL,I have terrible pain in all the diodes)),
+//  Dave -> List((Dave,How are you?))
+// )
+~~~
+
+We can go further and reduce this to:
+
+~~~ scala
+res2.mapValues { values =>
+  values.map{ case (name, msg) => msg }
+}
+// res3: Map[String,Seq[String]] = Map(
+//  HAL -> List(Hello, I have terrible pain in all the diodes),
+//  Dave -> List(How are you?)
+// )
+~~~
+
+Go ahead and write a method to encapsulate this:
+
+~~~ scala
+def userMessages: DBIO[Map[User, Seq[Message]]] = ???
+~~~
+
+<div class="solution">
+You need all the code in the question and also what you know about action combinators:
+
+~~~ scala
+def userMessages: DBIO[Map[User,Seq[Message]]] =
+  users.join(messages).on(_.id === _.senderId).result.
+  map { rows =>
+    rows.groupBy{ case (user, message) => user }.
+    mapValues(values => values.map{ case (name, msg) => msg })
+  }
+~~~
+</div>
+
