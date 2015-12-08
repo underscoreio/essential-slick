@@ -700,12 +700,12 @@ We have an example usage from the ship's marketing department.
 They are happy to report the number of chat messages, but only if that number is at least 100:
 
 ~~~ scala
-var marketingCount = exec(
+val marketingCount = exec(
   myFilter(messages.size.result)( _ > 100)(100)
 )
 ~~~
 <div class="solution">
-This is a fairly simple example of using `flatMap`:
+This is a fairly simple example of using `map`:
 
 ~~~ scala
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -714,11 +714,13 @@ def myFilter[T]
   (action: DBIO[T])
   (p: T => Boolean)
   (alternative: => T) =
-    action.flatMap{ v =>
-      if (p(v)) DBIO.successful(v)
-      else DBIO.successful(alternative)
+    action.map {
+      case t if p(t) => t
+      case _ => alternative
     }
 ~~~
+
+
 </div>
 
 ### Unfolding
