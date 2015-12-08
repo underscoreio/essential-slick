@@ -824,39 +824,3 @@ exec(selectiveMemory)
 
 ~~~
 </div>
-
-### Updating with a Computed Value
-
-Recall we were looking for a nice way to write the following SQL...
-
-~~~ sql
-update "message" set "content" = CONCAT("content", '!')
-~~~
-
-This appends an exclamation mark to the end of each message.
-Don't do it this way, instead use action combinators.
-
-~~~ scala
-for {
-  msg <- exec(messages.result)
-} yield exec(modify(msg))
-~~~
-
-This is bit nasty as you haven't learnt about action combinators, we'll see them in the next chapter.
-
-<div class="solution">
-
-Those of you who have looked through the example, will have seen the solution already!
-As stated earlier in the chapter, we'll see a better solution using Plain SQL queries [Chapter 7](#PlainSQL).
-
-~~~ scala
-  def exclaim(msg: Message): Message = msg.copy(content = msg.content + "!")
-  lazy val all: DBIO[Seq[Message]] = messages.result
-  def modify(msg: Message): DBIO[Int] =
-    messages.filter(_.id === msg.id).update(exclaim(msg))
-  lazy val action: DBIO[Seq[Int]] =
-    all.flatMap( msgs => DBIO.sequence(msgs.map(modify)) )
-  lazy val rowCounts: Seq[Int] = exec(action)
-~~~
-</div>
-
