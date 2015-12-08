@@ -771,7 +771,7 @@ WHERE
 
 Write a method `unfold` that will take any room name as a starting point, and a query to find the next room, and will follow all the connections until there are no more connecting rooms.
 
-The signature of `unfold` could be:
+The signature of `unfold` _could_ be:
 
 ~~~ scala
 def unfold(
