@@ -782,7 +782,7 @@ def unfold(
 
 ... where `z` is the starting ("zero") room, and `f` will lookup the connecting room.
 
-If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Podbday", "Galley", "Computer", "Engine Room")`.
+If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Podbay", "Galley", "Computer", "Engine Room")`.
 
 <div class="solution">
 
