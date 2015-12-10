@@ -619,6 +619,30 @@ Finally, we saw that actions that are combined together can also be run inside a
 
 ## Exercises
 
+### And Then what?
+
+In chapter 1 we create a schema, populate the database as separate actions.
+Use your newly found knowledge to combine them.
+
+~~~ scala
+
+val drop:     DBIO[Unit]        = messages.schema.drop
+val create:   DBIO[Unit]        = messages.schema.create
+val populate: DBIO[Option[Int]] = messages ++= testData
+
+exec(drop)
+exec(create)
+exec(populate)
+~~~~
+
+You'll need to drop the table first, otherwise you'll get an exception.
+
+<div class="solution">
+~~~ scala
+exec( drop andThen create andThen populate)
+~~~
+</div>
+
 ### First!
 
 Create a method that will insert a message, but if it is the first message in the database,
@@ -666,6 +690,82 @@ exec(messages.result).foreach(println)
 ~~~
 </div>
 
+### There Can be Only One
+
+Implement `onlyOne`, a method that guarantees that an action will return only one result.
+If the action returns anything other than one result, the method should fail with an exception.
+
+Below is the method signature and two test cases:
+
+``` scala
+def onlyOne[T](xs:DBIO[Seq[T]]):DBIO[T] = ???
+
+
+val happy = messages.filter(_.content like "%sorry%").result
+val boom  = messages.filter(_.content like "%I%").result
+
+
+exec(onlyOne(happy))
+exec(onlyOne(boom))
+```
+
+<div class="solution">
+
+~~~ scala
+  def onlyOne[T](action:DBIO[Seq[T]]):DBIO[T] = action.flatMap{ xs =>
+    xs match {
+      case x +: Nil =>
+        DBIO.successful(x)
+      case f      =>
+        DBIO.failed(
+          new RuntimeException(s"Expected 1 result, not ${f.length}")
+        )
+    }
+  }
+
+exec(onlyOne(boom))
+//java.lang.RuntimeException: Expected 1 result, not 2
+//  ...
+
+exec(onlyOne(happy))
+//res25: Example.MessageTable#TableElementType =
+//       Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
+
+scala>
+
+~~~
+</div>
+
+
+### Let's be Reasonable
+
+Some _fool_ is throwing exceptions in our code, destroying our ability to reason about it.
+Implement `exactlyOne` which wraps `onlyOne` encoding the possibility of failure using types rather than exceptions.
+
+Then rerun the test cases.
+
+<div class="solution">
+There are several ways we could have implemented this, the simplest is using `asTry`
+
+~~~ scala
+def exactlyOne[T](action:DBIO[Seq[T]]):DBIO[Try[T]] = onlyOne(action).asTry
+
+
+exec(exactlyOne(happy))
+// res26: scala.util.Try[Example.MessageTable#TableElementType] =
+//   Success(Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+
+
+exec(exactlyOne(boom))
+// res27: scala.util.Try[Example.MessageTable#TableElementType] =
+//   Failure(java.lang.RuntimeException: Expected 1 result, not 2)
+
+
+
+~~~
+</div>
+
+
 ### Filtering
 
 There is a `DBIO` `filter` method, but it produces a runtime exception if the filter predicate is false.
@@ -704,6 +804,7 @@ var marketingCount = exec(
   myFilter(messages.size.result)( _ > 100)(100)
 )
 ~~~
+
 <div class="solution">
 This is a fairly simple example of using `flatMap`:
 
