@@ -615,7 +615,8 @@ val messagesReturningRow =
 // messagesReturningRow: slick.driver.H2Driver.IntoInsertActionComposer[
 // Example.MessageTable#TableElementType,Example.Message] =
 // slick.driver.
-// ''JdbcActionComponent$ReturningInsertActionComposerImpl@6cfcdefc
+// JdbcActionComponent$ReturningInsertActionComposerImpl@6cfcdefc
+
 
 val insert:Message => DBIO[Message] = m =>  messagesReturningRow += m
 // insert: Example.Message =>
@@ -651,10 +652,7 @@ exec(messages.map( m => (m.sender,m.content)) += (("HAL","Helllllo Dave")))
 
 ### Bulk All the Inserts
 
-Insert an encrypted conversation between Alice and Bob, returning the messages populated with `id`s.
-
-<div class="solution">
-It is `messagesReturningRow` to the rescue once again:
+Insert the encrypted conversation below between Alice and Bob, returning the messages populated with `id`s.
 
 ~~~ scala
 val encryptedConversation = List(
@@ -668,21 +666,12 @@ val encryptedConversation = List(
   Message("Alice","totesEncryptedContent:Let's just to to the point "),
   Message("Bob",  "leetEncryptedContent:Okay okay, no need to be tetchy."),
   Message("Alice","totesEncryptedContent: Humph!"))
-//encryptedConversation: List[Example.Message] = List(
-  Message(Bob,leetEncryptedContent:Hi Alice,0),
-  Message(Alice,totesEncryptedContent:Hi Bob,0),
-  Message(Bob,leetEncryptedContent:Are you sure this is secure?,0),
-  Message(Alice,totesEncryptedContent:Totally, why do you ask?,0),
-  Message(Bob,leetEncryptedContent:Oh, nothing, just wondering.,0),
-  Message(Alice,totesEncryptedContent:Ten was too many messages,0),
-  Message(Bob,leetEncryptedContent:I could do with a sleep,0),
-  Message(Alice,totesEncryptedContent:Let's just to to the point ,0),
-  Message(Bob,leetEncryptedContent:Okay okay, no need to be tetchy.,0),
-  Message(Alice,totesEncryptedContent: Humph!,0))
-// messagesReturningRow: slick.driver.H2Driver.IntoInsertActionComposer[
-//   Example.MessageTable#TableElementType,Example.Message
-// ] = slick.driver.Jdb...
+~~~
 
+<div class="solution">
+It is `messagesReturningRow` to the rescue once again:
+
+~~~ scala
 val messagesReturningRow =
   messages returning messages.map(_.id) into { (message, id) =>
     message.copy(id = id)
@@ -720,7 +709,7 @@ messages.filter(_.content like "%sorry%").delete
 
 
 
-### Update Using a for Comprehension
+### Update Using a For Comprehension
 
 Rewrite the update statement below to use a for comprehension.
 
@@ -807,7 +796,10 @@ val zap: DBIO[Int] =
 
 ### Selective Memory
 
-Delete `HAL`s first two messages.
+Delete `HAL`s first two messages. This is a more difficult exercise.
+
+Hint: First write a query to select the two messages.
+Then see if you can find a way to use it as a subquery.
 
 <div class="solution">
 ~~~ scala
@@ -821,6 +813,6 @@ val selectiveMemory =
   }.delete
 
 exec(selectiveMemory)
-
+//res1: Int = 2
 ~~~
 </div>
