@@ -207,13 +207,11 @@ abstract class Table[T] {
 
 The type of `*` is actually something called a `ProvenShape`,
 not a tuple of columns as we specified in our example.
-There is clearly some magic here---Slick is using implicit conversions
+There is clearly some cleverness here---Slick is using implicit conversions
 to build a `ProvenShape` object from the columns we provided.
 
-If the above is magic, the internal workings of `ProvenShape` are sorcery
-and are certainly beyond the scope of this book.
-Suffice to say that Slick can use any Scala type as a projection
-provided it can generate a compatible `ProvenShape`.
+The internal workings of `ProvenShape` are certainly beyond the scope of this book.
+Suffice to say that Slick can use any Scala type as a projection provided it can generate a compatible `ProvenShape`.
 If we look at the rules for `ProvenShape` generation,
 we will get an idea about what data types we can map.
 Here are the three most common use cases:
