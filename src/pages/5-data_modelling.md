@@ -596,7 +596,7 @@ case class Address(street: String, city: String, country: String)
 case class User(contact: EmailContact, address: Address, id: Long = 0L)
 ~~~
 
-You'll find a definition of `UserTable` that you can copy and paste in the example code in the folder _chapter-05_.
+You'll find a definition of `UserTable` that you can copy and paste in the example code in the file _chapter-05/src/main/scala/nested_case_class.scala_.
 
 <div class="solution">
 A suitable projection is:
@@ -1271,10 +1271,15 @@ What happens if you try adding a message for a user ID of `3000`?
 For example:
 
 ~~~ scala
-messages += Message(3000L, "Hello HAL!")
+messages += Message(UserPK(3000L), "Hello HAL!", DateTime.now)
 ~~~
 
+
 Note that there is no user in our example with an ID of 3000.
+If you are using an editor rather than the REPL the file to open is
+`chapter-05/src/main/scala/value_classes.scala`.
+
+
 
 <div class="solution">
 We get a runtime exception as we have violated referential integrity.
