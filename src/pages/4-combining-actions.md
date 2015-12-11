@@ -621,8 +621,12 @@ Finally, we saw that actions that are combined together can also be run inside a
 
 ### And Then what?
 
-In chapter 1 we create a schema, populate the database as separate actions.
+In Chapter 1 we create a schema and populate the database as separate actions.
 Use your newly found knowledge to combine them.
+
+This exercise expects to start with an empty database.
+If you're already in the REPL and the database exists,
+you'll need to drop the table first:
 
 ~~~ scala
 
@@ -634,8 +638,6 @@ exec(drop)
 exec(create)
 exec(populate)
 ~~~~
-
-You'll need to drop the table first, otherwise you'll get an exception.
 
 <div class="solution">
 ~~~ scala
@@ -699,26 +701,43 @@ Below is the method signature and two test cases:
 
 ``` scala
 def onlyOne[T](xs:DBIO[Seq[T]]):DBIO[T] = ???
-
-
-val happy = messages.filter(_.content like "%sorry%").result
-val boom  = messages.filter(_.content like "%I%").result
-
-
-exec(onlyOne(happy))
-exec(onlyOne(boom))
 ```
 
+In the example there is only one message that contains the word "Sorry", so we expect onlyOne to return that row:
+
+``` scala
+val happy = messages.filter(_.content like "%sorry%").result
+
+exec(onlyOne(happy))
+//res25: Example.MessageTable#TableElementType =
+// Message(HAL, I'm sorry, Dave. I'm afraid I can't do that., 4)
+```
+
+However, there are two messages containing the word "I". In this case onlyOne will fail:
+
+``` scala
+val boom  = messages.filter(_.content like "%I%").result
+exec(onlyOne(boom))
+//java.lang.RuntimeException: Expected 1 result, not 2
+//  ...
+```
+
+Hints: The signature of `onlyOne` is telling us we will take an action that produces a `Seq[T]` and return an action that produces a `T`.
+That tells us we need an action combinator here.
+That fact that the method may fail means we want to use `DBIO.successful` and `DBIO.failed` in there somewhere.
+
 <div class="solution">
+
+You may not have seen `+:`, this is `cons` for `Seq`.
 
 ~~~ scala
   def onlyOne[T](action:DBIO[Seq[T]]):DBIO[T] = action.flatMap{ xs =>
     xs match {
       case x +: Nil =>
         DBIO.successful(x)
-      case f      =>
+      case ys       =>
         DBIO.failed(
-          new RuntimeException(s"Expected 1 result, not ${f.length}")
+          new RuntimeException(s"Expected 1 result, not ${ys.length}")
         )
     }
   }
@@ -728,11 +747,7 @@ exec(onlyOne(boom))
 //  ...
 
 exec(onlyOne(happy))
-//res25: Example.MessageTable#TableElementType =
-//       Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
-
-scala>
-
+// Message(HAL, I'm sorry, Dave. I'm afraid I can't do that., 4)
 ~~~
 </div>
 
