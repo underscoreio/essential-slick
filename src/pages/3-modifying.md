@@ -595,8 +595,7 @@ exec(
     Message("Dave", "So... what do we do now?"))
 ~~~
 
-You will have seen the exception below,
-recall from [Retrieving Rows on Insert](#retrievingRowsOnInsert) that H2 doesn't support returning more than the `id` field.
+You will have seen the exception :
 
 ~~~ scala
 // slick.SlickException:
@@ -604,6 +603,8 @@ recall from [Retrieving Rows on Insert](#retrievingRowsOnInsert) that H2 doesn't
 //     to be returned from an INSERT
 //   at ...
 ~~~
+
+Recall from [Retrieving Rows on Insert](#retrievingRowsOnInsert) that H2 doesn't support returning more than the `id` field.
 
 We need to use `into`:
 
@@ -618,28 +619,29 @@ val messagesReturningRow =
 // JdbcActionComponent$ReturningInsertActionComposerImpl@6cfcdefc
 
 
-val insert:Message => DBIO[Message] = m =>  messagesReturningRow += m
+val insert:Message => DBIO[Message] = m => messagesReturningRow += m
 // insert: Example.Message =>
 // slick.driver.H2Driver.api.DBIO[Example.Message]
 // = <function1>
 
 exec(insert(Message("Dave", "So... what do we do now?")) )
-//res4: messagesReturningRow.SingleInsertResult = Message(Jono,Hey!,6)
+// res4: messagesReturningRow.SingleInsertResult = Message(Dave,So... what do we do now?,6)
 ~~~
 </div>
 
 
 ### Get to the Specifics
 
-In [Inserting Specific Columns](#insertingSpecificColumns) we looked at only inserting the sender column.
-This failed as we didn't meet the requirements of the `message` table schema.
-Fix this query so we need to specify the minimum number of columns nessecary for the message to insert.
-
-The original query was:
+In [Inserting Specific Columns](#insertingSpecificColumns) we looked at only inserting the sender column:
 
 ~~~ scala
 exec(messages.map(_.sender) += "HAL")
 ~~~
+
+This failed as we didn't meet the requirements of the `message` table schema.
+For this to succeed we need to inlcude `content` as well as `sender`.
+
+Rewrite the above query to include the `content` column.
 
 <div class="solution">
 The requirements of the `messages` table is `sender` and `content` can not be null.
@@ -652,20 +654,20 @@ exec(messages.map( m => (m.sender,m.content)) += (("HAL","Helllllo Dave")))
 
 ### Bulk All the Inserts
 
-Insert the encrypted conversation below between Alice and Bob, returning the messages populated with `id`s.
+Insert the conversation below between Alice and Bob, returning the messages populated with `id`s.
 
 ~~~ scala
 val encryptedConversation = List(
-  Message("Bob",  "leetEncryptedContent:Hi Alice"),
-  Message("Alice","totesEncryptedContent:Hi Bob"),
-  Message("Bob",  "leetEncryptedContent:Are you sure this is secure?"),
-  Message("Alice","totesEncryptedContent:Totally, why do you ask?"),
-  Message("Bob",  "leetEncryptedContent:Oh, nothing, just wondering."),
-  Message("Alice","totesEncryptedContent:Ten was too many messages"),
-  Message("Bob",  "leetEncryptedContent:I could do with a sleep"),
-  Message("Alice","totesEncryptedContent:Let's just to to the point "),
-  Message("Bob",  "leetEncryptedContent:Okay okay, no need to be tetchy."),
-  Message("Alice","totesEncryptedContent: Humph!"))
+  Message("Bob",  "Hi Alice"),
+  Message("Alice","Hi Bob"),
+  Message("Bob",  "Are you sure this is secure?"),
+  Message("Alice","Totally, why do you ask?"),
+  Message("Bob",  "Oh, nothing, just wondering."),
+  Message("Alice","Ten was too many messages"),
+  Message("Bob",  "I could do with a sleep"),
+  Message("Alice","Let's just to to the point"),
+  Message("Bob",  "Okay okay, no need to be tetchy."),
+  Message("Alice","Humph!"))
 ~~~
 
 <div class="solution">
@@ -683,16 +685,16 @@ val messagesReturningRow =
 
 exec(messagesReturningRow ++= encryptedConversation)
 //res16: messagesReturningRow.MultiInsertResult = Vector(
-// Message(Bob,leetEncryptedContent:Hi Alice,28),
-// Message(Alice,totesEncryptedContent:Hi Bob,29),
-// Message(Bob,leetEncryptedContent:Are you sure this is secure?,30),
-// Message(Alice,totesEncryptedContent:Totally, why do you ask?,31
-// Message(Bob,leetEncryptedContent:Oh, nothing, just wondering.,32),
-// Message(Alice,totesEncryptedContent:Ten was too many messages,33),
-// Message(Bob,leetEncryptedContent:I could do with a sleep,34),
-// Message(Alice,totesEncryptedContent:Let's just to to the point ,35),
-// Message(Bob,leetEncryptedContent:Okay okay, no need to be tetchy.,36),
-// Message(Alice,totesEncryptedContent: Humph!,37))
+// Message(Bob,Hi Alice,28),
+// Message(Alice,Hi Bob,29),
+// Message(Bob,Are you sure this is secure?,30),
+// Message(Alice,Totally, why do you ask?,31
+// Message(Bob,Oh, nothing, just wondering.,32),
+// Message(Alice,Ten was too many messages,33),
+// Message(Bob,I could do with a sleep,34),
+// Message(Alice,Let's just to to the point ,35),
+// Message(Bob,Okay okay, no need to be tetchy.,36),
+// Message(Alice,Humph!,37))
 ~~~
 </div>
 
