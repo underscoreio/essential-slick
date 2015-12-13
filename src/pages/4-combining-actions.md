@@ -703,7 +703,7 @@ Below is the method signature and two test cases:
 def onlyOne[T](xs:DBIO[Seq[T]]):DBIO[T] = ???
 ```
 
-In the example there is only one message that contains the word "Sorry", so we expect onlyOne to return that row:
+In the example there is only one message that contains the word "Sorry", so we expect `onlyOne` to return that row:
 
 ``` scala
 val happy = messages.filter(_.content like "%sorry%").result
@@ -713,7 +713,7 @@ exec(onlyOne(happy))
 // Message(HAL, I'm sorry, Dave. I'm afraid I can't do that., 4)
 ```
 
-However, there are two messages containing the word "I". In this case onlyOne will fail:
+However, there are two messages containing the word "I". In this case `onlyOne` will fail:
 
 ``` scala
 val boom  = messages.filter(_.content like "%I%").result
@@ -728,7 +728,7 @@ That fact that the method may fail means we want to use `DBIO.successful` and `D
 
 <div class="solution">
 
-You may not have seen `+:`, this is `cons` for `Seq`.
+You may not have seen `+:` before: it is `cons` for `Seq`.
 
 ~~~ scala
   def onlyOne[T](action:DBIO[Seq[T]]):DBIO[T] = action.flatMap{ xs =>
