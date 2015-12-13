@@ -619,6 +619,32 @@ Finally, we saw that actions that are combined together can also be run inside a
 
 ## Exercises
 
+### And Then what?
+
+In Chapter 1 we create a schema and populate the database as separate actions.
+Use your newly found knowledge to combine them.
+
+This exercise expects to start with an empty database.
+If you're already in the REPL and the database exists,
+you'll need to drop the table first:
+
+~~~ scala
+
+val drop:     DBIO[Unit]        = messages.schema.drop
+val create:   DBIO[Unit]        = messages.schema.create
+val populate: DBIO[Option[Int]] = messages ++= testData
+
+exec(drop)
+exec(create)
+exec(populate)
+~~~~
+
+<div class="solution">
+~~~ scala
+exec( drop andThen create andThen populate)
+~~~
+</div>
+
 ### First!
 
 Create a method that will insert a message, but if it is the first message in the database,
@@ -666,6 +692,95 @@ exec(messages.result).foreach(println)
 ~~~
 </div>
 
+### There Can be Only One
+
+Implement `onlyOne`, a method that guarantees that an action will return only one result.
+If the action returns anything other than one result, the method should fail with an exception.
+
+Below is the method signature and two test cases:
+
+``` scala
+def onlyOne[T](xs:DBIO[Seq[T]]):DBIO[T] = ???
+```
+
+In the example there is only one message that contains the word "Sorry", so we expect `onlyOne` to return that row:
+
+``` scala
+val happy = messages.filter(_.content like "%sorry%").result
+
+exec(onlyOne(happy))
+//res25: Example.MessageTable#TableElementType =
+// Message(HAL, I'm sorry, Dave. I'm afraid I can't do that., 4)
+```
+
+However, there are two messages containing the word "I". In this case `onlyOne` will fail:
+
+``` scala
+val boom  = messages.filter(_.content like "%I%").result
+exec(onlyOne(boom))
+//java.lang.RuntimeException: Expected 1 result, not 2
+//  ...
+```
+
+Hints: The signature of `onlyOne` is telling us we will take an action that produces a `Seq[T]` and return an action that produces a `T`.
+That tells us we need an action combinator here.
+That fact that the method may fail means we want to use `DBIO.successful` and `DBIO.failed` in there somewhere.
+
+<div class="solution">
+
+You may not have seen `+:` before: it is `cons` for `Seq`.
+
+~~~ scala
+  def onlyOne[T](action:DBIO[Seq[T]]):DBIO[T] = action.flatMap{ xs =>
+    xs match {
+      case x +: Nil =>
+        DBIO.successful(x)
+      case ys       =>
+        DBIO.failed(
+          new RuntimeException(s"Expected 1 result, not ${ys.length}")
+        )
+    }
+  }
+
+exec(onlyOne(boom))
+//java.lang.RuntimeException: Expected 1 result, not 2
+//  ...
+
+exec(onlyOne(happy))
+// Message(HAL, I'm sorry, Dave. I'm afraid I can't do that., 4)
+~~~
+</div>
+
+
+### Let's be Reasonable
+
+Some _fool_ is throwing exceptions in our code, destroying our ability to reason about it.
+Implement `exactlyOne` which wraps `onlyOne` encoding the possibility of failure using types rather than exceptions.
+
+Then rerun the test cases.
+
+<div class="solution">
+There are several ways we could have implemented this, the simplest is using `asTry`
+
+~~~ scala
+def exactlyOne[T](action:DBIO[Seq[T]]):DBIO[Try[T]] = onlyOne(action).asTry
+
+
+exec(exactlyOne(happy))
+// res26: scala.util.Try[Example.MessageTable#TableElementType] =
+//   Success(Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+
+
+exec(exactlyOne(boom))
+// res27: scala.util.Try[Example.MessageTable#TableElementType] =
+//   Failure(java.lang.RuntimeException: Expected 1 result, not 2)
+
+
+
+~~~
+</div>
+
+
 ### Filtering
 
 There is a `DBIO` `filter` method, but it produces a runtime exception if the filter predicate is false.
@@ -704,6 +819,7 @@ val marketingCount = exec(
   myFilter(messages.size.result)( _ > 100)(100)
 )
 ~~~
+
 <div class="solution">
 This is a fairly simple example of using `map`:
 
@@ -773,7 +889,7 @@ WHERE
 
 Write a method `unfold` that will take any room name as a starting point, and a query to find the next room, and will follow all the connections until there are no more connecting rooms.
 
-The signature of `unfold` could be:
+The signature of `unfold` _could_ be:
 
 ~~~ scala
 def unfold(
@@ -784,7 +900,7 @@ def unfold(
 
 ... where `z` is the starting ("zero") room, and `f` will lookup the connecting room.
 
-If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Podbday", "Galley", "Computer", "Engine Room")`.
+If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Podbay", "Galley", "Computer", "Engine Room")`.
 
 <div class="solution">
 
