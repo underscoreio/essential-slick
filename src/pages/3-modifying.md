@@ -657,7 +657,7 @@ exec(messages.map( m => (m.sender,m.content)) += (("HAL","Helllllo Dave")))
 Insert the conversation below between Alice and Bob, returning the messages populated with `id`s.
 
 ~~~ scala
-val encryptedConversation = List(
+val conversation = List(
   Message("Bob",  "Hi Alice"),
   Message("Alice","Hi Bob"),
   Message("Bob",  "Are you sure this is secure?"),
@@ -683,7 +683,7 @@ val messagesReturningRow =
 //   Example.Message
 // ] = ...
 
-exec(messagesReturningRow ++= encryptedConversation)
+exec(messagesReturningRow ++= conversation)
 //res16: messagesReturningRow.MultiInsertResult = Vector(
 // Message(Bob,Hi Alice,28),
 // Message(Alice,Hi Bob,29),
