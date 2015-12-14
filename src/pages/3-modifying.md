@@ -133,7 +133,7 @@ exec(messagesReturningId += Message("HAL", "I don't know. I guess we wait."))
 
 Using `messagesReturningId` will return us the `id`, rather than the count of the number of rows inserted.
 
-### Retrieving Rows on Insert
+### Retrieving Rows on Insert {#retrievingRowsOnInsert}
 
 Some databases allow us to retrieve the complete inserted record, not just the primary key.
 For example, we could ask for the whole `Message` back:
@@ -153,7 +153,7 @@ If we tried this with H2, we get a runtime error:
 ~~~ scala
 exec(messages returning messages +=
       Message("Dave", "So... what do we do now?" ))
-// scala.slick.SlickException:
+// slick.SlickException:
 //   This DBMS allows only a single AutoInc column ↩
 //     to be returned from an INSERT
 //   at ...
@@ -191,7 +191,7 @@ exec(insert)
 
 The `into` method allows us to specify a function to combine the record and the new primary key. It's perfect for emulating the `jdbc.returnInsertOther` capability, although we can use it for any post-processing we care to imagine on the inserted data.
 
-### Inserting Specific Columns
+### Inserting Specific Columns {#insertingSpecificColumns}
 
 If our database table contains a lot of columns with default values, it is sometimes useful to specify a subset of columns in our insert queries. We can do this by `mapping` over a query before calling `insert`:
 
@@ -222,7 +222,7 @@ exec(messages.map(_.sender) += "HAL")
 //   at ...
 ~~~
 
-The query fails at runtime because the `sender` column is non-nullable in our schema.
+The query fails at runtime because the `content` column is non-nullable in our schema.
 No matter. We'll cover nullable columns when discussing schemas in [Chapter 5](#Modelling).
 
 
@@ -294,7 +294,7 @@ where
 That looks quite involved, but we can build it up gradually.
 
 The tricky part of this is the `select 'Stanley', 'Cut!'` part, as there is no `FROM` clause there.
-We saw an example of how to create that in Chapter 2, with `Query.apply`. For this situation it would be:
+We saw an example of how to create that in [Chapter 2](#constantQueries), with `Query.apply`. For this situation it would be:
 
 ~~~ scala
 val data = Query(("Stanley", "Cut!"))
@@ -567,6 +567,137 @@ Databases have different capabilities. The limitations of each driver is listed 
 The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
 
 
+<div class="callout callout-info">
+**Where Did My Data Go?**
+
+Several of the exercises in this chapter require you to delete or update  content from the database.
+If you get a different solution to provided, try ensuring the content of the database is correct by running:
+
+``` scala
+exec(populate)
+```
+
+This will drop, create and populate the `messages` table with known values.
+
+</div>
+
+### Methodical Inserts
+
+Create a method to insert a message and return it with the `id` field populated.
+
+<div class="solution">
+
+If you tried
+
+~~~ scala
+exec(
+  messages returning messages +=
+    Message("Dave", "So... what do we do now?"))
+~~~
+
+You will have seen the exception :
+
+~~~ scala
+// slick.SlickException:
+//   This DBMS allows only a single AutoInc column ↩
+//     to be returned from an INSERT
+//   at ...
+~~~
+
+Recall from [Retrieving Rows on Insert](#retrievingRowsOnInsert) that H2 doesn't support returning more than the `id` field.
+
+We need to use `into`:
+
+~~~ scala
+val messagesReturningRow =
+  messages returning messages.map(_.id) into { (message, id) =>
+    message.copy(id = id)
+  }
+// messagesReturningRow: slick.driver.H2Driver.IntoInsertActionComposer[
+// Example.MessageTable#TableElementType,Example.Message] =
+// slick.driver.
+// JdbcActionComponent$ReturningInsertActionComposerImpl@6cfcdefc
+
+
+val insert:Message => DBIO[Message] = m => messagesReturningRow += m
+// insert: Example.Message =>
+// slick.driver.H2Driver.api.DBIO[Example.Message]
+// = <function1>
+
+exec(insert(Message("Dave", "So... what do we do now?")) )
+// res4: messagesReturningRow.SingleInsertResult = Message(Dave,So... what do we do now?,6)
+~~~
+</div>
+
+
+### Get to the Specifics
+
+In [Inserting Specific Columns](#insertingSpecificColumns) we looked at only inserting the sender column:
+
+~~~ scala
+exec(messages.map(_.sender) += "HAL")
+~~~
+
+This failed as we didn't meet the requirements of the `message` table schema.
+For this to succeed we need to inlcude `content` as well as `sender`.
+
+Rewrite the above query to include the `content` column.
+
+<div class="solution">
+The requirements of the `messages` table is `sender` and `content` can not be null.
+Given this, we can correct our query:
+
+~~~ scala
+exec(messages.map( m => (m.sender,m.content)) += (("HAL","Helllllo Dave")))
+~~~
+</div>
+
+### Bulk All the Inserts
+
+Insert the conversation below between Alice and Bob, returning the messages populated with `id`s.
+
+~~~ scala
+val conversation = List(
+  Message("Bob",  "Hi Alice"),
+  Message("Alice","Hi Bob"),
+  Message("Bob",  "Are you sure this is secure?"),
+  Message("Alice","Totally, why do you ask?"),
+  Message("Bob",  "Oh, nothing, just wondering."),
+  Message("Alice","Ten was too many messages"),
+  Message("Bob",  "I could do with a sleep"),
+  Message("Alice","Let's just to to the point"),
+  Message("Bob",  "Okay okay, no need to be tetchy."),
+  Message("Alice","Humph!"))
+~~~
+
+<div class="solution">
+It is `messagesReturningRow` to the rescue once again:
+
+~~~ scala
+val messagesReturningRow =
+  messages returning messages.map(_.id) into { (message, id) =>
+    message.copy(id = id)
+  }
+// messagesReturningRow: slick.driver.H2Driver.IntoInsertActionComposer[
+//   Example.MessageTable#TableElementType,
+//   Example.Message
+// ] = ...
+
+exec(messagesReturningRow ++= conversation)
+//res16: messagesReturningRow.MultiInsertResult = Vector(
+// Message(Bob,Hi Alice,28),
+// Message(Alice,Hi Bob,29),
+// Message(Bob,Are you sure this is secure?,30),
+// Message(Alice,Totally, why do you ask?,31
+// Message(Bob,Oh, nothing, just wondering.,32),
+// Message(Alice,Ten was too many messages,33),
+// Message(Bob,I could do with a sleep,34),
+// Message(Alice,Let's just to to the point ,35),
+// Message(Bob,Okay okay, no need to be tetchy.,36),
+// Message(Alice,Humph!,37))
+~~~
+</div>
+
 ### No Apologies
 
 Write a query to delete messages that contain "sorry".
@@ -576,6 +707,8 @@ Write a query to delete messages that contain "sorry".
 messages.filter(_.content like "%sorry%").delete
 ~~~
 </div>
+
+
 
 
 ### Update Using a For Comprehension
@@ -660,5 +793,28 @@ val zap: DBIO[Int] =
   messages.filter { msg =>
     messages.filter(_.content === msg.content).size > 1
   }.delete
+~~~
+</div>
+
+### Selective Memory
+
+Delete `HAL`s first two messages. This is a more difficult exercise.
+
+Hint: First write a query to select the two messages.
+Then see if you can find a way to use it as a subquery.
+
+<div class="solution">
+~~~ scala
+val selectiveMemory =
+  messages.filter{
+   _.id in messages.
+      filter { _.sender === "HAL" }.
+      sortBy { _.id asc }.
+      map    {_.id}.
+      take(2)
+  }.delete
+
+exec(selectiveMemory)
+//res1: Int = 2
 ~~~
 </div>

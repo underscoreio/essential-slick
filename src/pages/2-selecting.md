@@ -127,6 +127,7 @@ messages.filter(_.sender === 123)
 ~~~
 
 <div class="callout callout-info">
+<a name="constantQueries"/>
 **Constant Queries **
 
 How can we perform useful queries such as
