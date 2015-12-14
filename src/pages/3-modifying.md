@@ -735,7 +735,7 @@ val rowsAffected = query.update("HAL 9000", "Rebooting, please wait...")
 ~~~
 </div>
 
-
+<!--
 ### Duped
 
 This is a harder exercise for working with queries and delete.
@@ -795,6 +795,7 @@ val zap: DBIO[Int] =
   }.delete
 ~~~
 </div>
+-->
 
 ### Selective Memory
 
