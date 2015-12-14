@@ -339,11 +339,9 @@ Do you see what's wrong? If not, don't worry because the compiler will find the 
 
 ```
 type mismatch;
-[error]  found    : SqlStreamingAction[               ↩
-            Vector[(String, Int)],(String, Int),Effect]
+[error]  found    : SqlStreamingAction[Vector[(String, Int)],(String, Int),Effect]
 [error]  required : DBIO[Seq[String]]
-[error]    (which expands to)                         ↩
-            DBIOAction[Seq[String],NoStream,Effect.All]
+[error]     (which expands to) DBIOAction[Seq[String],NoStream,Effect.All]
 ```
 
 The compiler wants a `String` for each row, because that's what we've declared the result to be. However it is found, via the database, that the query will return `(String,Int)` rows.

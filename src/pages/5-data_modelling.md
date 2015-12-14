@@ -1198,10 +1198,11 @@ The method signature is:
 def filterByEmail(email: Option[String]) = ???
 ~~~
 
-Assume we only have two user records: one with an email address of "dave@example.org", and one with no email address.
+Assume we only have two user records: one with an email address of "dave@example.org",
+and one with no email address.
 
-We want `filterByEmail(Some("dave@example.org")).run` to produce one row,
-and `filterByEmail(None).run` to produce two rows.
+We want `filterByEmail(Some("dave@example.org"))` to produce one row,
+and `filterByEmail(None)` to produce two rows.
 
 Tip: it's OK to use multiple queries.
 

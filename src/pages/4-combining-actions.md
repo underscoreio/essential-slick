@@ -81,7 +81,12 @@ Method       Arguments                       Result Type                    Note
 <div class="callout callout-warning">
 **Combined Actions Are Not Automatically Transactions**
 
-By default, when you combine actions together you do not get a single transaction.  At the [end of this chapter][Transactions] we'll see that it's very easy to run combined actions in a transaction with `db.run(actions.transactionally)`.
+By default, when you combine actions together you do not get a single transaction.
+At the [end of this chapter][Transactions] we'll see that it's very easy to run combined actions in a transaction with:
+
+~~~ scala
+db.run(actions.transactionally)
+~~~
 </div>
 
 

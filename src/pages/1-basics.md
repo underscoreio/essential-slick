@@ -103,7 +103,8 @@ Which will give output similar to:
 
 ~~~ scala
 > console
-[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/essential-slick-code/chapter-01/target/scala-2.11/classes...
+[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/essential-slick-code/ ↩
+  chapter-01/target/scala-2.11/classes...
 [info] Starting scala interpreter...
 [info]
 import slick.driver.H2Driver.api._
@@ -276,7 +277,7 @@ val db = Database.forConfig("chapter01")
 The parameter to `Database.forConfig` determines which configuration to use from the `application.conf` file.
 This file is found in `src/main/resources`. It looks like this:
 
-~~~ conf
+~~~ scala
 chapter01 = {
   driver = "org.h2.Driver"
   url    = "jdbc:h2:mem:chapter01"
