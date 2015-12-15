@@ -158,8 +158,10 @@ implicit val GetMessageId = GetResult(r => Id[MessageTable](r.nextLong))
 For the optional ones we need to use `nextLongOption` and then `map` to the right type:
 
 ~~~ scala
-implicit val GetOptUserId = GetResult(r => r.nextLongOption.map(i => Id[UserTable](i)))
-implicit val GetOptRoomId = GetResult(r => r.nextLongOption.map(i => Id[RoomTable](i)))
+implicit val GetOptUserId = GetResult(r =>
+                                  r.nextLongOption.map(i => Id[UserTable](i)))
+implicit val GetOptRoomId = GetResult(r =>
+                                  r.nextLongOption.map(i => Id[RoomTable](i)))
 ~~~
 
 With all the individual columns mapped we can pull them into a `GetResult` for `Message`. There are two helper methods which make it easier to construct these instances:
@@ -339,7 +341,10 @@ Do you see what's wrong? If not, don't worry because the compiler will find the 
 
 ```
 type mismatch;
-[error]  found    : SqlStreamingAction[Vector[(String, Int)],(String, Int),Effect]
+[error]  found    : SqlStreamingAction[
+                                        Vector[(String, Int)],
+                                        (String, Int),Effect
+                                      ]
 [error]  required : DBIO[Seq[String]]
 [error]     (which expands to) DBIOAction[Seq[String],NoStream,Effect.All]
 ```

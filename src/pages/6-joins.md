@@ -174,7 +174,10 @@ val usersAndRooms =
 
 // usersAndRooms: slick.lifted.Query[
 //  ((MessageTable, UserTable), RoomTable),
-//  ((MessageTable#TableElementType, UserTable#TableElementType), RoomTable#TableElementType),
+//  (
+//    (MessageTable#TableElementType, UserTable#TableElementType),
+//     RoomTable#TableElementType
+    ),
 //  Seq
 // ] = Rep(Join Inner)
 ~~~
@@ -698,7 +701,7 @@ When we run the query, it'll work, but it will be in terms of a user's primary k
 ~~~ scala
 exec(msgPerUser)
 // res1: Seq[(ChatSchema.PK[schema.UserTable], Int)] =
-//  Vector((PK(1),4), (PK(2),4), (PK(4),2))  
+//  Vector((PK(1),4), (PK(2),4), (PK(4),2))
 ~~~
 
 #### Groups and Joins

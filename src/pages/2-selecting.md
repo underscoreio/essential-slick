@@ -264,7 +264,9 @@ and the SQL is modified as we might expect:
 
 ~~~ scala
 messages.map(t => (t.id, t.content)).result.statements
-// res19: Iterable[String] = List(select x2."id", x2."content" from "message" x2)
+// res19: Iterable[String] = List(
+//    select x2."id", x2."content" from "message" x2
+// )
 ~~~
 
 We can even map sets of columns to Scala data structures using the
@@ -864,8 +866,12 @@ println(sql)
 The result will be something like:
 
 ~~~ SQL
-select x2."id", x2."sender", x2."content", x2."ts" from "message" x2  ↩
-where x2."id" = 1
+select
+  x2."id", x2."sender", x2."content", x2."ts"
+from
+  "message" x2
+where
+  x2."id" = 1
 ~~~
 
 From this we see how `filter` corresponds to a SQL `where` clause.
@@ -973,7 +979,13 @@ Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,6)
 And asking for any more messages will result in an empty collection.
 
 ~~~ scala
-val msgs = exec(messages.filter(_.sender === "HAL").drop(10).take(10).result)
+val msgs = exec(
+            messages.
+              filter(_.sender === "HAL").
+              drop(10).
+              take(10).
+              result
+          )
 // msgs: Seq[Example.MessageTable#TableElementType] = Vector()
 
 ~~~
@@ -995,8 +1007,12 @@ messages.filter(_.content startsWith "Open")
 The query is implemented in terms of `LIKE`:
 
 ~~~ SQL
-select x2."id", x2."sender", x2."content", x2."ts" from "message" x2  ↩
-where x2."content" like 'Open%' escape '^'
+select
+  x2."id", x2."sender", x2."content", x2."ts"
+from
+  "message" x2
+where
+  x2."content" like 'Open%' escape '^'
 ~~~
 </div>
 
@@ -1016,8 +1032,12 @@ messages.filter(_.content.toLowerCase like "%do%")
 The SQL will turn out as:
 
 ~~~ SQL
-select x2."id", x2."sender", x2."content", x2."ts" from "message" x2  ↩
-where lower(x2."content") like '%do%'
+select
+  x2."id", x2."sender", x2."content", x2."ts"
+from
+  "message" x2
+where
+  lower(x2."content") like '%do%'
 ~~~
 
 There are three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".

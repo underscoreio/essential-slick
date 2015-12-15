@@ -82,7 +82,8 @@ and that running the action results in a record with the ID being inserted:
 
 ~~~ scala
 forceInsertAction.statements.head
-// res4: String = insert into "message" ("sender","content","id")  values (?,?,?)
+// res4: String =
+//       insert into "message" ("sender","content","id")  values (?,?,?)
 
 exec(forceInsertAction)
 
@@ -625,7 +626,8 @@ val insert:Message => DBIO[Message] = m => messagesReturningRow += m
 // = <function1>
 
 exec(insert(Message("Dave", "So... what do we do now?")) )
-// res4: messagesReturningRow.SingleInsertResult = Message(Dave,So... what do we do now?,6)
+// res4: messagesReturningRow.SingleInsertResult =
+//                Message(Dave,So... what do we do now?,6)
 ~~~
 </div>
 

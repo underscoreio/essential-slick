@@ -730,17 +730,19 @@ which are provided in Slick by the methods `isEmpty` and `isDefined` defined on 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
 ----------------------- ---------------------------------- ------------------ --------------------------
-`col.?`                `A`                                `Option[A]`        `col`
+`col.?`                 `A`                                `Option[A]`        `col`
 
-`col.isEmpty`          `Option[A]`                        `Boolean`          `col is null`
+`col.isEmpty`           `Option[A]`                        `Boolean`          `col is null`
 
-`col.isDefined`        `Option[A]`                        `Boolean`          `col is not null`
+`col.isDefined`         `Option[A]`                        `Boolean`          `col is not null`
 
 --------------------------------------------------------------------------------------------------------
 
 : Optional column methods.
   Operand and result types should be interpreted as parameters to `Rep[_]`.
   The `?` method is described in the next section.
+
+
 
 We can fix our query by replacing our equality check with `isEmpty`:
 

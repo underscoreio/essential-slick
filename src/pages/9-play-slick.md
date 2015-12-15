@@ -195,7 +195,8 @@ Let's populate the schema as we have done throughout the book with the standard 
 object Global extends GlobalSettings {
 
   //When the application starts up, populate the schema.
-  override def onStart(app: Application) = Await.result(Schema.populate, Duration.Inf)
+  override def onStart(app: Application) =
+    Await.result(Schema.populate, Duration.Inf)
 
 }
 ```

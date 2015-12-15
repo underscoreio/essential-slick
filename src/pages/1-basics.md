@@ -103,8 +103,8 @@ Which will give output similar to:
 
 ~~~ scala
 > console
-[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/essential-slick-code/ ↩
-  chapter-01/target/scala-2.11/classes...
+[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/ ↩
+essential-slick-code/chapter-01/target/scala-2.11/classes...
 [info] Starting scala interpreter...
 [info]
 import slick.driver.H2Driver.api._
@@ -112,10 +112,12 @@ import Example._
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-db: slick.driver.H2Driver.backend.Database = slick.jdbc.JdbcBackend$DatabaseDef@75028b56
+db: slick.driver.H2Driver.backend.Database =
+      slick.jdbc.JdbcBackend$DatabaseDef@75028b56                     ↩
 exec: [T](program: slick.driver.H2Driver.api.DBIO[T])T
 res0: Option[Int] = Some(4)
-Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_25).
+Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM,   ↩
+Java 1.8.0_25).
 Type in expressions to have them evaluated.
 Type :help for more information.
 
@@ -473,7 +475,9 @@ Notice that we created our original `halSays` before connecting to the database.
 
 ~~~ scala
 halSays.map(_.id).result.statements
-// res6:List[String] = List(select x2."id" from "message" x2 where x2."sender" = 'HAL')
+// res6:List[String] = List(
+//        select x2."id" from "message" x2 where x2."sender" = 'HAL'
+//      )
 
 exec(halSays.map(_.id).result)
 // res7: Seq[Int] = Vector(2, 4)
@@ -604,15 +608,20 @@ If you don't pass the action created by `+=` to `db` to be run, you'll get back 
 
 ~~~ scala
 messages += Message("Dave","What if I say 'Pretty please'?")
-res6: slick.profile.FixedSqlAction[Int,slick.dbio.NoStream,slick.dbio.Effect.Write] =
- slick.driver.JdbcActionComponent$InsertActionComposerImpl$$anon$8@7e0e6d1e
+//res6: slick.profile.FixedSqlAction[
+//                  Int,
+//                  slick.dbio.NoStream,slick.dbio.Effect.Write
+//                  ] =
+// slick.driver.JdbcActionComponent$InsertActionComposerImpl
+//                                            $$anon$8@7e0e6d1e
 ~~~
 
 If you don't wait for the future to complete, you'll see just the future itself:
 
 ~~~ scala
 db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
-res7: scala.concurrent.Future[Int] = scala.concurrent.impl.Promise$DefaultPromise@652a41e8
+// res7: scala.concurrent.Future[Int] =
+// scala.concurrent.impl.Promise$DefaultPromise@652a41e8
 ~~~
 </div>
 
@@ -639,7 +648,8 @@ Note that the parameter to `filter` is built using a triple-equals operator, `==
 ~~~ scala
 exec(messages.filter(_.sender == "Dave").result)
 
-//<console>:18: error: inferred type arguments [Boolean] do not conform to method filter's
+//<console>:18: error: inferred type arguments [Boolean] do not conform to
+//                     method filter's
 //  type parameter bounds [T <: slick.lifted.Rep[_]]
 //              exec(messages.filter(_.sender == "Dave").result)
 //                            ^
@@ -663,10 +673,16 @@ you'll end up with a compilation error as `exec` and the call it is wrapping `db
 ~~~ scala
 exec(messages.filter(_.sender === "Dave"))
 <console>:18: error: type mismatch;
- found   : slick.lifted.Query[Example.MessageTable,Example.MessageTable#TableElementType,Seq]
-    (which expands to)  slick.lifted.Query[Example.MessageTable,Example.Message,Seq]
+ found   : slick.lifted.Query[Example.MessageTable,
+                              Example.MessageTable#TableElementType,
+                              Seq]
+    (which expands to)  slick.lifted.Query[Example.MessageTable,
+                                           Example.Message,
+                                           Seq]
  required: slick.driver.H2Driver.api.DBIO[?]
-    (which expands to)  slick.dbio.DBIOAction[?,slick.dbio.NoStream,slick.dbio.Effect.All]
+    (which expands to)  slick.dbio.DBIOAction[?,
+                                              slick.dbio.NoStream,
+                                              slick.dbio.Effect.All]
               exec(messages.filter(_.sender === "Dave"))
                                   ^
 ~~~
