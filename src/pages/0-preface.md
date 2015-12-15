@@ -27,13 +27,6 @@ This material is aimed at beginner-to-intermediate Scala developers. You need:
 
 The material presented focuses on Slick version 3. Examples use [H2][link-h2-home] as the relational database.
 
-## Notes on the Early Access Edition {-}
-
-This book is in early access status. The content is complete, but may contain typos and errata.
-
-As an early access customer you will receive a free copy of the final text when it is released, plus free
-lifetime updates thereafter.
-
 ## How to Contact Us {-}
 
 You can provide feedback on this text via:
