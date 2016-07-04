@@ -22,7 +22,34 @@ npm install
 Building
 --------
 
-Use the following commands to build a single format:
+~~~
+sbt pdf
+~~~
+
+Writing
+-------
+
+The source files are in _src/raw_.  Scala blocks are executed by tut when marked as:
+
+```tut:book
+your code here
+```
+
+Note:
+
+- no space before tut in the code block
+- `~~~tut` isn't recognized by tut
+
+For each chapter you'll need to update _src/main/rsources/application.conf_ to include the chapter database configuration.
+
+The tut converted sources are output to _src/pages_.
+
+All other targets are placed in the `dist` directory.
+
+Command reference
+-----------------
+
+Use the following commands if you need to build after tut has run:
 
 ~~~
 grunt pdf
