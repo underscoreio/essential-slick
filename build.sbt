@@ -5,7 +5,7 @@ tutSourceDirectory := sourceDirectory.value / "pages"
 
 tutTargetDirectory := target.value / "pages"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.11.7"
 
 scalacOptions ++= Seq(
   "-deprecation",
