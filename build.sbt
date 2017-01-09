@@ -1,11 +1,11 @@
 lazy val root = project.in(file("."))
   .settings(tutSettings)
 
-tutSourceDirectory := sourceDirectory.value / "raw"
+tutSourceDirectory := sourceDirectory.value / "pages"
 
-tutTargetDirectory := sourceDirectory.value / "pages"
+tutTargetDirectory := target.value / "pages"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.8"
 
 scalacOptions ++= Seq(
   "-deprecation",
@@ -26,6 +26,6 @@ libraryDependencies ++= Seq(
 lazy val pdf = taskKey[Unit]("Builds the PDF version of the book")
 
 pdf := {
-  val a = tut.value
+  val a = tutQuick.value
   "grunt pdf" !
 }
