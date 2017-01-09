@@ -95,15 +95,17 @@ If you haven't used sbt before, you may find the [sbt Tutorial][link-sbt-tutoria
 
 ## Working Interactively in the sbt Console
 
-To get you up to speed quickly,
-we've created an `exec` method and imported the base requirements to run examples from the console.
+Slick queries run asynchronously as `Future` values.
+These are fiddly to work with in the Scala REPL, but we do want you to be able to explore Slick via the REPL.
+So to get you up to speed quickly,
+the example projects define an `exec` method and import the base requirements to run examples from the console.
+
 You can see this by starting `sbt` and then running the `console` command.
 Which will give output similar to:
 
 ~~~ scala
 > console
-[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/ ↩
-essential-slick-code/chapter-01/target/scala-2.11/classes...
+[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/essential-slick-code/chapter-01/target/scala-2.11/classes...
 [info] Starting scala interpreter...
 [info]
 import slick.driver.H2Driver.api._
@@ -111,32 +113,32 @@ import Example._
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-db: slick.driver.H2Driver.backend.Database =
-      slick.jdbc.JdbcBackend$DatabaseDef@75028b56                     ↩
+db: slick.driver.H2Driver.backend.Database = slick.jdbc.JdbcBackend$DatabaseDef@75028b56
 exec: [T](program: slick.driver.H2Driver.api.DBIO[T])T
 res0: Option[Int] = Some(4)
-Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM,   ↩
-Java 1.8.0_25).
+Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_25).
 Type in expressions to have them evaluated.
 Type :help for more information.
 
 scala>
 ~~~
 
-This means we can focus on Slick, rather than the boilerplate.
-There is a complete explanation of `exec` later in the chapter.
-For now, a small example showing its usage and output:
+Our `exec` helper runs a query and waits for the output.
+There is a complete explanation of `exec` and these imports later in the chapter.
+For now, here's a small example which fetches all the `message` rows:
 
 ```scala
 exec(messages.result)
-/res1: Seq[Example.MessageTable#TableElementType] =
-//Vector(Message(Dave,Hello, HAL. Do you read me, HAL?,1),
+// res1: Seq[Example.MessageTable#TableElementType] =
+// Vector(Message(Dave,Hello, HAL. Do you read me, HAL?,1),
 //       Message(HAL,Affirmative, Dave. I read you.,2),
 //       Message(Dave,Open the pod bay doors, HAL.,3),
 //       Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
 ```
 
-Note: We reference the `messages` table and due to the import in the previous code snippet there was no reason to qualify it with as  `Example.messages`.
+But we're getting ahead of ourselves.
+We'll work though building up queries and running them, and using `exec`, as we work through this chapter.
+If the above works for you, great---you have a development environment set up and ready to go.
 
 
 ## Example: A Sequel Odyssey
@@ -247,7 +249,7 @@ Note that we're not *running* this query at the moment---we're simply defining i
 val halSays = messages.filter(_.sender === "HAL")
 ```
 
-Again, we haven't run this query yet---we've simply defined it as a useful building block for yet more queries. This demonstrates an important part of Slick's query language---it is made from *composable* building blocks that permit a lot of valuable code re-use.
+Again, we haven't run this query yet---we've defined it as a building block for yet more queries. This demonstrates an important part of Slick's query language---it is made from *composable* elements that permit a lot of valuable code re-use.
 
 <div class="callout callout-info">
 **Lifted Embedding**
@@ -265,7 +267,7 @@ Lifted embedding is the standard way to work with Slick. We will discuss the oth
 
 ### Configuring the Database
 
-We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object, which acts as a factory for managing connections and transactions:
+We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object which acts as a factory for managing connections and transactions:
 
 ```tut:book
 val db = Database.forConfig("chapter01")
@@ -349,7 +351,7 @@ val future: Future[Unit] = db.run(action)
 
 The result of `run` is a `Future[T]`, where `T` is the type of result returned by the database. Creating a schema is a side-effecting operation so the result type is `Future[Unit]`. This matches the type `DBIO[Unit]` of the action we started with.
 
-`Future`s are asynchronous. That's to say, they are place holders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can simply block until our action completes:
+`Future`s are asynchronous. That's to say, they are placeholders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can block until our action completes:
 
 ```tut:book
 import scala.concurrent.Await
@@ -445,7 +447,7 @@ exec(messages.filter(_.sender === "HAL").result)
 ```
 
 We actually generated this query earlier and stored it in the variable `halSays`.
-We can get exactly the same results from the database by running this stored query instead:
+We can get exactly the same results from the database by running this variable instead:
 
 ```tut:book
 exec(halSays.result)
@@ -482,7 +484,8 @@ exec(halSays2.result)
 
 Like `Query`, `DBIOAction` is also a monad. It implements the same methods described above, and shares the same compatibility with for comprehensions.
 
-We can combine the actions to create the schema, insert the data, and query results into one action. We can do this before we have a database connection, and we run the action like any other:
+We can combine the actions to create the schema, insert the data, and query results into one action. We can do this before we have a database connection, and we run the action like any other.
+To do this, Slick provides a number of useful action combinators. We can use `andThen`, for example:
 
 ```tut:book
 val actions: DBIO[Seq[Message]] = (
@@ -492,18 +495,23 @@ val actions: DBIO[Seq[Message]] = (
 )
 ```
 
-And if you want to get funky, `>>` is another name for `andThen`:
+What `andThen` does is combine two actions so that the result of the first action is thrown away.
+The end result of the above `actions` is the last action in the `andThen` chain.
+
+If you want to get funky, `>>` is another name for `andThen`:
 
 ```tut:book
-val sameActions = (
+val sameActions: DBIO[Seq[Message]] = (
   messages.schema.create       >>
   (messages ++= freshTestData) >>
   halSays.result
 )
 ```
 
-One important reason for composing queries and actions is to wrap them inside a transaction.
+Combining actions is an important feature of Slick.
+For example, one reason for combining actions is to wrap them inside a transaction.
 In [Chapter 4](#combining) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
+
 
 <div class="callout callout-danger">
 *Queries, Actions, Futures... Oh My!*

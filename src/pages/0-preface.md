@@ -1,9 +1,11 @@
 # Preface {-}
 
+## What is Slick? {-}
+
 [Slick][link-slick] is a Scala library for working with relational databases.
 That means it allows you to model a schema, run queries, insert data, and update data.
 
-You write queries in Scala and they are type checked by the compiler.
+Using Slick you write queries in Scala and they are type checked by the compiler.
 This makes working with a database like working with regular Scala collections.
 
 We've seen that developers using Slick for the first time often need help getting the most from it.
@@ -22,10 +24,9 @@ This material is aimed at beginner-to-intermediate Scala developers. You need:
   (we recommend [Essential Scala][link-essential-scala] or an equivalent book);
 * experience with relational databases
   (familiarity with concepts such as rows, columns, joins, indexes, SQL); and
-* an installed JDK 8 or better, along with a programmer's text editor or IDE
-  (Scala IDE for Eclipse or IntelliJ are both good choices).
+* an installed JDK 8 or better, along with a programmer's text editor or IDE.
 
-The material presented focuses on Slick version 3. Examples use [H2][link-h2-home] as the relational database.
+The material presented focuses on Slick version 3.1. Examples use [H2][link-h2-home] as the relational database.
 
 ## How to Contact Us {-}
 
@@ -40,8 +41,6 @@ You can follow us on Twitter as [\@underscoreio][link-twitter-underscore].
 
 ## Acknowledgements {-}
 
-
-
 Many thanks to [Renato Cavalcanti ][link-renato], [Dave Gurnell][link-twitter-dave], [Kevin Meredith][link-meredith], [Joseph Ottinger][link-ottinger], [Yann Simon][link-simon] and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
 
 ## Conventions Used in This Book {-}
@@ -52,7 +51,7 @@ This book contains a lot of technical information and program code. We use the f
 
 New terms and phrases are introduced in *italics*. After their initial introduction they are written in normal roman font.
 
-Terms from program code, filenames, and file contents, are written in `monospace font`. Note that we do not distinguish between singular and plural forms. For example, might write `String` or `Strings` to refer to the `java.util.String` class or objects of that type.
+Terms from program code, filenames, and file contents, are written in `monospace font`.
 
 References to external resources are written as [hyperlinks][link-underscore]. References to API documentation are written using a combination of hyperlinks and monospace font, for example: [`scala.Option`][link-scala-option].
 
@@ -78,6 +77,19 @@ should actually be written as follows:
 ~~~ scala
 println("This code should all be written on one line.")
 ~~~
+
+
+### REPL Output {-}
+
+We use Scala comments to show REPL output. For example:
+
+~~~ scala
+2 * 13
+// res0: Int = 26
+~~~
+
+If you're following along with the REPL, and copy and paste from the book we hope this will be useful.
+It means if you accidentally copy more than you intended, the REPL will ignore the commented output.
 
 ### Callout Boxes {-}
 
