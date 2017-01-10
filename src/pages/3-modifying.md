@@ -189,7 +189,7 @@ The Slick manual contains a comprehensive table of the [capabilities for each da
 The API documentation for each driver also lists the capabilities that the driver *doesn't* have. For an example, the top of the [H2 Driver Scaladoc][link-ref-h2driver] page points out several of its shortcomings.
 </div>
 
-If want to get a complete populated `Message` back from a database without `jdbc.returnInsertOther` support, we retrieve the primary key and manually add it to the inserted record. Slick simplifies this with another method, `into`:
+If we want to get a complete populated `Message` back from a database without `jdbc.returnInsertOther` support, we retrieve the primary key and manually add it to the inserted record. Slick simplifies this with another method, `into`:
 
 ```tut:book
 val messagesReturningRow =
