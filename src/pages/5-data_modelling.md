@@ -852,7 +852,7 @@ SELECT * FROM "user" WHERE "email" IS NULL
 
 We had our first introduction to primary keys in Chapter 1,
 where we started setting up `id` fields using
-the `O.PrimaryKey` and `O.AutoEnc` column options:
+the `O.PrimaryKey` and `O.AutoInc` column options:
 
 ~~~ scala
 def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
