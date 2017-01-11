@@ -562,7 +562,7 @@ You will have seen the exception :
 
 ~~~ scala
 // slick.SlickException:
-//   This DBMS allows only a single AutoInc column ↩
+//   This DBMS allows only a single AutoInc column 
 //     to be returned from an INSERT
 //   at ...
 ~~~

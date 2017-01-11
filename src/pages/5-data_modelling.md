@@ -690,15 +690,16 @@ You'll find a definition of `UserTable` that you can copy and paste in the examp
 A suitable projection is:
 
 ~~~ scala
-def pack(row: (String, String, String, String, String, Long)): User =
+type Row = (String, String, String, String, String, Long)
+
+def pack(row: Row): User =
   User(
     EmailContact(row._1, row._2),
     Address(row._3, row._4, row._5),
     row._6
   )
 
-def unpack(user: User): Option[(String, String, String, String, ↩
-                                                String, Long)] =
+def unpack(user: User): Option[Row] =
   Some((user.contact.name, user.contact.email,
         user.address.street, user.address.city, user.address.country,
         user.id))
