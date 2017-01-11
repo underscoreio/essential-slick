@@ -13,18 +13,17 @@ $ sbt
 sbt> pdf
 ~~~
 
+To avoid running out of MetaSpace you'll also maybe want to:
+
+```
+export JAVA_OPTS="-Xmx3g -XX:+TieredCompilation -XX:ReservedCodeCacheSize=256m -XX:+UseNUMA -XX:+UseParallelGC -XX:+CMSClassUnloadingEnabled"
+```
+
 For upgrading:
 
 ~~~
 rm -rf node_modules
 npm install
-~~~
-
-Building
---------
-
-~~~
-sbt pdf
 ~~~
 
 Writing

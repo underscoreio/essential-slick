@@ -31,6 +31,7 @@
 [link-wikipedia-joins]:      http://en.wikipedia.org/wiki/Join_(SQL)
 [link-wikipedia-injection]:  https://en.wikipedia.org/wiki/SQL_injection
 [link-dw-effect-blog]:       http://danielwestheide.com/blog/2015/06/28/put-your-writes-where-your-master-is-compile-time-restriction-of-slick-effect-types.html
+[link-fkri]:                 http://en.wikipedia.org/wiki/Foreign_key#Referential_actions
 
 [link-pins-interop]:         https://www.artima.com/pins1ed/combining-scala-and-java.html#i-855208314-1
 [link-scala-interpolation]:  http://docs.scala-lang.org/overviews/core/string-interpolation.html
