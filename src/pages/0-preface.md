@@ -22,8 +22,10 @@ This material is aimed at beginner-to-intermediate Scala developers. You need:
 
 * a working knowledge of Scala
   (we recommend [Essential Scala][link-essential-scala] or an equivalent book);
+
 * experience with relational databases
   (familiarity with concepts such as rows, columns, joins, indexes, SQL); and
+
 * an installed JDK 8 or better, along with a programmer's text editor or IDE.
 
 The material presented focuses on Slick version 3.1. Examples use [H2][link-h2-home] as the relational database.
@@ -33,6 +35,7 @@ The material presented focuses on Slick version 3.1. Examples use [H2][link-h2-h
 You can provide feedback on this text via:
 
 * [our Gitter channel][link-underscore-gitter]; or
+
 * email to [hello@underscore.io][link-email-underscore] using the subject line of "Essential Slick".
 
 The [Underscore Newsletter][link-newsletter] contains announcements regarding this and other publications from Underscore.
