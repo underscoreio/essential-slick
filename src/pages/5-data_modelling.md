@@ -1452,11 +1452,10 @@ and the unique primary key is simply the user's `id`:
 case class Bill(userId: Long, amount: BigDecimal)
 
 class BillTable(tag: Tag) extends Table[Bill](tag, "bill") {
-  def userId = column[Long]("user", O.PrimaryKey)
+  def userId = column[Long]("user", O.PrimaryKey
   def amount = column[BigDecimal]("dollars", O.Default(12.00))
   def * = (userId, amount) <> (Bill.tupled, Bill.unapply)
-  def user = foreignKey("fk_bill_user", userId, users)  ↩
-                       (_.id, onDelete=ForeignKeyAction.Restrict)
+  def user = foreignKey("fk_bill_user", userId, users)(_.id, onDelete=ForeignKeyAction.Restrict)
 }
 
 lazy val bills = TableQuery[BillTable]
