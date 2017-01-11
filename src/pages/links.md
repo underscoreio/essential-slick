@@ -22,6 +22,9 @@
 [link-slf4j]:                http://www.slf4j.org/
 [link-wartremover]:          https://github.com/puffnfresh/wartremover
 
+[link-shapeless]:            https://github.com/milessabin/shapeless
+[link-slickless]:            https://github.com/underscoreio/slickless
+
 [link-visual-joins]:         http://blog.codinghorror.com/a-visual-explanation-of-sql-joins/
 [link-akka-streams]:         http://akka.io/docs/
 [link-reactive-streams]:     http://http://www.reactive-streams.org/
