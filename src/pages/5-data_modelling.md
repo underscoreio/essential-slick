@@ -538,7 +538,7 @@ import scala.concurrent.duration._
 
 val db = Database.forConfig("chapter05")
 
-def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 2.seconds)
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
 ```
 
 Working with this table involves inserting, updating, selecting, and modifying
@@ -1062,7 +1062,7 @@ CREATE UNIQUE INDEX "c_idx" ON "people" ("name", "age")
 ~~~
 
 
-### Foreign Keys
+### Foreign Keys {fks}
 
 Foreign keys are declared in a similar manner to compound primary keys.
 
