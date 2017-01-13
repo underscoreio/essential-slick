@@ -12,9 +12,10 @@ In [Chapter 6](#joins) we'll look at more complex queries involving joins, aggre
 
 The simplest select query is the `TableQuery` generated from a `Table`. In the following example, `messages` is a `TableQuery` for `MessageTable`:
 
-```tut:book
+```tut:silent
 import slick.driver.H2Driver.api._
-
+```
+```tut:book
 final case class Message(
   sender:  String,
   content: String,
@@ -80,7 +81,9 @@ The types in our `filter` expression deserve some deeper explanation.
 Slick represents all queries using a trait `Query[M, U, C]` that has three type parameters:
 
  - `M` is called the *mixed* type. This is the function parameter type we see when calling methods like `map` and `filter`.
+ 
  - `U` is called the *unpacked* type. This is the type we collect in our results.
+ 
  - `C` is called the *collection* type. This is the type of collection we accumulate results into.
 
 In the examples above, `messages` is of a subtype of `Query` called `TableQuery`.
@@ -157,10 +160,12 @@ This changes both the mixed type and the unpacked type of the query:
 
 Just as we did in Chapter 1, we're using a simple helper method to run queries in the REPL:
 
-```tut:book
+```tut:silent
 import scala.concurrent.{Await,Future}
 import scala.concurrent.duration._
+```
 
+```tut:book
 val db = Database.forConfig("chapter02")
 
 def exec[T](action: DBIO[T]): T =
@@ -306,7 +311,9 @@ representing single queries and compose them to form multi-action sequences.
 Actions have the type signature `DBIOAction[R, S, E]`. The three type parameters are:
 
 - `R` is the type of data we expect to get back from the database (`Message`, `Person`, etc);
+
 - `S` indicates whether the results are streamed (`Streaming[T]`) or not (`NoStream`); and
+
 - `E` is the effect type and will be inferred.
 
 In many cases we can simplify the representation of an action to just `DBIO[T]`, which is an alias for `DBIOAction[T, NoStream, Effect.All]`.

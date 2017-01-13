@@ -174,7 +174,9 @@ libraryDependencies ++= Seq(
 This file declares the minimum library dependencies for a Slick project:
 
 - Slick itself;
+
 - the H2 database; and
+
 - a logging library.
 
 If we were using a separate database like MySQL or PostgreSQL, we would substitute the H2 dependency for the JDBC driver for that database.
@@ -183,7 +185,7 @@ If we were using a separate database like MySQL or PostgreSQL, we would substitu
 
 Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *driver*. For example, we access most of the Slick API for H2 via the following `import`:
 
-```tut:book
+```tut:silent
 import slick.driver.H2Driver.api._
 ```
 
@@ -276,14 +278,14 @@ val db = Database.forConfig("chapter01")
 The parameter to `Database.forConfig` determines which configuration to use from the `application.conf` file.
 This file is found in `src/main/resources`. It looks like this:
 
-~~~ scala
-chapter01 = {
+```scala
+chapter01 {
   driver = "org.h2.Driver"
   url    = "jdbc:h2:mem:chapter01"
   keepAliveConnection = true
   connectionPool = disabled
 }
-~~~
+```
 
 This syntax comes from the [Typesafe Config][link-config] library, which is also used by Akka and the Play framework.
 
@@ -343,9 +345,10 @@ But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 
 Let's run this action:
 
-```tut:book
+```tut:silent
 import scala.concurrent.Future
-
+```
+```tut:book
 val future: Future[Unit] = db.run(action)
 ```
 
@@ -353,10 +356,11 @@ The result of `run` is a `Future[T]`, where `T` is the type of result returned b
 
 `Future`s are asynchronous. That's to say, they are placeholders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can block until our action completes:
 
-```tut:book
+```tut:silent
 import scala.concurrent.Await
 import scala.concurrent.duration._
-
+```
+```tut:book
 val result = Await.result(future, 2.seconds)
 ```
 
