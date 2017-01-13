@@ -19,7 +19,6 @@ pages:
   - links.md
   - start-of-appendix.md
   - 8-databases.md
-  - 9-play-slick.md
   - solutions.md
 previewPages:
   - 0-preface.md
