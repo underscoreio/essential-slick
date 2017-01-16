@@ -46,6 +46,8 @@ You can follow us on Twitter as [\@underscoreio][link-twitter-underscore].
 
 Many thanks to [Renato Cavalcanti ][link-renato], [Dave Gurnell][link-twitter-dave], [Kevin Meredith][link-meredith], [Joseph Ottinger][link-ottinger], [Yann Simon][link-simon], [Trevor Sibanda][link-trevor], and the team at [Underscore][link-underscore] for their invaluable contributions and proof reading.
 
+And of course huge thanks to the Slick team for creating such a cool piece of software.
+
 ## Conventions Used in This Book {-}
 
 This book contains a lot of technical information and program code. We use the following typographical conventions to reduce ambiguity and highlight important concepts:
