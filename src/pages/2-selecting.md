@@ -929,7 +929,7 @@ messages.filter(_.content startsWith "Open")
 
 The query is implemented in terms of `LIKE`:
 
-```book:tut
+```tut:book
 messages.filter(_.content startsWith "Open").result.statements.head
 ```
 </div>

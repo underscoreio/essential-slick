@@ -109,7 +109,7 @@ val badAction =
 
 This compiles, but fails at runtime as the type of the `title` column is a `String` and we've provided an `Int`:
 
-```book:tut
+```tut:book
 exec(badAction.asTry)
 ```
 

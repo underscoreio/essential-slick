@@ -490,7 +490,7 @@ We can update rows by selecting the relevant data from the database, applying th
 
 You may be tempted to write something like this:
 
-~~~ scala
+```tut:book
 def modify(msg: Message): DBIO[Int] =
   messages.filter(_.id === msg.id).update(exclaim(msg))
 
@@ -498,7 +498,7 @@ def modify(msg: Message): DBIO[Int] =
 for {
   msg <- exec(messages.result)
 } yield exec(modify(msg))
-~~~
+```
 
 This will have the desired effect, but at some cost.
 What we have done there is use our own `exec` method which will wait for results.
@@ -517,7 +517,9 @@ However, for this particular example, we recommend using Plain SQL ([Chapter 7](
 For modifying the rows in the database we have seen that:
 
 * inserts are via a  `+=` or `++=` call on a table;
+
 * updates are via an `update` call on a query, but are somewhat limited when you need to update using the existing row value; and
+
 * deletes are via a  `delete` call to a query.
 
 Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
@@ -534,63 +536,32 @@ The code for this chapter is in the [GitHub repository][link-example] in the _ch
 **Where Did My Data Go?**
 
 Several of the exercises in this chapter require you to delete or update  content from the database.
-If you get a different solution to provided, try ensuring the content of the database is correct by running:
+We've shown you above how to restore you data,
+but if you want to explore and change the schema you might want to completely reset the schema.
+
+In the example code we provide a `populate` method you can use:
 
 ``` scala
 exec(populate)
 ```
 
-This will drop, create and populate the `messages` table with known values.
+This will drop, create, and populate the `messages` table with known values.
 
-</div>
+Populate is defined as:
 
-### Methodical Inserts
+```tut:book
+import scala.concurrent.ExecutionContext.Implicits.global
 
-Create a method to insert a message and return it with the `id` field populated.
+def populate: DBIOAction[Option[Int], NoStream, Effect.All] =
+  for {    
+    // Drop table if it already exists, then create the table:
+    _  <- messages.schema.drop.asTry andThen messages.schema.create
+    // Add some data:
+    count <- messages ++= freshTestData
+  } yield count
+```
 
-<div class="solution">
-
-If you tried
-
-~~~ scala
-exec(
-  messages returning messages +=
-    Message("Dave", "So... what do we do now?"))
-~~~
-
-You will have seen the exception :
-
-~~~ scala
-// slick.SlickException:
-//   This DBMS allows only a single AutoInc column 
-//     to be returned from an INSERT
-//   at ...
-~~~
-
-Recall from [Retrieving Rows on Insert](#retrievingRowsOnInsert) that H2 doesn't support returning more than the `id` field.
-
-We need to use `into`:
-
-~~~ scala
-val messagesReturningRow =
-  messages returning messages.map(_.id) into { (message, id) =>
-    message.copy(id = id)
-  }
-// messagesReturningRow: slick.driver.H2Driver.IntoInsertActionComposer[
-// Example.MessageTable#TableElementType,Example.Message] =
-// slick.driver.
-// JdbcActionComponent$ReturningInsertActionComposerImpl@6cfcdefc
-
-
-val insert:Message => DBIO[Message] = m => messagesReturningRow += m
-// insert: Example.Message =>
-// slick.driver.H2Driver.api.DBIO[Example.Message]
-// = <function1>
-
-exec(insert(Message("Dave", "So... what do we do now?")) )
-// res4: messagesReturningRow.SingleInsertResult =
-//                Message(Dave,So... what do we do now?,6)
-~~~
+We'll meet `asTry` and `andThen` in the next chapter.
 </div>
 
 
@@ -598,12 +569,12 @@ exec(insert(Message("Dave", "So... what do we do now?")) )
 
 In [Inserting Specific Columns](#insertingSpecificColumns) we looked at only inserting the sender column:
 
-~~~ scala
-exec(messages.map(_.sender) += "HAL")
-~~~
+```tut:book:silent
+messages.map(_.sender) += "HAL"
+```
 
-This failed as we didn't meet the requirements of the `message` table schema.
-For this to succeed we need to inlcude `content` as well as `sender`.
+This failed when we tried to use it as we didn't meet the requirements of the `message` table schema.
+For this to succeed we need to include `content` as well as `sender`.
 
 Rewrite the above query to include the `content` column.
 
@@ -611,16 +582,24 @@ Rewrite the above query to include the `content` column.
 The requirements of the `messages` table is `sender` and `content` can not be null.
 Given this, we can correct our query:
 
-~~~ scala
-exec(messages.map( m => (m.sender,m.content)) += (("HAL","Helllllo Dave")))
-~~~
+```tut:book
+val query = messages.map { m => (m.sender, m.content) }
+val action = query += ( ("HAL","Helllllo Dave") )
+exec(action)
+```
+
+We have used `map` to create a query that works on the two columns we care about.
+To insert using that query, we supply the two field values.
+
+In case you're wondering, we've out the extra parentheses around the column values
+to be clear it is a single value which is a tuple of two values.
 </div>
 
 ### Bulk All the Inserts
 
 Insert the conversation below between Alice and Bob, returning the messages populated with `id`s.
 
-~~~ scala
+```tut:book:silent
 val conversation = List(
   Message("Bob",  "Hi Alice"),
   Message("Alice","Hi Bob"),
@@ -632,34 +611,19 @@ val conversation = List(
   Message("Alice","Let's just to to the point"),
   Message("Bob",  "Okay okay, no need to be tetchy."),
   Message("Alice","Humph!"))
-~~~
+```
 
 <div class="solution">
-It is `messagesReturningRow` to the rescue once again:
+For this we need to use a batch insert (`++=`) and `into`:
 
-~~~ scala
+```tut:book
 val messagesReturningRow =
   messages returning messages.map(_.id) into { (message, id) =>
     message.copy(id = id)
   }
-// messagesReturningRow: slick.driver.H2Driver.IntoInsertActionComposer[
-//   Example.MessageTable#TableElementType,
-//   Example.Message
-// ] = ...
 
-exec(messagesReturningRow ++= conversation)
-//res16: messagesReturningRow.MultiInsertResult = Vector(
-// Message(Bob,Hi Alice,28),
-// Message(Alice,Hi Bob,29),
-// Message(Bob,Are you sure this is secure?,30),
-// Message(Alice,Totally, why do you ask?,31
-// Message(Bob,Oh, nothing, just wondering.,32),
-// Message(Alice,Ten was too many messages,33),
-// Message(Bob,I could do with a sleep,34),
-// Message(Alice,Let's just to to the point ,35),
-// Message(Bob,Okay okay, no need to be tetchy.,36),
-// Message(Alice,Humph!,37))
-~~~
+exec(messagesReturningRow ++= conversation).foreach(println)
+```
 </div>
 
 ### No Apologies
@@ -667,119 +631,66 @@ exec(messagesReturningRow ++= conversation)
 Write a query to delete messages that contain "sorry".
 
 <div class="solution">
-~~~ scala
+The pattern is to fine a query to select the data, and then use it with `delete`:
+
+```tut:book
 messages.filter(_.content like "%sorry%").delete
-~~~
+```
 </div>
-
-
 
 
 ### Update Using a For Comprehension
 
 Rewrite the update statement below to use a for comprehension.
 
-~~~ scala
-val rowsAffected = messages.
+```tut:book
+val rebootLoop = messages.
   filter(_.sender === "HAL").
   map(msg => (msg.sender, msg.content)).
-  update("HAL 9000", "Rebooting, please wait...")
-~~~
+  update(("HAL 9000", "Rebooting, please wait..."))
+```
 
 Which style do you prefer?
 
 <div class="solution">
-~~~ scala
-val query = for {
-  message <- messages
-  if message.sender === "HAL"
+We've split this into a `query` and then an `update`:
+
+```tut:book
+val halMessages = for {
+  message <- messages if message.sender === "HAL"
 } yield (message.sender, message.content)
 
-val rowsAffected = query.update("HAL 9000", "Rebooting, please wait...")
-~~~
+val rebootLoop = halMessages.update(("HAL 9000", "Rebooting, please wait..."))
+```
 </div>
-
-<!--
-### Duped
-
-This is a harder exercise for working with queries and delete.
-
-Messages that are repeated are just noise.
-Write a delete expression that will remove all repeated messages.
-
-For example, if the database contains the messages...
-
-* Hello
-* Morning
-* Morning
-
-...then regardless of who sent them, after the delete we just expect to have "Hello" in the database.
-
-One way to do this in SQL is:
-
-~~~ sql
-DELETE FROM
-  message AS msg
-WHERE (
-  SELECT
-    COUNT(1)
-  FROM
-    message
-  WHERE
-    message.content = msg.content
-  )
-  > 1
-~~~
-
-Hint: start by figuring out to count the messages.
-Then try to select the rows to delete.
-That is, don't worry about deleting those rows, just try to select them.
-
-<div class="solution">
-If we have some `Message`, `msg`, we can count how many messages have the same content as `msg`:
-
-~~~ scala
-messages.filter(_.content === msg.content).size
-~~~
-
-Where can we get `msg` from?  That would be the outer query:
-
-~~~ scala
-messages.filter { msg =>
-  messages.filter(_.content === msg.content).size > 1
-}
-~~~
-
-To turn a query into a delete, we just called `.delete`:
-
-~~~ scala
-val zap: DBIO[Int] =
-  messages.filter { msg =>
-    messages.filter(_.content === msg.content).size > 1
-  }.delete
-~~~
-</div>
--->
 
 ### Selective Memory
 
 Delete `HAL`s first two messages. This is a more difficult exercise.
 
-Hint: First write a query to select the two messages.
-Then see if you can find a way to use it as a subquery.
+You don't know the IDs of the messages, or the content of them.
+But you do know the IDs increase. 
+
+Hints: 
+
+- First write a query to select the two messages. Then see if you can find a way to use it as a subquery.
+
+- You can use `in` in a query to see if a value is in a set of values returned from a query.
 
 <div class="solution">
-~~~ scala
+We've selected HAL's message IDs, sorted by the ID, and used this query inside a filter:
+
+```tut:book
 val selectiveMemory =
   messages.filter{
    _.id in messages.
       filter { _.sender === "HAL" }.
-      sortBy { _.id asc }.
+      sortBy { _.id.asc }.
       map    {_.id}.
       take(2)
   }.delete
 
-exec(selectiveMemory)
-//res1: Int = 2
-~~~
+selectiveMemory.statements.head
+```
+
 </div>
