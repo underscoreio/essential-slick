@@ -292,9 +292,9 @@ The above will generate SQL which looks similar to this:
 
 ~~~ sql
 select exists(
-  select x2."sender", x2."content", x2."id"
-  from "message" x2
-  where x2."content" like '%bay%'
+  select "sender", "content", "id"
+  from "message"
+  where "content" like '%bay%'
 )
 ~~~
 
@@ -657,9 +657,9 @@ users.sortBy(_.name.nullsFirst)
 The generated SQL for the above quiery would be:
 
 ~~~ sql
-select x2."name", x2."email", x2."id"
-from "user" x2
-order by x2."name" nulls first
+select "name", "email", "id"
+from "user"
+order by "name" nulls first
 ~~~
 
 We cover nullable columns in [Chapter 5](#Modelling) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-05_.
@@ -717,11 +717,14 @@ How would you count the number of messages?
 Hint: in the Scala collections the method `length` gives you the size of the collection.
 
 <div class="solution">
-~~~ scala
-val results = exec(halSays.length.result)
-~~~
+```tut:book
+val results = exec(messages.length.result)
+```
 
 You could also use `size`, which is an alias for `length`.
+```tut:invisible
+messages.size
+```
 </div>
 
 ### Selecting a Message
@@ -734,15 +737,23 @@ Hint: our IDs are `Long`s.
 Adding `L` after a number in Scala, such as `99L`, makes it a long.
 
 <div class="solution">
-~~~ scala
+```tut:book
 val query = for {
   message <- messages if message.id === 1L
 } yield message
 
 val results = exec(query.result)
-~~~
+```
 
 Asking for `999`, when there is no row with that ID, will give back an empty collection.
+
+```tut:invisible
+{
+  val nnn = messages.filter(_.id === 999L)
+  val rows = exec(nnn.result)
+  assert(rows.isEmpty, s"Expected empty rows for id 999 in ex2, not $rows")
+}
+```
 </div>
 
 ### One Liners
@@ -751,9 +762,9 @@ Re-write the query from the last exercise to not use a for comprehension.
 Which style do you prefer? Why?
 
 <div class="solution">
-~~~ scala
+```tut:book
 val results = exec(messages.filter(_.id === 1L).result)
-~~~
+```
 </div>
 
 ### Checking the SQL
@@ -766,21 +777,10 @@ What does this tell you about the way `filter` has been mapped to SQL?
 <div class="solution">
 The code you need to run is:
 
-~~~ scala
+```tut:book
 val sql = messages.filter(_.id === 1L).result.statements
-println(sql)
-~~~
-
-The result will be something like:
-
-~~~ SQL
-select
-  x2."id", x2."sender", x2."content", x2."ts"
-from
-  "message" x2
-where
-  x2."id" = 1
-~~~
+println(sql.head)
+```
 
 From this we see how `filter` corresponds to a SQL `where` clause.
 </div>
@@ -791,57 +791,56 @@ Find if there are any messages by HAL in the database,
 but only return a boolean value from the database.
 
 <div class="solution">
-
 That's right, we want to know if HAL `exists`:
 
-~~~ scala
+```tut:book
 val query = messages.filter(_.sender === "HAL").exists
 
+exec(query.result)
+```
 
-println(s"The query is:  ${query.result.statements}")
-println(s"The result is: ${exec(query.result)}")
-~~~
-
+```tut:invisible
+{
+val found = exec(query.result)
+assert(found, s"Expected to find HAL, not: $found")
+}
+```
 
 The query will return `true` as we do have records from HAL,
 and Slick will generate the following SQL:
 
-~~~ SQL
-select exists(
-  select "sender", "content", "id"
-  from "message"
-  where "sender" = 'HAL'
-)
-~~~
+```tut:book
+query.result.statements.head
+```
 </div>
 
 
 ### Selecting Columns
 
-So far we have been returning `Message` classes or counts.
-Select all the messages in the database, but return just their contents.
+So far we have been returning `Message` classes, booleans, or counts.
+Now we want to select all the messages in the database, but return just their `content` columns.
+
 Hint: think of messages as a collection and what you would do to a collection to just get back a single field of a case class.
 
 Check what SQL would be executed for this query.
 
 <div class="solution">
-~~~ scala
+```tut:book
 val query = messages.map(_.content)
-println(s"The query is:  ${query.result.statements}")
-println(s"The result is: ${exec(query.result)}")
-~~~
+exec(query.result)
+```
 
 You could have also said:
 
-~~~ scala
+```tut:book
 val query = for { message <- messages } yield message.content
-~~~
+```
 
-The query will just return the `content` column from the database:
+The query will return only the `content` column from the database:
 
-~~~ SQL
-select x2."content" from "message" x2
-~~~
+```tut:book
+query.result.statements.head
+```
 </div>
 
 
@@ -849,16 +848,21 @@ select x2."content" from "message" x2
 
 The methods `head` and `headOption` are useful methods on a `result`.
 Find the first message that HAL sent.
+
 What happens if you use `head` to find a message from "Alice" (note that Alice has sent no messages).
 
 <div class="solution">
-~~~ scala
+```tut:book
 val msg1 = messages.filter(_.sender === "HAL").map(_.content).result.head
-~~~
+```
 
 You should get an action that produces "Affirmative, Dave. I read you."
 
 For Alice, `head` will throw a run-time exception as we are trying to return the head of an empty collection. Using `headOption` will prevent the exception.
+
+```tut:book
+exec(messages.filter(_.sender === "Alice").result.headOption)
+```
 </div>
 
 ### Then the Rest
@@ -870,23 +874,29 @@ What messages are returned?
 What if we'd asked for HAL's tenth through to twentieth message?
 
 <div class="solution">
-It's pagination's friends `drop` and `take` to the rescue:
+It's `drop` and `take` to the rescue:
 
-~~~ scala
+```tut:book
 val msgs = messages.filter(_.sender === "HAL").drop(1).take(5).result
-~~~
+```
 
-HAL has only three messages in total.
-Therefore our result set should contain two messages:
+HAL has only two messages in total.
+Therefore our result set should contain one messages
 
-~~~ scala
+```scala
 Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
-Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,6)
-~~~
+```
+
+```tut:invisible
+{
+  val nextFive = exec(msgs)
+  assert(nextFive.length == 1, s"Expected 1 msgs, not: $nextFive")
+}
+```
 
 And asking for any more messages will result in an empty collection.
 
-~~~ scala
+```tut:book
 val msgs = exec(
             messages.
               filter(_.sender === "HAL").
@@ -894,9 +904,14 @@ val msgs = exec(
               take(10).
               result
           )
-// msgs: Seq[Example.MessageTable#TableElementType] = Vector()
+```
 
-~~~
+```tut:invisible
+{
+  assert(msgs.length == 0, s"Expected 0 msgs, not: $msgs")
+}
+```
+
 </div>
 
 
@@ -908,63 +923,71 @@ Find the message that starts with "Open".
 How is that query implemented in SQL?
 
 <div class="solution">
-~~~ scala
+```tut:book
 messages.filter(_.content startsWith "Open")
-~~~
+```
 
 The query is implemented in terms of `LIKE`:
 
-~~~ SQL
-select
-  x2."id", x2."sender", x2."content", x2."ts"
-from
-  "message" x2
-where
-  x2."content" like 'Open%' escape '^'
-~~~
+```book:tut
+messages.filter(_.content startsWith "Open").result.statements.head
+```
 </div>
 
 ### Liking
 
 Slick implements the method `like`.
 Find all the messages with "do" in their content.
+
 Can you make this case insensitive?
 
 <div class="solution">
-The query is:
+If you have familiarity with SQL `like` expressions, it probably wasn't too hard to find a case-sensitive version of this query:
 
-~~~ scala
+```tut:book
+messages.filter(_.content like "%do%")
+```
+
+To make it case sensitive you could use `toLowerCase` on the `content` field:
+
+```tut:book
 messages.filter(_.content.toLowerCase like "%do%")
-~~~
+```
 
-The SQL will turn out as:
+We can do this because `content` is a `Rep[String]` and that `Rep` has implemented `toLowerCase`.
+That means, the `toLowerCase` will be translated into meaningful SQL.
 
-~~~ SQL
-select
-  x2."id", x2."sender", x2."content", x2."ts"
-from
-  "message" x2
-where
-  lower(x2."content") like '%do%'
-~~~
+There will be three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".
+```tut:invisible
+{
+  val likeDo = exec( messages.filter(_.content.toLowerCase like "%do%").result )
 
-There are three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".
+  assert(likeDo.length == 3, s"Expected 3 results, not $likeDo")
+}
+```
 </div>
 
 ### Client-Side or Server-Side?
 
 What does this do and why?
 
-~~~ scala
+```scala
 exec(messages.map(_.content + "!").result)
-~~~
+```
 
 <div class="solution">
 The query Slick generates looks something like this:
 
-~~~ sql
-select '(message Ref @421681221).content!' from "message" x2
-~~~
+```sql
+select '(message Ref @421681221).content!' from "message"
+```
+
+```tut:invisible
+{
+  val weird = exec(messages.map(_.content + "!").result).head
+  assert(weird contains "Ref", s"Expected 'Ref' inside $weird")
+}
+```
 
 That is a select expression for a strange constant string.
 
@@ -976,29 +999,31 @@ This is an unfortunate effect of Scala allowing automatic conversion to a `Strin
 If you are interested in disabling this Scala behaviour, tools like [WartRemover][link-wartremover] can help.
 
 It is possible to do this mapping in the database with Slick.
-We just need to remember to work in terms of `Rep[T]` classes:
+We need to remember to work in terms of `Rep[T]` classes:
 
-~~~ scala
+```tut:book
 messages.map(m => m.content ++ LiteralColumn("!"))
-~~~
+```
 
 Here `LiteralColumn[T]` is type of `Rep[T]` for holding a constant value to be inserted into the SQL.
 The `++` method is one of the extension methods defined for any `Rep[String]`.
 
 Using `++` will produce the desired query:
 
-~~~ sql
+```sql
 select "content"||'!' from "message"
-~~~
+```
 
 You can also write:
 
-~~~ scala
+```tut:book
 messages.map(m => m.content ++ "!")
-~~~
+```
 
-... as "!" will be lifted to a `Rep[String]``
+...as "!" will be lifted to a `Rep[String]``
 
-This exercise highlights that inside of a `map` or `filter` you are working in terms of `Rep[T]`. You should become familiar with the operations available to you. The tables we've included in this chapter should help with that.
+This exercise highlights that inside of a `map` or `filter` you are working in terms of `Rep[T]`.
+You should become familiar with the operations available to you.
+The tables we've included in this chapter should help with that.
 
 </div>
