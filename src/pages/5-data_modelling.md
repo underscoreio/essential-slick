@@ -665,78 +665,6 @@ and customize the code produced.
 Prefer it to manually reverse engineering a schema by hand.
 </div>
 
-### Exercises
-
-#### Turning a Row into Many Case Classes
-
-Our `HList` example mapped a table with many columns.
-It's not the only way to deal with lots of columns.
-
-Use custom functions with `<>` and map `UserTable` into a tree of case classes.
-To do this you will need to define the schema, define a `User`, insert data, and query the data.
-
-To make this easier, we're just going to map six of the columns.
-Here are the case classes to use:
-
-~~~ scala
-case class EmailContact(name: String, email: String)
-case class Address(street: String, city: String, country: String)
-case class User(contact: EmailContact, address: Address, id: Long = 0L)
-~~~
-
-You'll find a definition of `UserTable` that you can copy and paste in the example code in the file _chapter-05/src/main/scala/nested_case_class.scala_.
-
-<div class="solution">
-A suitable projection is:
-
-~~~ scala
-type Row = (String, String, String, String, String, Long)
-
-def pack(row: Row): User =
-  User(
-    EmailContact(row._1, row._2),
-    Address(row._3, row._4, row._5),
-    row._6
-  )
-
-def unpack(user: User): Option[Row] =
-  Some((user.contact.name, user.contact.email,
-        user.address.street, user.address.city, user.address.country,
-        user.id))
-
-def * = (name, email, street, city, country, id) <> (pack, unpack)
-~~~
-
-We can insert and query as normal:
-
-~~~ scala
-users += User(
-  EmailContact("Dr. Dave Bowman", "dave@example.org"),
-  Address("123 Some Street", "Any Town", "USA")
- )
-~~~
-
-Executing `exec(users.result)` will produce:
-
-~~~ scala
-Vector(
-  User(
-    EmailContact(Dr. Dave Bowman,dave@example.org),
-    Address(123 Some Street,Any Town,USA),
-    1
-  )
-)
-~~~
-
-You can continue to select just some fields. For example `users.map(_.email).result` will produce:
-
-~~~ scala
-Vector(dave@example.org)
-~~~
-
-However, notice that if you used `users.schema.create`, only the columns defined in the default projection were created in the H2 database.
-</div>
-
 
 
 ## Table and Column Representation
@@ -903,7 +831,6 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
 
   def * = (id.?, name) <> (User.tupled, User.unapply)
 }
-
 
 lazy val users = TableQuery[UserTable]
 lazy val insertUser = users returning users.map(_.id)
@@ -1315,178 +1242,6 @@ In this example we've done three things:
    The values allowed here depend on the database we're using.
 
 
-### Exercises
-
-#### Filtering Optional Columns
-
-Sometimes you want to look at all the users in the database, and sometimes you want to only see rows matching a particular value.
-
-Working with the optional email address for a user,
-write a method that will take an optional value,
-and list rows matching that value.
-
-The method signature is:
-
-~~~ scala
-def filterByEmail(email: Option[String]) = ???
-~~~
-
-Assume we only have two user records: one with an email address of "dave@example.org",
-and one with no email address.
-
-We want `filterByEmail(Some("dave@example.org"))` to produce one row,
-and `filterByEmail(None)` to produce two rows.
-
-Tip: it's OK to use multiple queries.
-
-<div class="solution">
-We can decide on the query to run in the two cases from inside our application:
-
-~~~ scala
-def filterByEmail(email: Option[String]) =
-  if (email.isEmpty) users
-  else users.filter(_.email === email)
-~~~
-
-You don't always have to do everything at the SQL level.
-</div>
-
-
-#### Inside the Option
-
-Build on the last exercise to match rows that start with the supplied optional value.
-Recall that `Rep[String]` defines `startsWith`.
-
-So this time even `filterByEmail(Some("dave@")).run` will produce one row.
-
-<div class="solution">
-As the `email` value is optional we can't simply pass it to `startsWith`.
-
-~~~ scala
-def filterByEmail(email: Option[String]) =
-  email.map(e =>
-    users.filter(_.email startsWith e)
-  ) getOrElse users
-~~~
-</div>
-
-
-#### Matching or Undecided
-
-Not everyone has an email address, so perhaps when filtering it would be safer to only exclude rows that don't match our filter criteria.  That is, keep `NULL` addresses in the results.
-
-Add Elena to the database...
-
-~~~ scala
-insert += User("Elena", Some("elena@example.org"))
-~~~
-
-...and modify `filterByEmail` so when we search for `Some("elena@example.org")` we only
-exclude Dave, as he definitely doesn't match that address.
-
-This time you can do this in one query.
-
-<div class="solution">
-This problem we can represent in SQL, so we can do it with one query:
-
-~~~ scala
-def filterByEmail(email: Option[String]) =
-  users.filter(u => u.email.isEmpty || u.email === email)
-~~~
-</div>
-
-
-#### Enforcement
-
-What happens if you try adding a message for a user ID of `3000`?
-
-For example:
-
-~~~ scala
-messages += Message(UserPK(3000L), "Hello HAL!", DateTime.now)
-~~~
-
-
-Note that there is no user in our example with an ID of 3000.
-If you are using an editor rather than the REPL the file to open is
-`chapter-05/src/main/scala/value_classes.scala`.
-
-
-
-<div class="solution">
-We get a runtime exception as we have violated referential integrity.
-There is no row in the `user` table with a primary id of `3000`.
-</div>
-
-
-#### Model This
-
-We're now charging for our chat service.
-Outstanding payments will be stored in a table called `bill`.
-The default change is $12.00, and bills are recorded against a user.
-A user should only have one or zero entries in this table.
-Make sure it is impossible for a user to be deleted while they have a bill to pay.
-
-Go ahead and model this.
-
-Hint: Remember to include your new table when creating the schema:
-
-~~~ scala
-(messages.schema ++ users.schema ++ bills.schema).create
-~~~
-
-Additionally, provide queries to give the full details of users:
-
-- who do have an outstanding bill; and
-- who have no outstanding bills.
-
-Hint: Slick provides `in` for SQL's `WHERE x IN (SELECT ...)` expressions.
-
-
-<div class="solution">
-There are a few ways to model this table regarding constraints and defaults.
-Here's one way, where the default is on the database,
-and the unique primary key is simply the user's `id`:
-
-~~~ scala
-case class Bill(userId: Long, amount: BigDecimal)
-
-class BillTable(tag: Tag) extends Table[Bill](tag, "bill") {
-  def userId = column[Long]("user", O.PrimaryKey
-  def amount = column[BigDecimal]("dollars", O.Default(12.00))
-  def * = (userId, amount) <> (Bill.tupled, Bill.unapply)
-  def user = foreignKey("fk_bill_user", userId, users)(_.id, onDelete=ForeignKeyAction.Restrict)
-}
-
-lazy val bills = TableQuery[BillTable]
-~~~
-
-Exercise the code as follows:
-
-~~~ scala
-bills += Bill(daveId, 12.00)
-println(exec(bills.result)
-
-// Unique index or primary key violation:
-// exec(bills += Bill(daveId, 24.00))
-
-// Referential integrity constraint violation: "fk_bill_user:
-// exec(users.filter(_.name === "Dave").delete)
-
-// Who has a bill?
-val has = for {
-  b <- bills
-  u <- b.user
-} yield u
-
-// Who doesn't have a bill?
-val hasNot = for {
-  u <- users
-  if !(u.id in bills.map(_.userId))
-} yield u
-~~~
-</div>
-
 
 ## Custom Column Mappings
 
@@ -1825,7 +1580,7 @@ preventing us shipping the application until we've covered all bases.
 Using `Flag` is the same as any other custom type:
 
 ```tut:book
-class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+class MessageTable(tag: Tag) extends Table[Message](tag, "flagmessage") {
   def id       = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
   def senderId = column[UserPK]("sender")
   def content  = column[String]("content")
@@ -1837,6 +1592,8 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 }
 
 lazy val messages = TableQuery[MessageTable]
+
+exec(messages.schema.create)
 ```
 
 We can insert a message with a flag easily:
@@ -1844,14 +1601,18 @@ We can insert a message with a flag easily:
 ```tut:book
 val halId = UserPK(1L)
 
-messages += Message(halId, "Just kidding - come on in! LOL.", Some(Important))
+exec(
+  messages += Message(halId, "Just kidding - come on in! LOL.", Some(Important))
+)
 ```
 
 We can also query for messages with a particular flag.
 However, we need to give the compiler a little help with the types:
 
 ```tut:book
-messages.filter(_.flag === (Important : Flag))
+exec(
+  messages.filter(_.flag === (Important : Flag)).result
+)
 ```
 
 The _type annotation_ here is annoying.
@@ -1866,7 +1627,7 @@ object Flags {
   val offensive : Flag = Offensive
   val spam      : Flag = Spam
 
-  val query = messages.filter(_.flag === Flags.important).result
+  val action = messages.filter(_.flag === Flags.important).result
 }
 ```
 
@@ -1882,107 +1643,6 @@ implicit class MessageQueryOps(message: MessageTable) {
 
 messages.filter(_.isImportant).result.statements.head
 ```
-
-### Exercises
-
-#### Mapping Enumerations
-
-We can use the same trick that we've seen for `DateTime` and value classes to map enumerations.
-
-Here's a Scala Enumeration for a user's role:
-
-~~~ scala
-object UserRole extends Enumeration {
-  type UserRole = Value
-  val Owner   = Value("O")
-  val Regular = Value("R")
-}
-~~~
-
-Modify the `user` table to include a `UserRole`.
-In the database store the role as a single character.
-
-<div class="solution">
-The first step is to supply an implicit to and from the database values:
-
-~~~ scala
-object UserRole extends Enumeration {
-  type UserRole = Value
-  val Owner   = Value("O")
-  val Regular = Value("R")
-}
-
-import UserRole._
-implicit val userRoleMapper =
-  MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
-~~~
-
-Then we can use the `UserRole` in the table definition:
-
-~~~ scala
-case class User(name: String,
-                userRole: UserRole = Regular,
-                id: UserPK = UserPK(0L))
-
-class UserTable(tag: Tag) extends Table[User](tag, "user") {
-  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
-  def name = column[String]("name")
-  def role = column[UserRole]("role", O.Length(1,false))
-
-  def * = (name, role, id) <> (User.tupled, User.unapply)
-}
-~~~
-</div>
-
-
-#### Alternative Enumerations
-
-Modify your solution to the previous exercise to store the value in the database as an integer.
-
-Oh, and by the way, this is a legacy system. If we see an unrecognized user role value, just
-default it to a `UserRole.Regular`.
-
-<div class="solution">
-The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
-
-~~~ scala
-implicit val userRoleMapper =
-  MappedColumnType.base[UserRole, Int](
-  _.id,
-  v => UserRole.values.find(_.id == v) getOrElse Regular)
-~~~
-</div>
-
-
-#### Custom Boolean
-
-Messages can be high priority or low priority.
-The database value for high priority messages will be: `y`, `Y`, `+`, or `high`.
-For low priority messages the value will be: `n`, `N`, `-`, `lo`, or `low`.
-
-Go ahead and model this with a sum type.
-
-<div class="solution">
-This is similar to the `Flag` example above,
-except we need to handle multiple values from the database.
-
-~~~ scala
-sealed trait Priority
-case object HighPriority extends Priority
-case object LowPriority  extends Priority
-
-implicit val priorityType =
-  MappedColumnType.base[Priority, String](
-    flag => flag match {
-      case HighPriority => "y"
-      case LowPriority  => "n"
-    },
-    str => str match {
-      case "Y" | "y" | "+" | "high"         => HighPriority
-      case "N" | "n" | "-" | "lo"   | "low" => LowPriority
-  })
-~~~
-</div>
 
 
 ## Take Home Points
@@ -2037,3 +1697,375 @@ and return values of convenient types.
 In the next chapter we will build on the foundations of
 primary and foreign keys and look at writing more
 complex queries involving joins and aggregate functions.
+
+
+
+## Exercises
+
+### Turning a Row into Many Case Classes
+
+Our `HList` example mapped a table with many columns.
+It's not the only way to deal with lots of columns.
+
+Use custom functions with `<>` and map `UserTable` into a tree of case classes.
+To do this you will need to define the schema, define a `User`, insert data, and query the data.
+
+To make this easier, we're just going to map six of the columns.
+Here are the case classes to use:
+
+```tut:book:silent
+case class EmailContact(name: String, email: String)
+case class Address(street: String, city: String, country: String)
+case class User(contact: EmailContact, address: Address, id: Long = 0L)
+```
+
+You'll find a definition of `UserTable` that you can copy and paste in the example code in the file _chapter-05/src/main/scala/nested_case_class.scala_.
+
+<div class="solution">
+
+In our huge legacy table we will use custom functions with `<>`...
+
+```tut:book
+final class LegacyUserTable(tag: Tag) extends Table[User](tag, "legacy") {
+  def id           = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name         = column[String]("name")
+  def age          = column[Int]("age")
+  def gender       = column[Char]("gender")
+  def height       = column[Float]("height")
+  def weight       = column[Float]("weight_kg")
+  def shoeSize     = column[Int]("shoe_size")
+  def email        = column[String]("email_address")
+  def phone        = column[String]("phone_number")
+  def accepted     = column[Boolean]("terms")
+  def sendNews     = column[Boolean]("newsletter")
+  def street       = column[String]("street")
+  def city         = column[String]("city")
+  def country      = column[String]("country")
+  def faveColor    = column[String]("fave_color")
+  def faveFood     = column[String]("fave_food")
+  def faveDrink    = column[String]("fave_drink")
+  def faveTvShow   = column[String]("fave_show")
+  def faveMovie    = column[String]("fave_movie")
+  def faveSong     = column[String]("fave_song")
+  def lastPurchase = column[String]("sku")
+  def lastRating   = column[Int]("service_rating")
+  def tellFriends  = column[Boolean]("recommend")
+  def petName      = column[String]("pet")
+  def partnerName  = column[String]("partner")
+
+  // The tuple representation we will use:
+  type Row = (String, String, String, String, String, Long)
+
+  // One function from Row to User
+  def pack(row: Row): User = User(
+    EmailContact(row._1, row._2),
+    Address(row._3, row._4, row._5),
+    row._6
+  )
+
+  // Another method from User to Row:
+  def unpack(user: User): Option[Row] = Some(
+    (user.contact.name, user.contact.email, user.address.street,
+     user.address.city, user.address.country, user.id)
+  )
+
+  def * = (name, email, street, city, country, id) <> (pack, unpack)
+}
+
+lazy val legacyUsers = TableQuery[LegacyUserTable]
+```
+
+We can insert and query as normal:
+
+```tut:book
+exec(legacyUsers.schema.create)
+
+exec(
+  legacyUsers += User(
+    EmailContact("Dr. Dave Bowman", "dave@example.org"),
+    Address("123 Some Street", "Any Town", "USA")
+   )
+)
+```
+
+And we can fetch results:
+
+```tut:book
+exec(legacyUsers.result)
+```
+
+You can continue to select just some fields:
+
+```tut:book
+exec(legacyUsers.map(_.email).result)
+```
+
+However, notice that if you used `legacyUsers.schema.create`, only the columns defined in the default projection were created in the H2 database:
+
+```tut:book
+legacyUsers.schema.createStatements.foreach(println)
+```
+</div>
+
+
+
+### Filtering Optional Columns
+
+Imagine a reporting tool on a web site.
+Sometimes you want to look at all the users in the database, and sometimes you want to only see rows matching a particular value.
+
+Working with the optional email address for a user,
+write a method that will take an optional value,
+and list rows matching that value.
+
+The method signature is:
+
+```tut:book
+def filterByEmail(email: Option[String]) = ???
+```
+
+Assume we only have two user records: one with an email address and one with no email address:
+
+```tut:book:silent
+case class User(name: String, email: Option[String], id: Long = 0)
+
+class UserTable(tag: Tag) extends Table[User](tag, "filtering") {
+  def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name   = column[String]("name")
+  def email  = column[Option[String]]("email")
+
+  def * = (name, email, id) <> (User.tupled, User.unapply)
+}
+
+lazy val users = TableQuery[UserTable]
+
+val setup = DBIO.seq(
+  users.schema.create,
+  users += User("Dave", Some("dave@example.org")),
+  users += User("HAL ", None)
+)
+
+exec(setup)
+```
+
+We want `filterByEmail(Some("dave@example.org"))` to produce one row,
+and `filterByEmail(None)` to produce two rows:
+
+Tip: it's OK to use multiple queries.
+
+<div class="solution">
+We can decide on the query to run in the two cases from inside our application:
+
+```tut:book
+def filterByEmail(email: Option[String]) =
+  email.isEmpty match {
+    case true  => users
+    case false => users.filter(_.email === email)
+  }
+```
+
+You don't always have to do everything at the SQL level.
+
+```tut:book
+exec(
+  filterByEmail(Some("dave@example.org")).result
+).foreach(println)
+
+exec(
+  filterByEmail(None).result
+).foreach(println)
+```
+
+</div>
+
+
+### Matching or Undecided
+
+Not everyone has an email address, so perhaps when filtering it would be safer to exclude rows that don't match our filter criteria.
+That is, keep `NULL` addresses in the results.
+
+Add Elena to the database...
+
+```tut:book
+exec(
+  users += User("Elena", Some("elena@example.org"))
+)
+```
+
+...and modify `filterByEmail` so when we search for `Some("elena@example.org")` we only
+exclude Dave, as he definitely doesn't match that address.
+
+This time you can do this in one query.
+
+Hint: if you get stuck thinking about this in terms of SQL,
+think about it in terms of Scala collections.  E.g.,
+
+```scala
+List(Some("dave"), Some("elena"), None).filter( ??? ) == List(Some("elena", None))
+```
+
+<div class="solution">
+This problem we can represent in SQL, so we can do it with one query:
+
+```tut:book
+def filterByEmail(email: Option[String]) =
+  users.filter(u => u.email.isEmpty || u.email === email)
+```
+
+In this implementation we've decided that if you search for email addresses matching `None`, we only return `NULL` email address.
+But you could switch on the value of `email` and do something different, as we did in previous exercises.
+
+```tut:invisible
+{
+  val result = exec(filterByEmail(Some("elena@example.org")).result)
+  assert(result.length == 2, s"Expected 2 results, not $result")
+}
+
+{
+  val result = exec(filterByEmail(None).result)
+  assert(result.length == 1, s"Expected 1 results, not $result")
+}
+```
+</div>
+
+
+### Enforcement
+
+What happens if you try adding a message for a user ID of `3000`?
+
+For example:
+
+```tut:book:silent
+messages += Message(UserPK(3000L), "Hello HAL!")
+```
+
+Note that there is no user in our example with an ID of 3000.
+
+<div class="solution">
+We get a runtime exception as we have violated referential integrity.
+There is no row in the `user` table with a primary id of `3000`.
+
+```tut:book
+val action = messages += Message(UserPK(3000L), "Hello HAL!") 
+exec(action.asTry)
+```
+
+```tut:invisible
+{
+  val result = exec(action.asTry)
+  assert(result.toString contains "Referential", s"Expected referential integrity error, not $result")
+}
+```
+</div>
+
+
+### Mapping Enumerations
+
+We can use the same trick that we've seen for `DateTime` and value classes to map enumerations.
+
+Here's a Scala Enumeration for a user's role:
+
+```tut:book
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+```
+
+Modify the `user` table to include a `UserRole`.
+In the database store the role as a single character.
+
+<div class="solution">
+The first step is to supply an implicit to and from the database values:
+
+```tut:book
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+
+import UserRole._
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
+```
+
+Then we can use the `UserRole` in the table definition:
+
+```tut:book
+case class User(
+  name     : String,
+  userRole : UserRole = Regular,
+  id       : UserPK = UserPK(0L)
+)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user_with_role") {
+  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def role = column[UserRole]("role", O.Length(1,false))
+
+  def * = (name, role, id) <> (User.tupled, User.unapply)
+}
+
+lazy val users = TableQuery[UserTable]
+```
+
+We've made the `role` column exactly 1 character in size.
+</div>
+
+
+### Alternative Enumerations
+
+Modify your solution to the previous exercise to store the value in the database as an integer.
+
+If you see an unrecognized user role value, default it to a `UserRole.Regular`.
+
+<div class="solution">
+The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
+
+```tut:book
+implicit val userRoleMapper =
+  MappedColumnType.base[UserRole, Int](
+    _.id,
+    v => UserRole.values.find(_.id == v) getOrElse Regular
+  )
+```
+</div>
+
+
+### Custom Boolean
+
+Messages can be high priority or low priority.
+
+The database is a bit of a mess:
+
+- The database value for high priority messages will be: `y`, `Y`, `+`, or `high`.
+
+- For low priority messages the value will be: `n`, `N`, `-`, `lo`, or `low`.
+
+Go ahead and model this with a sum type.
+
+<div class="solution">
+This is similar to the `Flag` example above,
+except we need to handle multiple values from the database.
+
+```tut:book
+sealed trait Priority
+case object HighPriority extends Priority
+case object LowPriority  extends Priority
+
+implicit val priorityType =
+  MappedColumnType.base[Priority, String](
+    flag => flag match {
+      case HighPriority => "y"
+      case LowPriority  => "n"
+    },
+    str => str match {
+      case "Y" | "y" | "+" | "high"         => HighPriority
+      case "N" | "n" | "-" | "lo"   | "low" => LowPriority
+  })
+```
+
+The table definition would need a `column[Priority]`.
+</div>
