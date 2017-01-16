@@ -229,7 +229,6 @@ The database schema for this chapter.
 Find this code in the _chat-schema.scala_ file of the example project on GitHub.
 A _message_ can have a _sender_, which is a join to the _user_ table.
 Also, a _message_ can be in a _room_, which is a join to the _room_ table.
-Finally, a _user_ can be in a _room_, which is a join between _user_ and _room_ via the _occupant_ table.
 ](src/img/Schema.png)
 
 For now we will add one more table.
