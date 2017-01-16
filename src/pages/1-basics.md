@@ -570,9 +570,9 @@ Start by inserting an extra line of dialog into the database.
 This line hit the cutting room floor late in the development of the film 2001,
 but we're happy to reinstate it here:
 
-~~~ scala
+```tut:book
 Message("Dave","What if I say 'Pretty please'?")
-~~~
+```
 
 You'll need to insert the row using the `+=` method on `messages`.
 Alternatively you could put the message in a `Seq` and use `++=`.
@@ -581,98 +581,92 @@ We've included some common pitfalls in the solution in case you get stuck.
 <div class="solution">
 Here's the solution:
 
-~~~ scala
+```tut:book
 exec(messages += Message("Dave","What if I say 'Pretty please'?"))
-// res5: Int = 1
-~~~
+```
 
-The return value indicates that `1` row was inserted. Because we're using an auto-incrementing primary key, Slick ignores the `id` field for our `Message` and asks the database to allocate an `id` for the new row.
+The return value indicates that `1` row was inserted.
+Because we're using an auto-incrementing primary key, Slick ignores the `id` field for our `Message` and asks the database to allocate an `id` for the new row.
 It is possible to get the insert query to return the new `id` instead of the row count, as we shall see next chapter.
 
 Here are some things that might go wrong:
 
 If you don't pass the action created by `+=` to `db` to be run, you'll get back the `Action` object instead.
 
-~~~ scala
+```tut:book
 messages += Message("Dave","What if I say 'Pretty please'?")
-//res6: slick.profile.FixedSqlAction[
-//                  Int,
-//                  slick.dbio.NoStream,slick.dbio.Effect.Write
-//                  ] =
-// slick.driver.JdbcActionComponent$InsertActionComposerImpl
-//                                            $$anon$8@7e0e6d1e
-~~~
+```
 
 If you don't wait for the future to complete, you'll see just the future itself:
 
-~~~ scala
+```tut:book
 db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
-// res7: scala.concurrent.Future[Int] =
-// scala.concurrent.impl.Promise$DefaultPromise@652a41e8
-~~~
+```
+
+
+```tut:invisible
+{
+  // Post-exercise clean up
+  // We inserted a new message for Dave twice in the last solution.
+  // We need to fix this so the next exercise doesn't contain confusing duplicates
+  import scala.concurrent.ExecutionContext.Implicits.global
+  val ex1cleanup = for {
+    _ <- messages.filter(_.content === "What if I say 'Pretty please'?").delete
+    m = Message("Dave","What if I say 'Pretty please'?", 5L)
+    _ <- messages.forceInsert(m)
+    count <- messages.filter(_.content === "What if I say 'Pretty please'?").length.result
+  } yield count
+  val rowCount = exec(ex1cleanup)
+  assert(rowCount == 1, s"Wrong number of rows after cleaning up ex1: $rowCount")
+}
+```
 </div>
 
-Now retrieve the new dialog by selecting all messages sent by Dave. You'll need to build the appropriate query using `messages.filter`, and create the action to be run by using its `result` method. Don't forget to run the query by using the `exec` helper method we provided.
+Now retrieve the new dialog by selecting all messages sent by Dave.
+You'll need to build the appropriate query using `messages.filter`, and create the action to be run by using its `result` method.
+Don't forget to run the query by using the `exec` helper method we provided.
 
 Again, we've included some common pitfalls in the solution.
 
 <div class="solution">
 Here's the code:
 
-~~~ scala
-exec(messages.filter(_.sender === "Dave").result)
 
-// res0: Seq[Example.MessageTable#TableElementType] = Vector(
-//   Message(Dave,Hello, HAL. Do you read me, HAL?,1),
-//   Message(Dave,Open the pod bay doors, HAL.,3),
-//   Message(Dave,What if I say 'Pretty please'?,5))
-~~~
+```tut:book
+exec(messages.filter(_.sender === "Dave").result)
+```
+
+If that's hard to read, we can print each message in turn.
+As the `Future` will evaluate to a collection of `Message`, we can `foreach` over that with a function of `Message => Unit`, such as `println`:
+
+```tut:book
+val result: Seq[Message] = exec(messages.filter(_.sender === "Dave").result)
+result.foreach(println)
+```
+
 
 Here are some things that might go wrong:
 
-Note that the parameter to `filter` is built using a triple-equals operator, `===`, not a regular `==`. If you use `==` you'll get an interesting compile error:
+Note that the parameter to `filter` is built using a triple-equals operator, `===`, not a regular `==`.
+If you use `==` you'll get an interesting compile error:
 
-~~~ scala
+```tut:book:fail
 exec(messages.filter(_.sender == "Dave").result)
+```
 
-//<console>:18: error: inferred type arguments [Boolean] do not conform to
-//                     method filter's
-//  type parameter bounds [T <: slick.lifted.Rep[_]]
-//              exec(messages.filter(_.sender == "Dave").result)
-//                            ^
-//<console>:18: error: type mismatch;
-// found   : Example.MessageTable => Boolean
-// required: Example.MessageTable => T
-//              exec(messages.filter(_.sender == "Dave").result)
-//                                            ^
-//<console>:18: error: Type T cannot be a query condition
-//  (only Boolean, Rep[Boolean] and Rep[Option[Boolean]] are allowed
-//              exec(messages.filter(_.sender == "Dave").result)
-//                                  ^
-
-~~~
-
-The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`. A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Rep[Boolean]` (Slick uses the `Rep` type to represent expressions over `Column`s as well as `Column`s themselves.). The error message is baffling when you first see it but makes sense once you understand what's going on.
+The trick here is to notice that we're not actually trying to compare `_.sender` and `"Dave"`.
+A regular equality expression evaluates to a `Boolean`, whereas `===` builds an SQL expression of type `Rep[Boolean]`
+(Slick uses the `Rep` type to represent expressions over `Column`s as well as `Column`s themselves).
+The error message is baffling when you first see it but makes sense once you understand what's going on.
 
 Finally, if you forget to call `result`,
 you'll end up with a compilation error as `exec` and the call it is wrapping `db.run` both expect actions:
 
-~~~ scala
+```tut:book:fail
 exec(messages.filter(_.sender === "Dave"))
-<console>:18: error: type mismatch;
- found   : slick.lifted.Query[Example.MessageTable,
-                              Example.MessageTable#TableElementType,
-                              Seq]
-    (which expands to)  slick.lifted.Query[Example.MessageTable,
-                                           Example.Message,
-                                           Seq]
- required: slick.driver.H2Driver.api.DBIO[?]
-    (which expands to)  slick.dbio.DBIOAction[?,
-                                              slick.dbio.NoStream,
-                                              slick.dbio.Effect.All]
-              exec(messages.filter(_.sender === "Dave"))
-                                  ^
-~~~
+```
 
-`Query` types tend to be verbose, which can be distracting from the actual cause of the problem (which is that we're not expecting a `Query` object at all). We will discuss `Query` types in more detail next chapter.
+`Query` types tend to be verbose, which can be distracting from the actual cause of the problem
+(which is that we're not expecting a `Query` object at all).
+We will discuss `Query` types in more detail next chapter.
 </div>
