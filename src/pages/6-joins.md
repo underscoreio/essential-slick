@@ -1004,14 +1004,19 @@ That is, the `messages.senderId` will have a matching row via `users.id`.
 Please...
 
 - Write a monadic join to return all `Message` rows and the associated `User` record for each of them.
-- Change your answer to just return the content of a message and the name of the sender.
+
+- Change your answer to return only the content of a message and the name of the sender.
+
 - Modify the query to return the results in name order.
+
 - Re-write the query as an applicative join.
 
 These exercises will get your fingers familiar with writing joins.
 
 <div class="solution">
-~~~ scala
+These queries are all items we've covered in the text:
+
+```tut:book
 val ex1 = for {
   m <- messages
   u <- users
@@ -1031,7 +1036,7 @@ val ex4 =
    join(users).on(_.senderId === _.id).
    map    { case (msg, usr)     => (msg.content, usr.name) }.
    sortBy { case (content,name) => name }
-~~~
+```
 </div>
 
 ### Messages of the Sender
@@ -1039,26 +1044,28 @@ val ex4 =
 Write a method to fetch all the message sent by a particular user.
 The signature is:
 
-~~~ scala
+```tut:book:silent
 def findByName(name: String): Query[Rep[Message], Message, Seq] = ???
-~~~
+```
 
 <div class="solution">
-~~~ scala
+This is a filter, a join, and a map:
+
+```tut:book
 def findByName(name: String): Query[Rep[Message], Message, Seq] = for {
   u <- users    if u.name === name
   m <- messages if m.senderId === u.id
 } yield m
-~~~
+```
 
 ...or...
 
-~~~ scala
+```tut:book
 def findByName(name: String): Query[Rep[Message], Message, Seq] =
   users.filter(_.name === name).
   join(messages).on(_.id === _.senderId).
   map{ case (user, msg) => msg }
-~~~
+```
 </div>
 
 
@@ -1066,37 +1073,41 @@ def findByName(name: String): Query[Rep[Message], Message, Seq] =
 
 Modify the `msgsPerUser` query...
 
-~~~ scala
+```tut:book
 val msgsPerUser =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user)  => user.name }.
    map     { case (name, group) => name -> group.length }
-~~~
+```
 
 ...to return the counts for just those users with more than 2 messages.
 
 <div class="solution">
-SQL distinguishes between `WHERE` and `HAVING`. In Slick you just use `filter`:
+SQL distinguishes between `WHERE` and `HAVING`. In Slick you use `filter` for both:
 
-~~~ scala
+```tut:book
 val msgsPerUser =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user)  => user.name }.
    map     { case (name, group) => name -> group.length }.
    filter  { case (name, count) => count > 2 }
-~~~
+```
 
-Running this on the data in _aggregates.scala_ produces:
+At this point in the book, only Frank has more than two messages:
 
-~~~ scala
-Vector((Frank,2), (HAL,4), (Dave,4))
-~~~
+```tut:book
+exec(msgsPerUser.result)
 
-Running it in the REPL, which has less data set up by default, produces:
+// Let's check:
+val frankMsgs = 
+  messages.join(users).on {
+    case (msg,user) => msg.senderId === user.id && user.name === "Frank" 
+  }
 
-~~~ scala
-Vector((HAL,4), (Dave,4))
-~~~
+exec(frankMsgs.result).foreach(println)
+```
+
+...although if you've been experimenting with the database, your results could be different.
 </div>
 
 ### Collecting Results
@@ -1104,58 +1115,58 @@ Vector((HAL,4), (Dave,4))
 A join on messages and senders will produce a row for every message.
 Each row will be a tuple of the user and message:
 
-~~~ scala
+```tut:book
 users.join(messages).on(_.id === _.senderId)
 // res1: slick.lifted.Query[
 //  (UserTable, MessageTable),
 //  (UserTable#TableElementType, MessageTable#TableElementType),
 //  Seq] = Rep(Join Inner)
-~~~
+```
+
+The return type is effectively type is `Seq[User, Message]`.
 
 Sometimes you'll really want something like a `Map[User, Seq[Message]]`.
 
 There's no built-in way to do that in Slick, but you can do it in Scala using the collections `groupBy` method.
 
-~~~ scala
-Seq(
+```tut:book
+val almost = Seq(
   ("HAL"  -> "Hello"),
   ("Dave" -> "How are you?"),
   ("HAL"  -> "I have terrible pain in all the diodes")
   ).groupBy{ case (name, message) => name }
-// res2: Map[String,Seq[(String, String)]] = Map(
-//  HAL  -> List((HAL,Hello), (HAL,I have terrible pain in all the diodes)),
-//  Dave -> List((Dave,How are you?))
-// )
-~~~
+```
 
+That's close, but the values in the map are still a tuple of the name and the message.
 We can go further and reduce this to:
 
-~~~ scala
-res2.mapValues { values =>
+```tut:book:silent
+val correct = almost.mapValues { values =>
   values.map{ case (name, msg) => msg }
 }
-// res3: Map[String,Seq[String]] = Map(
-//  HAL -> List(Hello, I have terrible pain in all the diodes),
-//  Dave -> List(How are you?)
-// )
-~~~
+```
+```tut:book
+correct.foreach(println)
+```
 
-Go ahead and write a method to encapsulate this:
+Go ahead and write a method to encapsulate this for a join:
 
-~~~ scala
+```tut:book:silent
 def userMessages: DBIO[Map[User, Seq[Message]]] = ???
-~~~
+```
 
 <div class="solution">
 You need all the code in the question and also what you know about action combinators:
 
-~~~ scala
+```tut:book
 def userMessages: DBIO[Map[User,Seq[Message]]] =
   users.join(messages).on(_.id === _.senderId).result.
   map { rows =>
     rows.groupBy{ case (user, message) => user }.
     mapValues(values => values.map{ case (name, msg) => msg })
   }
-~~~
+
+exec(userMessages).foreach(println)
+```
 </div>
 
