@@ -67,6 +67,7 @@
 [link-play-example]:         https://github.com/underscoreio/play-slick-example
 [link-play-slick-github]:    https://github.com/playframework/play-slick
 [link-play-slick-dbconfig]:  https://www.playframework.com/documentation/2.4.x/PlaySlick#Database-Configuration
+[link-tut]:                  https://github.com/tpolecat/tut
 [link-renato]:               https://twitter.com/renatocaval
 [link-ottinger]:             https://github.com/jottinger
 [link-meredith]:             https://twitter.com/Gentmen

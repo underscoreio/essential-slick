@@ -94,6 +94,8 @@ We use Scala comments to show REPL output. For example:
 If you're following along with the REPL, and copy and paste from the book we hope this will be useful.
 It means if you accidentally copy more than you intended, the REPL will ignore the commented output.
 
+We use the wonderful [tut][link-tut] to compile the vast majority of code in this text.  The REPL output is wrapped by LaTeX. This can be tricky to read, especially with long type signatures. So in some places we also duplicate and reformat the output. But the best way is to try the code out in the REPL for yourself.
+
 ### Callout Boxes {-}
 
 We use three types of *callout box* to highlight particular content:
