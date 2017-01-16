@@ -648,28 +648,37 @@ Finally, we saw that actions that are combined together can also be run inside a
 
 ### And Then what?
 
-In Chapter 1 we create a schema and populate the database as separate actions.
+In Chapter 1 we created a schema and populated the database as separate actions.
 Use your newly found knowledge to combine them.
 
 This exercise expects to start with an empty database.
 If you're already in the REPL and the database exists,
 you'll need to drop the table first:
 
-~~~ scala
-
+```tut:book
 val drop:     DBIO[Unit]        = messages.schema.drop
 val create:   DBIO[Unit]        = messages.schema.create
-val populate: DBIO[Option[Int]] = messages ++= testData
+val populate: DBIO[Option[Int]] = messages ++= freshTestData
 
 exec(drop)
-exec(create)
-exec(populate)
-~~~~
+```
 
 <div class="solution">
-~~~ scala
-exec( drop andThen create andThen populate)
-~~~
+Using the values we've provided, you can create a new database with a single action:
+
+```tut:invisible
+exec(drop.asTry >> create)
+```
+```tut:book
+exec(drop andThen create andThen populate)
+```
+
+If we don't care about any of the values we could also use `DBIO.seq`:
+
+```tut:book
+val allInOne = DBIO.seq(drop,create,populate)
+val result = exec(allInOne)
+```
 </div>
 
 ### First!
@@ -679,9 +688,9 @@ automatically insert the message "First!" before it.
 
 Your method signature should be:
 
-~~~ scala
-def insert(m: Message): DBIO[Int]
-~~~
+```tut:book
+def insert(m: Message): DBIO[Int] = ???
+```
 
 Use your knowledge of the `flatMap` action combinator to achieve this.
 
@@ -689,34 +698,31 @@ Use your knowledge of the `flatMap` action combinator to achieve this.
 There are two elements to this problem:
 
 1. being able to use the result of a count, which is what `flatMap` gives us; and
+
 2. combining two inserts via `andThen`.
 
-~~~ scala
+```tut:book
 import scala.concurrent.ExecutionContext.Implicits.global
 
 def insert(m: Message): DBIO[Int] =
-    messages.size.result.flatMap {
-      case 0 =>
-        (messages += Message(m.sender, "First!")) andThen (messages += m)
-      case n =>
-        messages += m
+  messages.size.result.flatMap {
+    case 0 =>
+      (messages += Message(m.sender, "First!")) andThen (messages += m)
+    case n =>
+      messages += m
     }
 
 // Throw away all the messages:
 exec(messages.delete)
-// res1: Int = 3
 
 // Try out the method:
 exec {
   insert(Message("Me", "Hello?"))
 }
-// res2: Int = 1
 
 // What's in the database?
 exec(messages.result).foreach(println)
-// Message(Me,First!,7)
-// Message(Me,Hello?,8)
-~~~
+```
 </div>
 
 ### There Can be Only One
@@ -726,58 +732,71 @@ If the action returns anything other than one result, the method should fail wit
 
 Below is the method signature and two test cases:
 
-``` scala
-def onlyOne[T](xs:DBIO[Seq[T]]):DBIO[T] = ???
+```tut:book
+def onlyOne[T](ms: DBIO[Seq[T]]): DBIO[T] = ???
 ```
 
-In the example there is only one message that contains the word "Sorry", so we expect `onlyOne` to return that row:
+You can see that `onlyOne` takes an action as an argument, and that the action could return a sequence of results.
+The return from the method is an action that will return a single value.
 
-``` scala
+In the example data there is only one message that contains the word "Sorry", so we expect `onlyOne` to return that row:
+
+```tut:book
 val happy = messages.filter(_.content like "%sorry%").result
 
-exec(onlyOne(happy))
-//res25: Example.MessageTable#TableElementType =
-// Message(HAL, I'm sorry, Dave. I'm afraid I can't do that., 4)
+// We expect... 
+// exec(onlyOne(happy))
+// ...to return a message.
 ```
 
-However, there are two messages containing the word "I". In this case `onlyOne` will fail:
+However, there are two messages containing the word "I". In this case `onlyOne` should fail:
 
-``` scala
+```tut:book
 val boom  = messages.filter(_.content like "%I%").result
-exec(onlyOne(boom))
-//java.lang.RuntimeException: Expected 1 result, not 2
-//  ...
+
+// If we run this...
+// exec(onlyOne(boom))
+// we want a failure, such as:
+// java.lang.RuntimeException: Expected 1 result, not 2
 ```
 
-Hints: The signature of `onlyOne` is telling us we will take an action that produces a `Seq[T]` and return an action that produces a `T`.
-That tells us we need an action combinator here.
-That fact that the method may fail means we want to use `DBIO.successful` and `DBIO.failed` in there somewhere.
+Hints:
+
+- The signature of `onlyOne` is telling us we will take an action that produces a `Seq[T]` and return an action that produces a `T`. That tells us we need an action combinator here.
+
+- That fact that the method may fail means we want to use `DBIO.successful` and `DBIO.failed` in there somewhere.
 
 <div class="solution">
+The basis of our solution is to `flatMap` the action we're given into a new action with the type we want:
 
-You may not have seen `+:` before: it is `cons` for `Seq`.
-
-~~~ scala
-  def onlyOne[T](action:DBIO[Seq[T]]):DBIO[T] = action.flatMap{ xs =>
-    xs match {
-      case x +: Nil =>
-        DBIO.successful(x)
-      case ys       =>
-        DBIO.failed(
-          new RuntimeException(s"Expected 1 result, not ${ys.length}")
-        )
-    }
+```tut:book
+def onlyOne[T](action: DBIO[Seq[T]]): DBIO[T] = action.flatMap { ms =>
+  ms match {
+    case m +: Nil => DBIO.successful(m)
+    case ys       => DBIO.failed(
+        new RuntimeException(s"Expected 1 result, not ${ys.length}")
+      )
   }
+}
+```
 
+If you've not seen `+:` before: it is "cons" for `Seq` (a standard part of Scala, equivalent to `::` for `List`).
+
+Our `flatMap` is taking the results from the action, `ms`, and in the case it is a single message, we return it.
+In the case it's something else, we fail with an informative message.
+
+```tut:book
+exec(populate)
+```
+
+```tut:book:fail
 exec(onlyOne(boom))
-//java.lang.RuntimeException: Expected 1 result, not 2
-//  ...
+```
 
+```tut:book
 exec(onlyOne(happy))
-// Message(HAL, I'm sorry, Dave. I'm afraid I can't do that., 4)
-~~~
+```
 </div>
-
 
 ### Let's be Reasonable
 
@@ -787,24 +806,19 @@ Implement `exactlyOne` which wraps `onlyOne` encoding the possibility of failure
 Then rerun the test cases.
 
 <div class="solution">
-There are several ways we could have implemented this, the simplest is using `asTry`
+There are several ways we could have implemented this.
+Perhaps the simplest is using `asTry`:
 
-~~~ scala
-def exactlyOne[T](action:DBIO[Seq[T]]):DBIO[Try[T]] = onlyOne(action).asTry
-
+```tut:book
+import scala.util.Try
+def exactlyOne[T](action: DBIO[Seq[T]]): DBIO[Try[T]] = onlyOne(action).asTry
 
 exec(exactlyOne(happy))
-// res26: scala.util.Try[Example.MessageTable#TableElementType] =
-//   Success(Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4))
+```
 
-
+```tut:book
 exec(exactlyOne(boom))
-// res27: scala.util.Try[Example.MessageTable#TableElementType] =
-//   Failure(java.lang.RuntimeException: Expected 1 result, not 2)
-
-
-
-~~~
+```
 </div>
 
 
@@ -818,52 +832,37 @@ It can take some alternative action when the filter predicate fails.
 
 The signature could be:
 
-~~~ scala
-def myFilter[T]
-  (action: DBIO[T])
-  (p: T => Boolean)
-  (alternative: => T) = ???
-~~~
+```tut:book
+def myFilter[T](action: DBIO[T])(p: T => Boolean)(alternative: => T) = ???
+```
 
 If you're not comfortable with the `[T]` type parameter,
 or the by name parameter on `alternative`,
 just use `Int` instead:
 
-~~~ scala
-def myFilter
-  (action: DBIO[Int])
-  (p: Int => Boolean)
-  (alternative: Int) = ???
-~~~
+```tut:book
+def myFilter(action: DBIO[Int])(p: Int => Boolean)(alternative: Int) = ???
+```
 
 Go ahead and implement `myFilter`.
 
 We have an example usage from the ship's marketing department.
 They are happy to report the number of chat messages, but only if that number is at least 100:
 
-~~~ scala
-val marketingCount = exec(
-  myFilter(messages.size.result)( _ > 100)(100)
-)
-~~~
+```scala
+myFilter(messages.size.result)( _ > 100)(100)
+```
 
 <div class="solution">
-This is a fairly simple example of using `map`:
+This is a fairly straightforward example of using `map`:
 
-~~~ scala
-import scala.concurrent.ExecutionContext.Implicits.global
-
-def myFilter[T]
-  (action: DBIO[T])
-  (p: T => Boolean)
-  (alternative: => T) =
-    action.map {
-      case t if p(t) => t
-      case _ => alternative
-    }
-~~~
-
-
+```tut:book
+def myFilter[T](action: DBIO[T])(p: T => Boolean)(alternative: => T) =
+  action.map {
+    case t if p(t) => t
+    case _         => alternative
+  }
+```
 </div>
 
 ### Unfolding
@@ -880,13 +879,13 @@ You can follow a link between rows, possibly recording what you find as you foll
 
 As an example, let's pretend the crew's ship is a set of rooms, one connected to just one other:
 
-~~~ scala
+```tut:book
 final case class Room(name: String, connectsTo: String)
 
 final class FloorPlan(tag: Tag) extends Table[Room](tag, "floorplan") {
   def name       = column[String]("name")
   def connectsTo = column[String]("next")
-  def * = (name, next) <> (Room.tupled, Room.unapply)
+  def * = (name, connectsTo) <> (Room.tupled, Room.unapply)
 }
 
 lazy val floorplan = TableQuery[FloorPlan]
@@ -899,7 +898,7 @@ exec {
   (floorplan += Room("Galley",      "Computer"))    >>
   (floorplan += Room("Computer",    "Engine Room"))
 }
-~~~
+```
 
 For any given room it's easy to find the next room. For example:
 
@@ -914,20 +913,33 @@ WHERE
 -- Returns 'Galley'
 ~~~
 
-Write a method `unfold` that will take any room name as a starting point, and a query to find the next room, and will follow all the connections until there are no more connecting rooms.
+Write a method `unfold` that will take any room name as a starting point,
+and a query to find the next room,
+and will follow all the connections until there are no more connecting rooms.
 
 The signature of `unfold` _could_ be:
 
-~~~ scala
+```tut:book
 def unfold(
   z: String,
   f: String => DBIO[Option[String]]
-  ): DBIO[Seq[String]]
-~~~
+): DBIO[Seq[String]] = ???
+```
 
-... where `z` is the starting ("zero") room, and `f` will lookup the connecting room.
+...where `z` is the starting ("zero") room, and `f` will lookup the connecting room (an action for the query to find the next room).
 
 If `unfold` is given `"Podbay"` as a starting point it should return an action which, when run, will produce: `Seq("Podbay", "Galley", "Computer", "Engine Room")`.
+
+You'll want to accumulate results of the rooms you visit.
+One way to do that would be to use a different signature:
+
+```tut:book
+def unfold(
+  z: String,
+  f: String => DBIO[Option[String]],
+  acc: Seq[String] = Seq.empty
+): DBIO[Seq[String]] = ???
+```
 
 <div class="solution">
 
@@ -935,29 +947,43 @@ The trick here is to recognize that:
 
 1. this is a recursive problem, so we need to define a stopping condition;
 
-2. we need `flatMap` to pass a value long; and
+2. we need `flatMap` to sequence queries ; and
 
 3. we need to accumulate results from each step.
 
-The solution below is generalized with `T` rather than having a hard-coded `String` type.
+In code...
 
-~~~ scala
-def unfold[T]
-  (z: T, acc: Seq[T] = Seq.empty)
-  (f: T => DBIO[Option[T]]): DBIO[Seq[T]] =
+```tut:book
+def unfold(
+  z: String,
+  f: String => DBIO[Option[String]],
+  acc: Seq[String] = Seq.empty
+): DBIO[Seq[String]] =
   f(z).flatMap {
     case None    => DBIO.successful(acc :+ z)
-    case Some(t) => unfold(t, acc :+ z)(f)
+    case Some(r) => unfold(r, f, acc :+ z)
   }
+```
 
-val path: DBIO[Seq[String]] =
-  unfold("Podbay") {
-     roomName => floorplan
-          .filter(_.name === roomName)
-          .map(_.connectsTo).result.headOption
-   }
+The basic idea is to call our action (`f`) on the first room name (`z`).
+If there's no result from the query, we're done.
+Otherwise we add the room to the list of rooms, and recurse starting from the room we just found.
 
-println( exec(path) )
-// List(Podbay, Galley, Computer, Engine Room)
-~~~
+Here's how we'd use it:
+
+```tut:book
+def nextRoom(roomName: String): DBIO[Option[String]] =
+  floorplan.filter(_.name === roomName).map(_.connectsTo).result.headOption
+
+val path: DBIO[Seq[String]] = unfold("Podbay", nextRoom)
+
+exec(path)
+```
+
+```tut:invisible
+{
+  val r = exec(path)
+  assert(r == List("Podbay", "Galley", "Computer", "Engine Room"), s"Expected 4 specific rooms, but got $r")
+}
+```
 </div>
