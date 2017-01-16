@@ -477,7 +477,51 @@ The `tsql` interpolator will check Plain SQL queries against a database at compi
 
 ## Exercises
 
-The examples for this section are in the `chapter-07` folder, in the source files `selects.scala`, `updates.scala`, and `tsql.scala`.  Familiarise yourself with the schema and example data from `chat_schema.scala`.
+For these exercises we will use a  combination of messages and users.
+We'll set this up using the lifted embedded style:
+
+```tut:silent
+case class User(
+  name  : String,
+  email : Option[String] = None,
+  id    : Long = 0L
+)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+ def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
+ def name  = column[String]("name")
+ def email = column[Option[String]]("email")
+ def * = (name, email, id) <> (User.tupled, User.unapply)
+}
+
+lazy val users = TableQuery[UserTable]
+lazy val insertUsers = users returning users.map(_.id)
+
+case class Message(senderId: Long, content: String, id: Long = 0L)
+
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+ def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
+ def senderId = column[Long]("sender_id")
+ def content  = column[String]("content")
+ def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
+}
+
+lazy val messages = TableQuery[MessageTable]
+
+val setup = for {
+   _ <- (users.schema ++ messages.schema).create
+   daveId <- insertUsers += User("Dave")
+   halId  <- insertUsers += User("HAL")
+   rowsAdded <- messages ++= Seq(
+    Message(daveId, "Hello, HAL. Do you read me, HAL?"),
+    Message(halId,  "Affirmative, Dave. I read you."),
+    Message(daveId, "Open the pod bay doors, HAL."),
+    Message(halId,  "I'm sorry, Dave. I'm afraid I can't do that.")
+   )
+} yield rowsAdded
+
+val setupResult = exec(setup)
+```
 
 ### Plain Selects
 
@@ -486,50 +530,51 @@ Let's get warmed up some some simple exercises.
 Write the following four queries as Plain SQL queries:
 
 - Count the number of rows in the message table.
+
 - Select the content from the messages table.
+
 - Select the length of each message ("content") in the messages table.
+
 - Select the content and length of each message.
 
 Tips:
 
 - Remember that you need to use double quotes around table and column names in the SQL.
+
 - We gave the database tables names which are singular: `message`, `user`, etc.
 
 <div class="solution">
 The SQL statements are relatively simple. You need to take care to make the `as[T]` align to the result of the query.
 
-~~~ scala
-exec(sql""" select count(*) from "message" """.as[Int])
-// res1: Vector[Int] = Vector(8)
+```tut:book
+val q1 = sql""" select count(*) from "message" """.as[Int]
+val a1 = exec(q1)
 
-exec(sql""" select "content" from "message" """.as[String])
-// res2: Vector[String] = Vector(
-//   Hello, HAL. Do you read me, HAL?,
-//   Affirmative, Dave. I read you.,
-//   Open the pod bay doors, HAL.,
-//   I'm sorry, Dave. I'm afraid I can't do that.,
-//   Well, whaddya think?,
-//   I'm not sure, what do you think?,
-//   Are you thinking what I'm thinking?,
-//   Maybe)
+val q2 = sql""" select "content" from "message" """.as[String]
+val a2 = exec(q2)
+a2.foreach(println)
 
-exec(sql""" select length("content") from "message" """.as[String])
-// res3: Vector[String] = Vector(32, 30, 28, 44, 20, 32, 35, 5)
+val q3 = sql""" select length("content") from "message" """.as[Int]
+val a3 = exec(q3)
 
-exec(sql""" select "content", length("content") from "message" """.as[(String,Int)])
-// res4: Vector[(String, Int)] = Vector(
-//  (Hello, HAL. Do you read me, HAL?,32),
-//  (Affirmative, Dave. I read you.,30),
-//  (Open the pod bay doors, HAL.,28),
-// ...
-~~~
+val q4 = sql""" select "content", length("content") from "message" """.as[(String,Int)]
+val a4 = exec(q4)
+a4.foreach(println)
+```
+
+```tut:invisible
+assert(a1.head == 4, s"Expected 4 results for a1, not $a1")
+assert(a2.length == 4, s"Expected 4 results for a2, not $a2")
+assert(a3 == Seq(32,30,28,44), s"Expected specific lenghts, not $a3")
+assert(a4.length == 4, s"Expected 4 results for a4, not $a4")
+```
 </div>
 
 ### Conversion
 
 Convert the following lifted embedded query to a Plain SQL query.
 
-~~~ scala
+```tut:book
 val whoSaidThat =
   messages.join(users).on(_.senderId === _.id).
   filter{ case (message,user) =>
@@ -537,31 +582,32 @@ val whoSaidThat =
   map{ case (message,user) => user.name }
 
 exec(whoSaidThat.result)
-// res1: Seq[String] = Vector(Dave)
-~~~
+```
 
 Tips:
 
-- If you're not familiar with SQL syntax, you can peak at the `whoSaidThat.result.statements`.
+- If you're not familiar with SQL syntax, peak at the statement generated for `whoSaidThat` given above.
+
 - Remember that strings in SQL are wrapped in single quotes, not double quotes.
-- In the database the `senderId` is in a column called `sender`.
+
+- In the database, the sender's ID is `sender_id`.
+
 
 <div class="solution">
 There are various ways to implement this query in SQL.  Here's one of them...
 
-~~~ scala
+```tut:book
 val whoSaidThat = sql"""
   select
     "name" from "user" u
   join
-    "message" m on u."id" = m."sender"
+    "message" m on u."id" = m."sender_id"
   where
     m."content" = 'Open the pod bay doors, HAL.'
   """.as[String]
 
 exec(whoSaidThat)
-// res1: Seq[String] = Vector(Dave)
-~~~
+```
 </div>
 
 
@@ -569,36 +615,33 @@ exec(whoSaidThat)
 
 Complete the implementation of this method using a Plain SQL query:
 
-~~~ scala
+```tut:book
 def whoSaid(content: String): DBIO[Seq[String]] =
   ???
+```
 
-exec(whoSaid("Open the pod bay doors, HAL."))
-// res1: Seq[String] = Vector(Dave)
-~~~
+Running `whoSaid("Open the pod bay doors, HAL.")` should return a list of the people who said that. Which should be Dave.
 
 This should be a small change to your solution to the last exercise.
 
 <div class="solution">
-The solution just requires the use of a `$` substitution:
+The solution requires the use of a `$` substitution:
 
-~~~ scala
+```tut:book
 def whoSaid(content: String): DBIO[Seq[String]] =
   sql"""
     select
       "name" from "user" u
     join
-      "message" m on u."id" = m."sender"
+      "message" m on u."id" = m."sender_id"
     where
       m."content" = $content
     """.as[String]
 
 exec(whoSaid("Open the pod bay doors, HAL."))
-// res1: Seq[String] = Vector(Dave)
 
 exec(whoSaid("Affirmative, Dave. I read you."))
-//res2: Seq[String] = Vector(HAL)
-~~~
+```
 </div>
 
 
@@ -606,53 +649,40 @@ exec(whoSaid("Affirmative, Dave. I read you."))
 
 This H2 query returns the alphabetically first and last messages:
 
-~~~ scala
+```tut:book
 exec(sql"""
-      select min("content"), max("content")
-      from "message" """.
-      as[(String,String)])
-// res1: Vector[(String, String)] = Vector(
-//   (Affirmative, Dave. I read you., Well, whaddya think?)
-// )
-~~~
+  select min("content"), max("content")
+  from "message" """.as[(String,String)]
+)
+```
 
 In this exercise we want you to write a `GetResult` type class instance so that the result of the query is one of these:
 
-~~~ scala
+```tut:book:silent
 case class FirstAndLast(first: String, last: String)
-~~~
+```
 
 The steps are:
 
 1. Remember to `import slick.jdbc.GetResult`.
+
 2. Provide an implicit value for `GetResult[FirstAndLast]`
+
 3. Make the query use `as[FirstAndLast]`
 
 <div class="solution">
-~~~ scala
+```tut:book
 import slick.jdbc.GetResult
-// import slick.jdbc.GetResult
-
-case class FirstAndLast(first: String, last: String)
-// defined class FirstAndLast
 
 implicit val GetFirstAndLast =
   GetResult[FirstAndLast](r => FirstAndLast(r.nextString, r.nextString))
-// GetFirstAndLast: slick.jdbc.GetResult[FirstAndLast] = <function1>
 
 
 val query =  sql""" select min("content"), max("content")
                     from "message" """.as[FirstAndLast]
-// query: slick.profile.SqlStreamingAction[
-//  Vector[FirstAndLast],FirstAndLast,slick.dbio.Effect
-// ] = slick.jdbc.SQLActionBuilder$$anon$1@1fb692f9
-
 
 exec(query)
-// res1: Vector[FirstAndLast] = Vector(
-//   FirstAndLast(Affirmative, Dave. I read you.,Well, whaddya think?)
-// )
-~~~
+```
 </div>
 
 
@@ -667,17 +697,14 @@ Just store a song title. Insert a row into the table.
 <div class="solution">
 For modifications we use `sqlu`, not `sql`:
 
-~~~ scala
+```tut:book
 exec(sqlu""" create table "jukebox" ("title" text) """)
-// res1: Int = 0
 
 exec(sqlu""" insert into "jukebox"("title")
              values ('Bicycle Built for Two') """)
-// res2: Int = 1
 
 exec(sql""" select "title" from "jukebox" """.as[String])
-// res3: Vector[String] = Vector(Bicycle Built for Two)
-~~~
+```
 </div>
 
 
@@ -685,14 +712,13 @@ exec(sql""" select "title" from "jukebox" """.as[String])
 
 We're building a web site that allows searching for users by their email address:
 
-~~~ scala
+```tut:book
 def lookup(email: String) =
-  sql"""select "id" from "user" where "user"."email" = '#${email}'"""
+  sql"""select "id" from "user" where "email" = '#${email}'"""
 
 // Example use:
 exec(lookup("dave@example.org").as[Long].headOption)
-// res1: Option[Long] = Some(1)
-~~~
+```
 
 What the problem with this code?
 
@@ -702,14 +728,15 @@ the title of the exercise has probably tipped you off:  `#$` does not escape inp
 
 This means a user could use a carefully crafted email address to do evil:
 
-~~~ scala
-lookup("""';DROP TABLE "user";--- """).as[Long]
-~~~
+```tut:book
+val action = lookup("""';DROP TABLE "user";--- """).as[Long]
+exec(action)
+```
 
 This "email address" turns into two queries:
 
 ~~~ sql
-SELECT * FROM "user" WHERE "user"."email" = '';
+SELECT * FROM "user" WHERE "email" = '';
 ~~~
 
 and
@@ -720,13 +747,9 @@ DROP TABLE "user";
 
 Trying to access the users table after this will produce:
 
-~~~ scala
-exec(users.result)
-// org.h2.jdbc.JdbcSQLException: Table "user" not found; SQL statement:
-// select "id", "name", "email" from "user" [42102-185]
-//  at org.h2.message.DbException.getJdbcSQLException(DbException.java:345)
-// ...
-~~~
+```tut:book
+exec(users.result.asTry)
+```
 
 Yes, the table was dropped by the query.
 
