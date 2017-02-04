@@ -109,7 +109,7 @@ val q = for {
 ```
 
 Notice how we are using `msg.sender` which is defined as a foreign key in the `MessageTable` definition.
-(See [Foreign Keys]{#fks} in Chapter 5 to recap this topic.)
+(See [Foreign Keys](#fks) in Chapter 5 to recap this topic.)
 
 
 We can express the same query without using a for comprehension:
