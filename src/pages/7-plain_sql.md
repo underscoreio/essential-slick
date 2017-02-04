@@ -163,11 +163,12 @@ sql""" select "created" from "message" """.as[DateTime]
 OK, that won't compile as Slick doesn't know anything about `DateTime`.
 For this to compile we need to provide an instance of `GetResult[DateTime]`:
 
-```tut:book
+```tut:silent
 import slick.jdbc.GetResult
 import java.sql.Timestamp
 import org.joda.time.DateTimeZone.UTC
-
+```
+```tut:book
 implicit val GetDateTime =
   GetResult[DateTime](r => new DateTime(r.nextTimestamp(), UTC))
 ```
@@ -272,12 +273,18 @@ Just like the `sql` interpolator, we also have access to `$` for binding to vari
 
 ```tut:book
 val char = "!"
-val query =
+val action =
   sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
 ```
 
 This gives us two benefits: the compiler will point out typos in variables names,
 but also the input is sanitized against [SQL injection attacks][link-wikipedia-injection].
+
+In this case, the statement that Slick generates will be:
+
+```tut:book
+action.statements.head
+```
 
 
 ### Updating with Custom Types
@@ -408,7 +415,7 @@ type mismatch;
 ```
 
 The compiler wants a `String` for each row, because that's what we've declared the result to be.
-However it is found, via the database, that the query will return `(String,Int)` rows.
+However it has found, via the database, that the query will return `(String,Int)` rows.
 
 If we had omitted the type declaration, the action would have the inferred type of `DBIO[Seq[(String,Int)]]`.
 So if you want to catch these kinds of mismatches, it's good practice to declare the type you expect when using `tsql`.
