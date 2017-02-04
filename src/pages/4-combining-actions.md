@@ -606,7 +606,7 @@ So far each of the changes we've made to the database have run independently of 
 
 We often want to tie sets of modifications together in a *transaction* so that they either *all* succeed or *all* fail. We can do this in Slick using the `transactionally` method.
 
-As an example, let's re-write the movie script. We want to make sure the script changes all complete or nothing changes:
+As an example, let's re-write the movie script. We want to make sure the script changes all complete or nothing changes. We can do this by finding the old script text and replacing it with some new text:
 
 ```tut:book
 def updateContent(old: String) =
@@ -618,7 +618,7 @@ exec {
    updateContent("I'm sorry, Dave. I'm afraid I can't do that.").update("Opening now.") ).transactionally
 }
 
-exec(messages.result)
+exec(messages.result).foreach(println)
 ```
 
 The changes we make in the `transactionally` block are temporary until the block completes, at which point they are *committed* and become permanent.
