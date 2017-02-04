@@ -40,10 +40,6 @@ In the last chapter we saw how to retrieve data from the database using select q
 
 SQL veterans will know that update and delete queries share many similarities with select queries. The same is true in Slick, where we use the `Query` monad and combinators to build the different kinds of query. Ensure you are familiar with the content of [Chapter 2](#selecting) before proceeding.
 
-This chapter also introduces the important concept of _action combinators_.
-These combinators enable us to combine actions into a single action.
-The result is an action that can be made up of multiple updates, selects, deletes, or other actions.
-
 ## Inserting Rows
 
 As we saw in [Chapter 1](#Basics), adding new data looks like an append operation on a mutable collection. We can use the `+=` method to insert a single row into a table, and `++=` to insert multiple rows. We'll discuss both of these operations below.
