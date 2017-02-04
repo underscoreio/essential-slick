@@ -81,8 +81,17 @@ chapter01 = {
 
 ### Update Slick Driver
 
-Change the import from `slick.driver.H2Driver.api._`{.scala}
-to `slick.driver.PostgresDriver.api._`{.scala}.
+Change the import from
+
+```scala
+slick.driver.H2Driver.api._
+```
+
+to
+
+```scala
+slick.driver.PostgresDriver.api._
+```
 
 
 ## MySQL
@@ -147,4 +156,14 @@ In reality all those `&` parameters will be on the same line.
 
 ### Update Slick Driver
 
-Change the import from `slick.driver.H2Driver.api._`{.scala} to `slick.driver.MySQLDriver.api._`{.scala}.
+Change the import from 
+
+```scala
+slick.driver.H2Driver.api._
+```
+
+to
+
+```scala
+slick.driver.MySQLDriver.api._
+```
