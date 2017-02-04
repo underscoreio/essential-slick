@@ -176,7 +176,7 @@ which are mirrored in Slick with the following methods:
   * `join`      --- an inner join,
 
   * `joinLeft`  --- a left outer join,
-  
+
   * `joinRight` --- a right outer join,
 
   * `joinFull`  --- a full outer join.
@@ -298,7 +298,7 @@ val setup = for {
   msgs <- messages.result
 } yield (msgs)
 
-exec(setup)
+exec(setup).foreach(println)
 ```
 
 Now let's get to work and join across all these tables.
@@ -319,16 +319,14 @@ val usersAndRooms =
 ```
 
 We're joining `messages` to `users`, and `messages` to `rooms`.
-We need two `join`s---if you are joining _n_ tables you'll need _n-1_ join expressions.
+We use a binary function to the first call to `on`
+and a pattern matching function on our second call, to illustrate two styles.
 
-Notice that we're supplying a binary function to the first call to `on`
-and a pattern matching function on our second call.
 Because each join results in a query of a tuple,
 successive joins result in nested tuples.
-
 Pattern matching is our preferred syntax for unpacking these tuples
 because it explicitly clarifies the structure of the query.
-However, you may see this more concisely expressed as a binary function:
+However, you may see this more concisely expressed as a binary function for both joins:
 
 ```tut:book
 val usersAndRooms =
@@ -336,6 +334,8 @@ val usersAndRooms =
   join(users).on(_.senderId  === _.id).
   join(rooms).on(_._1.roomId === _.id)
 ```
+
+The result is the same either way.
 
 #### Mapping Joins
 
@@ -361,10 +361,9 @@ val usersAndRooms =
   join(rooms).on { case ((msg,user), room) => msg.roomId === room.id }.
   map { case ((msg, user), room) => (msg.content, user.name, room.title) }
 
-val action: DBIO[Seq[(String, String, String)]] =
-  usersAndRooms.result
+val action: DBIO[Seq[(String, String, String)]] = usersAndRooms.result
 
-exec(action)
+exec(action).foreach(println)
 ```
 
 #### Filter with Joins
@@ -444,7 +443,7 @@ Query[
   (MessageTable, Rep[Option[RoomTable]]),
   (MessageTable#TableElementType, Option[Room]),
   Seq]
-~~~
+```
 
 The results of this query are of type `(Message, Option[Room])`---Slick
 has made the `Room` side optional for us automatically.
@@ -913,7 +912,7 @@ messages.
 }
 ```
 
-The effect if `_ => true` here is to group all rows into the same group!
+The effect of `_ => true` here is to group all rows into the same group!
 This allows us to reuse the `msgs` query, and obtain the result we want.
 </div>
 
