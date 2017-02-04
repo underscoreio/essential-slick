@@ -32,13 +32,14 @@ folder _chapter-05_, file _structure.scala_.
 ### Abstracting over Databases
 
 Let's look at how we can write code that works with multiple different database drivers.
-When we previously wrote:
+When we previously wrote...
 
 ```tut:book
 import slick.driver.H2Driver.api._
 ```
 
-We now have to write an import that works with a variety of drivers.
+...we were locking ourselves into H2.
+We want to write an import that works with a variety of drivers.
 Fortunately, Slick provides a common supertype for the drivers
 for the most popular databases---a trait called `JdbcProfile`:
 
@@ -64,7 +65,7 @@ and import from that. The basic pattern we'll use is as follows:
 
 * extend our database trait to make the profile concrete.
 
-Here's the simplest form of this pattern:
+Here's a simple form of this pattern:
 
 ```tut:book
 trait DatabaseModule {
@@ -173,7 +174,7 @@ val action =
 ## Representations for Rows
 
 In previous chapters we modelled rows as case classes.
-Although this is the most common usage pattern, and the one we recommend,
+Although this is a common usage pattern, and the one we recommend,
 there are several representation options available, including tuples,
 case classes, and `HList`s.
 Let's investigate these by looking in more detail
@@ -331,7 +332,7 @@ In the `User` example, the case class supplies these functions
 via `User.tupled` and `User.unapply`, so we don't need to build them ourselves.
 However it is useful to remember that we can provide our own functions
 for more elaborate packaging and unpackaging of rows.
-We will see this in one of the exercises in this section.
+We will see this in one of the exercises in this chapter.
 
 ### Tuples versus Case Classes
 
@@ -714,7 +715,7 @@ exec(program)
 and retrieve them again with a select query:
 
 ```tut:book
-exec(users.result)
+exec(users.result).foreach(println)
 ```
 
 So far, so ordinary.
@@ -746,7 +747,7 @@ The SQL expression `"email" = null` evaluates to `null` for any value of `"email
 SQL's `null` is a falsey value, so this query never returns a value.
 
 To resolve this issue, SQL provides two operators: `IS NULL` and `IS NOT NULL`,
-which are provided in Slick by the methods `isEmpty` and `isDefined` defined on any `Rep[Option[A]]`:
+which are provided in Slick by the methods `isEmpty` and `isDefined` on any `Rep[Option[A]]`:
 
 --------------------------------------------------------------------------------------------------------
 Scala Code              Operand Column Types               Result Type        SQL Equivalent
@@ -871,6 +872,8 @@ As it happens, this specific example [doesn't currently work with H2 and Slick](
 
 The `O.AutoInc` marks the column as an H2 "IDENTIY"
 column which is, implicitly, a primary key as far as H2 is concerned.
+
+It's fixed in Slick 3.2.
 </div>
 
 
@@ -989,7 +992,7 @@ CREATE UNIQUE INDEX "c_idx" ON "people" ("name", "age")
 ~~~
 
 
-### Foreign Keys {fks}
+### Foreign Keys {#fks}
 
 Foreign keys are declared in a similar manner to compound primary keys.
 
@@ -1156,7 +1159,7 @@ exec(setup)
 ...our query produces the following results, showing the sender name (not ID) and corresponding message:
 
 ```tut:book
-exec(q.result)
+exec(q.result).foreach(println)
 ```
 
 <!--
@@ -1263,11 +1266,12 @@ Slick doesn't provide native support for Joda Time,
 but it's painless for us to implement it via Slick's
 `ColumnType` type class:
 
-```tut:book
+```tut:book:silent
 import java.sql.Timestamp
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone.UTC
-
+```
+```tut:book
 object CustomColumnTypes {
   implicit val jodaDateTimeType =
     MappedColumnType.base[DateTime, Timestamp](
@@ -1277,7 +1281,7 @@ object CustomColumnTypes {
 }
 ```
 
-What we're providing here is two functions:
+What we're providing here is two functions to `MappedColumnType.base`:
 
 - one from a `DateTime` to
   a database-friendly `java.sql.Timestamp`; and
@@ -1365,7 +1369,7 @@ exec(messages.filter(_.id === msgId).result)
 This model of working with semantic types is
 immediately appealing to Scala developers.
 We strongly encourage you to use `ColumnType` in your applications,
-to help reduce bugs and let Slick take care of cumbersome type conversions.
+to help reduce bugs and let Slick take care of the type conversions.
 
 
 ### Value Classes {#value-classes}
@@ -1467,7 +1471,7 @@ lazy val insertMessage = messages returning messages.map(_.id)
 ```
 
 Notice how we're able to be explicit:
-the `User.id` and `Message.senderId` are `UserPK`s
+the `User.id` and `Message.senderId` are `UserPK`s,
 and the `Message.id` is a `MessagePK`.
 
 We can lookup values if we have the right kind of key:
@@ -1602,7 +1606,11 @@ We can insert a message with a flag easily:
 val halId = UserPK(1L)
 
 exec(
-  messages += Message(halId, "Just kidding - come on in! LOL.", Some(Important))
+  messages += Message(
+    halId,
+    "Just kidding - come on in! LOL.",
+    Some(Important)
+  )
 )
 ```
 
