@@ -356,8 +356,7 @@ Despite the similarity in name to `DBIO.seq`, `DBIO.sequence` has a different pu
 It takes a sequence of `DBIO`s and gives back a `DBIO` of a sequence.
 That's a bit of a mouthful, but an example may help.
 
-At the end of the last chapter we attempted to update rows based on their current value.
-Here we'll say we want to reverse the text of every message (row) in the database.
+Let's say we want to reverse the text of every message (row) in the database.
 We start with this:
 
 ```tut:book
@@ -501,6 +500,9 @@ val action: DBIO[Int] = work.cleanUp {
 
 The result of running this `action` is still the original exception...
 
+```tut:invisible:fail
+exec(action)
+```
 ```scala
 java.lang.RuntimeException: Boom!
 ... 45 elided
@@ -510,6 +512,13 @@ java.lang.RuntimeException: Boom!
 
 ```tut:book
 exec(messages.filter(_.sender === "SYSTEM").result)
+```
+
+```tut:invisible
+{
+  val c = exec(messages.filter(_.sender === "SYSTEM").length.result)
+  assert(c == 1, s"Expected one result not $c")
+}
 ```
 
 Both `cleanUp` and `andFinally` run after an action, regardless of whether it succeeds or fails.
