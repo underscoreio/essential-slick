@@ -122,7 +122,7 @@ exec(messages.filter(_.id === 1000L).result)
 
 ### Retrieving Primary Keys on Insert
 
-When the database allocates primary keys for us sit's often the case that we want get the key back as after an insert.
+When the database allocates primary keys for us it's often the case that we want get the key back as after an insert.
 Slick supports this via the `returning` method:
 
 ```tut:book
