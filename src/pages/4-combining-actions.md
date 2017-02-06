@@ -240,17 +240,6 @@ val v: DBIO[Nothing] =
 
 This has a particular role to play inside transactions, which we cover later in this chapter.
 
-
-<div class="callout callout-info">
-**Error: value successful is not a member of object slick.dbio.DBIO**
-
-Due to a [bug][link-scala-type-alias-bug] in Scala you may experience something like the above error when using `DBIO` methods on the REPL with Slick 3.0. This is resolved in Slick 3.1.
-
-If you do encounter it, and have to stay with Slick 3.0,
-you can carry on by writing your code in a `.scala` source file and running it from SBT.
-</div>
-
-
 ### `flatMap`
 
 Ahh, `flatMap`. Wonderful `flatMap`.
