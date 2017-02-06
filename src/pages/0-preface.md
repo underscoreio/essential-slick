@@ -26,7 +26,7 @@ This material is aimed at beginner-to-intermediate Scala developers. You need:
 * experience with relational databases
   (familiarity with concepts such as rows, columns, joins, indexes, SQL); and
 
-* an installed JDK 8 or better, along with a programmer's text editor or IDE.
+* an installed JDK 8 or later, along with a programmer's text editor or IDE.
 
 The material presented focuses on Slick version 3.1. Examples use [H2][link-h2-home] as the relational database.
 
