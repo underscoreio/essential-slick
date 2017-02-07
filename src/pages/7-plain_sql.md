@@ -133,9 +133,9 @@ To be sure you remember it, say it again with us:  never use `#$` with input sup
 
 ### Select with Custom Types
 
-Out of the box Slick knows how to convert many data types to and from SQL data types. The examples we've seen so far include turning a Scala `String` into a SQL string, and a SQL BIGINT to a Scala `Long`.
+Out of the box Slick knows how to convert many data types to and from SQL data types. The examples we've seen so far include turning a Scala `String` into a SQL string, and a SQL BIGINT to a Scala `Long`. These conversions are available via `as[T]`.  
 
-These conversions are available to `as[T]`.  If we want to work with a type that Slick doesn't know about, we need to provide a conversion.  That's the role of the `GetResult` type class.
+If we want to work with a type that Slick doesn't know about, we need to provide a conversion.  That's the role of the `GetResult` type class.
 
 For an example, let's set up a table for messages with some interesting structure:
 
