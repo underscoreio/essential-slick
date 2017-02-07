@@ -98,7 +98,7 @@ That is, you don't have to worry about SQL injection attacks when you use the SQ
 <div class="callout callout-warning">
 **The Danger of Strings**
 
-The SQL interpolators are essential for situations where you need full control over the SQL to be run. Be aware there there is some loss compile-time of safety. For example:
+The SQL interpolators are essential for situations where you need full control over the SQL to be run. Be aware there  is some loss of compile-time safety. For example:
 
 ```tut:book
 val t = 42
