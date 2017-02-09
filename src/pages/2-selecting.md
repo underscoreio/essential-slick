@@ -1020,7 +1020,7 @@ You can also write:
 messages.map(m => m.content ++ "!")
 ```
 
-...as "!" will be lifted to a `Rep[String]``
+...as `"!"` will be lifted to a `Rep[String]`.
 
 This exercise highlights that inside of a `map` or `filter` you are working in terms of `Rep[T]`.
 You should become familiar with the operations available to you.
