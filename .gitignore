@@ -13,3 +13,7 @@ Thumbs.db
 npm-debug.log
 
 *.sublime-workspace
+
+target
+project/project
+project/target
