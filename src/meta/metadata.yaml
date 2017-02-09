@@ -5,28 +5,27 @@ filenameStem: "essential-slick-3"
 # Used by Pandoc to generate the PDF cover...
 # see src/css/book.less for HTML/ePub covers:
 coverColor: "F58B40"
-copyright: "2015"
+copyright: "2017"
 tocDepth: 3
 pages:
-  - src/pages/0-preface.md
-  - src/pages/1-basics.md
-  - src/pages/2-selecting.md
-  - src/pages/3-modifying.md
-  - src/pages/4-combining-actions.md
-  - src/pages/5-data_modelling.md
-  - src/pages/6-joins.md
-  - src/pages/7-plain_sql.md
-  - src/pages/links.md
-  - src/pages/start-of-appendix.md
-  - src/pages/8-databases.md
-  - src/pages/9-play-slick.md
-  - src/pages/solutions.md
+  - 0-preface.md
+  - 1-basics.md
+  - 2-selecting.md
+  - 3-modifying.md
+  - 4-combining-actions.md
+  - 5-data_modelling.md
+  - 6-joins.md
+  - 7-plain_sql.md
+  - links.md
+  - start-of-appendix.md
+  - 8-databases.md
+  - solutions.md
 previewPages:
-  - src/pages/0-preface.md
-  - src/pages/1-basics.md
-  - src/pages/2-selecting.md
-  - src/pages/end-of-preview.md
-  - src/pages/links.md
-  - src/pages/start-of-appendix.md
-  - src/pages/solutions.md
+  - 0-preface.md
+  - 1-basics.md
+  - 2-selecting.md
+  - end-of-preview.md
+  - links.md
+  - start-of-appendix.md
+  - solutions.md
 ...

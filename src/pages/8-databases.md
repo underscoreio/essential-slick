@@ -1,8 +1,14 @@
 # Using Different Database Products {#altdbs}
 
-As mentioned during the introduction, H2 is used throughout the book for examples. However Slick also supports PostgreSQL, MySQL, Derby, SQLite, Oracle, and Microsoft Access. To work with DB2, SQL Server or Oracle you need a commercial license. These are the closed source _Slick Drivers_ known as the _Slick Extensions_.
+As mentioned during the introduction, H2 is used throughout the book for examples.
+However Slick also supports PostgreSQL, MySQL, Derby, SQLite, Oracle, and Microsoft Access.
 
-For MS-SQL and Oracle users, there is an open source Slick driver in development. You can find out more about this from the [FreeSlick GitHub page](https://github.com/smootoo/freeslick).
+There was a time when you needed a commercial license from Lightbend to use Slick in production with Oracle, SQL Server, or DB2.
+This restriction was removed in early 2016[^slick-blog-open].
+However, there was an effort to build free and open drivers, resulting in the FreeSlick project.
+These drivers continue to be available, and you can find out more about this from the [FreeSlick GitHub page](https://github.com/smootoo/freeslick).
+
+[^slick-blog-open]: [http://slick.lightbend.com/news/2016/02/01/slick-extensions-licensing-change.html](http://slick.lightbend.com/news/2016/02/01/slick-extensions-licensing-change.html).
 
 ## Changes
 
@@ -75,8 +81,17 @@ chapter01 = {
 
 ### Update Slick Driver
 
-Change the import from `slick.driver.H2Driver.api._`{.scala}
-to `slick.driver.PostgresDriver.api._`{.scala}.
+Change the import from
+
+```scala
+slick.driver.H2Driver.api._
+```
+
+to
+
+```scala
+slick.driver.PostgresDriver.api._
+```
 
 
 ## MySQL
@@ -123,9 +138,9 @@ Replace `Database.forURL` parameters with:
 
 ~~~ json
 chapter01 = {
-  connectionPool      = jdbc:mysql://localhost:3306/chapter-01     ↩
-                                      &useUnicode=true             ↩
-                                      &amp;characterEncoding=UTF-8 ↩
+  connectionPool      = jdbc:mysql://localhost:3306/chapter-01
+                                      &useUnicode=true
+                                      &amp;characterEncoding=UTF-8
                                       &amp;autoReconnect=true
   url                 = jdbc:postgresql:chapter-01
   driver              = com.mysql.jdbc.Driver
@@ -135,6 +150,20 @@ chapter01 = {
 }
 ~~~
 
+Note that we've formatted the `connectionPool` line to make it legible.
+In reality all those `&` parameters will be on the same line.
+
+
 ### Update Slick Driver
 
-Change the import from `slick.driver.H2Driver.api._`{.scala} to `slick.driver.MySQLDriver.api._`{.scala}.
+Change the import from 
+
+```scala
+slick.driver.H2Driver.api._
+```
+
+to
+
+```scala
+slick.driver.MySQLDriver.api._
+```

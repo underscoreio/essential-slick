@@ -4,13 +4,20 @@ Essential Slick
 Getting Started
 ---------------
 
-You'll need to install the grunt project dependencies the first time you check the project out:
+You need to have installed docker. Then...
 
 ~~~
-brew install pandoc
-npm install -g grunt-cli
-npm install
+$ ./go.sh
+$ npm install
+$ sbt
+sbt> pdf
 ~~~
+
+To avoid running out of MetaSpace you'll also maybe want to:
+
+```
+export JAVA_OPTS="-Xmx3g -XX:+TieredCompilation -XX:ReservedCodeCacheSize=256m -XX:+UseNUMA -XX:+UseParallelGC -XX:+CMSClassUnloadingEnabled"
+```
 
 For upgrading:
 
@@ -19,37 +26,25 @@ rm -rf node_modules
 npm install
 ~~~
 
-Building
---------
+Writing
+-------
 
-Use the following commands to build a single format:
+The source files are in _src/pages_.  Scala blocks are executed by tut when marked as:
 
-~~~
-grunt pdf
-grunt html
-grunt epub
-~~~
+```tut:book
+your code here
+```
 
-All targets are placed in the `dist` directory.
+Note:
 
-Run the following to build all formats, start a web server to serve them all,
-and rebuild if you change any files:
+- no space before tut in the code block
+- `~~~tut` isn't recognized by tut
 
-~~~
-grunt watch
-~~~
+For each chapter you'll need to update _src/main/rsources/application.conf_ to include the chapter database configuration.
 
-Use the following to build all a ZIP of all formats:
+The tut converted sources are output to _target/pages_.
 
-~~~
-grunt zip
-~~~
-
-The default grunt behaviour is to run `zip`:
-
-~~~
-grunt
-~~~
+The `dist` directory contains the PDF etc.
 
 Publishing a Preview
 --------------------
