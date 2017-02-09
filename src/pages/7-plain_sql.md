@@ -323,7 +323,7 @@ val now =
 
 Without the `SetParameter[DateTime]` instance the compiler would tell you:
 
-```
+```scala
 could not find implicit SetParameter[DateTime]
 ```
 
