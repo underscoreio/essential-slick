@@ -1,5 +1,5 @@
 ```tut:invisible
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 
 final case class Message(
   sender:  String,

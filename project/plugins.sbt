@@ -1,2 +1,2 @@
-addSbtPlugin("org.tpolecat" % "tut-plugin" % "0.4.7")
+addSbtPlugin("org.tpolecat" % "tut-plugin" % "0.4.8")
 

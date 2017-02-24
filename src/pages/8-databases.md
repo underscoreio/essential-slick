@@ -5,8 +5,8 @@ However Slick also supports PostgreSQL, MySQL, Derby, SQLite, Oracle, and Micros
 
 There was a time when you needed a commercial license from Lightbend to use Slick in production with Oracle, SQL Server, or DB2.
 This restriction was removed in early 2016[^slick-blog-open].
-However, there was an effort to build free and open drivers, resulting in the FreeSlick project.
-These drivers continue to be available, and you can find out more about this from the [FreeSlick GitHub page](https://github.com/smootoo/freeslick).
+However, there was an effort to build free and open profiles, resulting in the FreeSlick project.
+These profiles continue to be available, and you can find out more about this from the [FreeSlick GitHub page](https://github.com/smootoo/freeslick).
 
 [^slick-blog-open]: [http://slick.lightbend.com/news/2016/02/01/slick-extensions-licensing-change.html](http://slick.lightbend.com/news/2016/02/01/slick-extensions-licensing-change.html).
 
@@ -21,7 +21,7 @@ In summary you will need to ensure that:
  * a database is available with the correct name;
  * the `build.sbt` file has the correct dependency;
  * the correct JDBC driver is referenced in the code; and
- * the correct Slick driver is used.
+ * the correct Slick profile is used.
 
 Each chapter uses its own database---so these steps will need to be applied for each chapter.
 
@@ -79,18 +79,18 @@ chapter01 = {
 }
 ~~~
 
-### Update Slick Driver
+### Update Slick Profile
 
 Change the import from
 
 ```scala
-slick.driver.H2Driver.api._
+slick.jdbc.H2Profile.api._
 ```
 
 to
 
 ```scala
-slick.driver.PostgresDriver.api._
+slick.jdbc.PostgresProfile.api._
 ```
 
 
@@ -154,16 +154,16 @@ Note that we've formatted the `connectionPool` line to make it legible.
 In reality all those `&` parameters will be on the same line.
 
 
-### Update Slick Driver
+### Update Slick DriverProfile
 
 Change the import from 
 
 ```scala
-slick.driver.H2Driver.api._
+slick.jdbc.H2Profile.api._
 ```
 
 to
 
 ```scala
-slick.driver.MySQLDriver.api._
+slick.jdbc.MySQLProfile.api._
 ```

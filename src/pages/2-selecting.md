@@ -13,7 +13,7 @@ In [Chapter 6](#joins) we'll look at more complex queries involving joins, aggre
 The simplest select query is the `TableQuery` generated from a `Table`. In the following example, `messages` is a `TableQuery` for `MessageTable`:
 
 ```tut:silent
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 ```
 ```tut:book
 final case class Message(
@@ -48,10 +48,10 @@ Our `TableQuery` is the equivalent of the SQL `select * from message`.
 **Query Extension Methods**
 
 Like many of the methods discussed below, the `result` method is actually an extension method applied to `Query` via an implicit conversion.
-You'll need to have everything from `H2Driver.api` in scope for this to work:
+You'll need to have everything from `H2Profile.api` in scope for this to work:
 
 ```tut:silent
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 ```
 </div>
 
@@ -681,6 +681,7 @@ We'll see the Slick representation of `GROUP` and `JOIN` in [Chapter 6](#joins).
 We introduced some new terminology:
 
 * _unpacked_ type, which is the regular Scala types we work with, such as `String`; and
+
 * _mixed_ type, which is Slick's column representation, such as `Rep[String]`.
 
 We run queries by converting them to actions using the `result` method.
