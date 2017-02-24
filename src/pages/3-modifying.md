@@ -1,5 +1,5 @@
 ```tut:invisible
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 
 final case class Message(
   sender:  String,
@@ -178,11 +178,11 @@ exec(messages returning messages +=
 This is a shame, but getting the primary key is often all we need.
 
 <div class="callout callout-info">
-**Driver Capabilities**
+**Profile Capabilities**
 
-The Slick manual contains a comprehensive table of the [capabilities for each database driver][link-ref-dbs]. The ability to return complete records from an insert query is referenced as the `jdbc.returnInsertOther` capability.
+The Slick manual contains a comprehensive table of the [capabilities for each database profile][link-ref-dbs]. The ability to return complete records from an insert query is referenced as the `jdbc.returnInsertOther` capability.
 
-The API documentation for each driver also lists the capabilities that the driver *doesn't* have. For an example, the top of the [H2 Driver Scaladoc][link-ref-h2driver] page points out several of its shortcomings.
+The API documentation for each profile also lists the capabilities that the profile *doesn't* have. For an example, the top of the [H2 Profile Scaladoc][link-ref-h2driver] page points out several of its shortcomings.
 </div>
 
 If we want to get a complete populated `Message` back from a database without `jdbc.returnInsertOther` support, we retrieve the primary key and manually add it to the inserted record. Slick simplifies this with another method, `into`:
@@ -520,7 +520,7 @@ For modifying the rows in the database we have seen that:
 
 Auto-incrementing values are inserted by Slick, unless forced. The auto-incremented values can be returned from the insert by using `returning`.
 
-Databases have different capabilities. The limitations of each driver is listed in the driver's Scala Doc page.
+Databases have different capabilities. The limitations of each profile is listed in the profile's Scala Doc page.
 
 
 ## Exercises

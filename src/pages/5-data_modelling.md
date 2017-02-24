@@ -21,9 +21,9 @@ So far, all of our examples have been written in a single Scala file.
 This approach doesn't scale to larger application codebases.
 In this section we'll explain how to split up application code into modules.
 
-Until now we've also been exclusively using Slick's H2 driver.
+Until now we've also been exclusively using Slick's H2 profile.
 When writing real applications we often need to be able to
-switch drivers in different circumstances.
+switch profiles in different circumstances.
 For example, we may use PostgreSQL in production and H2 in our unit tests.
 
 An example of this pattern can be found in the [example project][link-example],
@@ -31,29 +31,20 @@ folder _chapter-05_, file _structure.scala_.
 
 ### Abstracting over Databases
 
-Let's look at how we can write code that works with multiple different database drivers.
+Let's look at how we can write code that works with multiple different database profiles.
 When we previously wrote...
 
 ```tut:book
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 ```
 
 ...we were locking ourselves into H2.
-We want to write an import that works with a variety of drivers.
-Fortunately, Slick provides a common supertype for the drivers
-for the most popular databases---a trait called `JdbcProfile`:
+We want to write an import that works with a variety of profiles.
+Fortunately, Slick provides a common supertype for profiles---a trait called `JdbcProfile`:
 
 ```tut:book
-import slick.driver.JdbcProfile
+import slick.jdbc.JdbcProfile
 ```
-
-<div class="callout callout-info">
-*Drivers and Profiles*
-
-Slick uses the words "driver" and "profile" interchangeably.
-We'll start referring to Slick drivers as "profiles" here
-to distinguish them from the JDBC drivers that sit lower in the code.
-</div>
 
 We can't import directly from `JdbcProfile` because it isn't a concrete object.
 Instead, we have to *inject a dependency* of type `JdbcProfile` into our application
@@ -81,7 +72,7 @@ trait DatabaseModule {
 object Main extends App {
   // Instantiate the database module, assigning a concrete profile:
   val databaseLayer = new DatabaseModule {
-    val profile = slick.driver.H2Driver
+    val profile = slick.jdbc.H2Profile
   }
 }
 ```
@@ -123,7 +114,7 @@ class DatabaseLayer(val profile: JdbcProfile) extends
 
 // Instantiate the modules and inject a profile:
 object Main extends App {
-  val databaseLayer = new DatabaseLayer(slick.driver.H2Driver)
+  val databaseLayer = new DatabaseLayer(slick.jdbc.H2Profile)
 }
 ```
 
@@ -136,7 +127,7 @@ To work with a different database, we inject a different profile
 when we instantiate the database code:
 
 ```tut:book
-val anotherDatabaseLayer = new DatabaseLayer(slick.driver.PostgresDriver)
+val anotherDatabaseLayer = new DatabaseLayer(slick.jdbc.PostgresProfile)
 ```
 
 This basic pattern is reasonable way of structuring your application.
@@ -159,7 +150,7 @@ object messages extends TableQuery(new MessageTable(_)) {
   def messagesFrom(name: String) =
     this.filter(_.sender === name)
 
-  val numSenders = this.map(_.sender).countDistinct
+  val numSenders = this.map(_.sender).distinct.length
 }
 ~~~
 
@@ -533,7 +524,7 @@ so we've introduced a type alias for `AttrHList`
 to avoid as much typing as we can.
 
 ```tut:invisible
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 import scala.concurrent.{Await,Future}
 import scala.concurrent.duration._
 
@@ -864,18 +855,6 @@ meaning the schema will include:
 ~~~ sql
 ALTER TABLE "user" ADD CONSTRAINT "pk_id" PRIMARY KEY("id")
 ~~~
-
-<div class="callout callout-info">
-**H2 Issue**
-
-As it happens, this specific example [doesn't currently work with H2 and Slick](https://github.com/slick/slick/issues/763).
-
-The `O.AutoInc` marks the column as an H2 "IDENTIY"
-column which is, implicitly, a primary key as far as H2 is concerned.
-
-It's fixed in Slick 3.2.
-</div>
-
 
 The `primaryKey` method is more useful for defining *compound* primary keys
 that involve two or more columns.
