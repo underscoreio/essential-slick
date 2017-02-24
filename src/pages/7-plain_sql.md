@@ -1,5 +1,5 @@
 ```tut:invisible
-import slick.jdbc.H2Profile.api._
+import slick.driver.H2Driver.api._
 import scala.concurrent.{Await,Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -358,7 +358,7 @@ The `@StaticDatabaseConfig` syntax is called an _annotation_. This particular `S
 
 ```scala
 tsql {
-  profile = "slick.jdbc.H2Profile$"
+  driver = "slick.driver.H2Driver$"
   db {
     connectionPool = disabled
     url = "jdbc:h2:mem:chapter06; INIT=
@@ -369,9 +369,9 @@ tsql {
 }
 ```
 
-Note the `$` in the profile class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of _Programming in Scala_][link-pins-interop].
+Note the `$` in the driver class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of _Programming in Scala_][link-pins-interop].
 
-You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick profile (`slick.jdbcr.H2Profile`) and the JDBC driver (`org.h2.Drvier`) in one entry.
+You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick driver (`slicker.driver.H2Driver$`) and the JDBC driver (`org.h2.Drvier`) in one entry.
 
 A consequence of supplying a `@StaticDatabaseConfig` is that you can define one databases configuration for your application and a different one for the compiler to use. That is, perhaps you are running an application, or test suite, against an in-memory database, but validating the queries at compile time against a full-populated production-like integration database.
 

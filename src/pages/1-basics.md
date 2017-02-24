@@ -105,19 +105,21 @@ Which will give output similar to:
 
 ~~~ scala
 > console
+[info] Compiling 1 Scala source to /Users/jonoabroad/developer/books/essential-slick-code/chapter-01/target/scala-2.11/classes...
 [info] Starting scala interpreter...
 [info]
-Welcome to Scala 2.12.1 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_112).
-Type in expressions for evaluation. Or try :help.
-
-scala> import slick.jdbc.H2Profile.api._
+import slick.driver.H2Driver.api._
 import Example._
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
-db: slick.jdbc.H2Profile.backend.Database = slick.jdbc.JdbcBackend$DatabaseDef@ac9a820
-exec: [T](program: slick.jdbc.H2Profile.api.DBIO[T])T
+db: slick.driver.H2Driver.backend.Database = slick.jdbc.JdbcBackend$DatabaseDef@75028b56
+exec: [T](program: slick.driver.H2Driver.api.DBIO[T])T
 res0: Option[Int] = Some(4)
+Welcome to Scala version 2.11.7 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0_25).
+Type in expressions to have them evaluated.
+Type :help for more information.
+
 scala>
 ~~~
 
@@ -160,10 +162,10 @@ name := "essential-slick-chapter-01"
 
 version := "1.0.0"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.11.7"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "3.2.0",
+  "com.typesafe.slick" %% "slick"           % "3.1.1",
   "com.h2database"      % "h2"              % "1.4.185",
   "ch.qos.logback"      % "logback-classic" % "1.1.2"
 )
@@ -181,13 +183,13 @@ If we were using a separate database like MySQL or PostgreSQL, we would substitu
 
 ### Importing Library Code
 
-Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *profile*. For example, we access most of the Slick API for H2 via the following `import`:
+Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *driver*. For example, we access most of the Slick API for H2 via the following `import`:
 
 ```tut:silent
-import slick.jdbc.H2Profile.api._
+import slick.driver.H2Driver.api._
 ```
 
-Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 5](#Modelling) looks how you can keep a specific database profile out of your code until necessary.
+Slick makes heavy use of implicit conversions and extension methods, so we generally need to include this import anywhere where we're working with queries or the database. [Chapter 5](#Modelling) looks how you can keep a specific database driver out of your code until necessary.
 
 ### Defining our Schema
 
@@ -598,21 +600,17 @@ messages += Message("Dave","What if I say 'Pretty please'?")
 If you don't wait for the future to complete, you'll see just the future itself:
 
 ```tut:book
-val f = db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
+db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
 ```
 
 
 ```tut:invisible
-
+{
   // Post-exercise clean up
   // We inserted a new message for Dave twice in the last solution.
   // We need to fix this so the next exercise doesn't contain confusing duplicates
-
-  // NB: this block is not inside {}s because doing that triggered:
-  // Could not initialize class $line41.$read$$iw$$iw$$iw$$iw$$iw$$iw$
-
   import scala.concurrent.ExecutionContext.Implicits.global
-  val ex1cleanup: DBIO[Int] = for {
+  val ex1cleanup = for {
     _ <- messages.filter(_.content === "What if I say 'Pretty please'?").delete
     m = Message("Dave","What if I say 'Pretty please'?", 5L)
     _ <- messages.forceInsert(m)
@@ -620,6 +618,7 @@ val f = db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
   } yield count
   val rowCount = exec(ex1cleanup)
   assert(rowCount == 1, s"Wrong number of rows after cleaning up ex1: $rowCount")
+}
 ```
 </div>
 
