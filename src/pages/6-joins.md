@@ -29,7 +29,7 @@ To demonstrate joins we will need at least two tables.
 We'll start this chapter with `User`...
 
 ```tut:book
-import slick.jdbc.H2Profile.api._
+import slick.driver.H2Driver.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class User(name: String, id: Long = 0L)
@@ -632,19 +632,19 @@ of your chosen database profile:
 
 ```tut:book
 // H2 supports zip
-slick.jdbc.H2Profile.capabilities.
+slick.driver.H2Driver.capabilities.
   map(_.toString).
   contains("relational.zip")
 
 // SQLite does not support zip
-slick.jdbc.SQLiteProfile.capabilities.
+slick.driver.SQLiteDriver.capabilities.
   map(_.toString).
   contains("relational.zip")
 ```
 
 ```tut:invisible
-assert(false == slick.jdbc.SQLiteProfile.capabilities.map(_.toString).contains("relational.zip"), "SQLLite now supports ZIP!")
-assert(true  == slick.jdbc.H2Profile.capabilities.map(_.toString).contains("relational.zip"), "H2 no longer supports ZIP?!")
+assert(false == slick.driver.SQLiteDriver.capabilities.map(_.toString).contains("relational.zip"), "SQLLite now supports ZIP!")
+assert(true  == slick.driver.H2Driver.capabilities.map(_.toString).contains("relational.zip"), "H2 no longer supports ZIP?!")
 ```
 
 
@@ -712,6 +712,8 @@ Method           SQL
 ---------------  ---------------------------------------------------
  `length`        `COUNT(1)`
 
+ `countDistinct` `COUNT(DISTINCT column)`
+
  `min`           `MIN(column)`
 
  `max`           `MAX(column)`
@@ -730,13 +732,13 @@ Using them causes no great surprises, as shown in the following examples:
 val numRows: DBIO[Int] = messages.length.result
 
 val numDifferentSenders: DBIO[Int] =
-  messages.map(_.senderId).distinct.length.result
+  messages.map(_.senderId).countDistinct.result
 
 val firstSent: DBIO[Option[Long]] =
   messages.map(_.id).min.result
 ```
 
-While `length` returns an `Int`, the other functions return an `Option`.
+While `length` and `countDistinct` return an `Int`, the other functions return an `Option`.
 This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
 
 
