@@ -367,16 +367,13 @@ and case classes don't scale beyond 22 fields[^scala211-limit22].
 
 [^scala211-limit22]: Scala 2.11 introduced the ability
 to define case classes with more than 22 fields,
-but tuple and function arities are still limited to 22.
+but tuples and functions are still limited to 22.
+We've written about this in [a blog post](https://underscore.io/blog/posts/2016/10/11/twenty-two.html).
 
 Many of us have heard horror stories of legacy tables in enterprise databases
-that have tens or hundreds of columns.
-We can't map everything in these tables using the tuple approach described above[^slick32].
+that have tens or hundreds of columns. How do we map these rows?
 Fortunately, Slick provides an [`HList`][link-slick-hlist] implementation
 to support tables with very large numbers of columns.
-
-[^slick32]: Slick 3.2 is planned to have a new macro, `mapTo`, which will replace `<>` and allow
-mapping to tables with more than 22 columns.
 
 To motivate this, let's consider a poorly-designed legacy table
 for storing product attributes:
@@ -433,10 +430,11 @@ It has an arbitrary length like a `List`,
 but each element can be a different type like a tuple.
 Here are some examples:
 
-```tut:book
+```tut:silent
 import slick.collection.heterogeneous.{HList, HCons, HNil}
 import slick.collection.heterogeneous.syntax._
-
+```
+```tut:book
 val emptyHList = HNil
 
 val shortHList: Int :: HNil = 123 :: HNil
@@ -464,13 +462,17 @@ to map `HList`s of columns to `HList`s of their values.
 For example, the shape for a `Rep[Int] :: Rep[String] :: HNil`
 maps values of type `Int :: String :: HNil`.
 
+#### Using HLists Directly
+
 We can use an `HList` to map the large table in our example above.
 Here's what the default projection looks like:
 
-```tut:book
+```tut:silent
 import slick.collection.heterogeneous.{ HList, HCons, HNil }
 import slick.collection.heterogeneous.syntax._
 import scala.language.postfixOps
+```
+```tut:book
 
 type AttrHList =
   Long :: Long ::
@@ -520,8 +522,8 @@ val attributes = TableQuery[AttrTable]
 ```
 
 Writing `HList` types and values is cumbersome and error prone,
-so we've introduced a type alias for `AttrHList`
-to avoid as much typing as we can.
+so we've introduced a type alias of `AttrHList`
+to help us.
 
 ```tut:invisible
 import slick.jdbc.H2Profile.api._
@@ -563,38 +565,22 @@ val id: Long = myAttrs.head
 val productId: Long = myAttrs.tail.head
 val name1: String = myAttrs(2)
 val value1: Int = myAttrs(3)
-// And so on...
 ```
 
-In practice we'll want to map instances of `AttrHList`
-to a regular class to make them easier to work with.
-Fortunately Slick's `<>` operator works with `HList` shapes as well as tuple shapes.
-We have to produce our own mapping functions in place of `apply` and `unapply`,
+#### Using HLists and Case Classes
+
+In practice we'll want to map an HList representation
+to a regular class to make it easier to work with.
+Slick's `<>` operator works with `HList` shapes as well as tuple shapes.
+To use it we'd have to produce our own mapping functions in place of the case class `apply` and `unapply`,
 but otherwise this approach is the same as we've seen for tuples.
 
+However, the `mapTo` macro will generate the mapping between an HList and a case class for us:
+
 ```tut:book
-// An object so Attrs can be companions when run in the REPL
-object AttrModule {
-
-  case class Attrs(id: Long, productId: Long,
-    name1: String, value1: Int, name2: String, value2: Int /* etc */)
-
-  object Attrs {
-    type AttrHList = Long :: Long ::
-      String :: Int :: String :: Int :: /* etc */ HNil
-
-    def hlistApply(hlist: AttrHList): Attrs = hlist match {
-      case id :: pId :: n1 :: v1 :: n2 :: v2 /* etc */ :: HNil =>
-        Attrs(id, pId, n1, v1, n2, v2 /* etc */)
-    }
-
-    def hlistUnapply(a: Attrs): Option[AttrHList] =
-      Some(a.id :: a.productId ::
-        a.name1 :: a.value1 :: a.name2 :: a.value2 /* etc */ :: HNil)
-  }
-}
-
-import AttrModule._
+// A case class for our very wide row:
+case class Attrs(id: Long, productId: Long,
+  name1: String, value1: Int, name2: String, value2: Int /* etc */)
 
 final class AttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
   def id        = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -609,14 +595,20 @@ final class AttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
     id :: productId ::
     name1 :: value1 :: name2 :: value2 /* etc */ :: 
     HNil
-  ) <> (Attrs.hlistApply, Attrs.hlistUnapply)
+  ).mapTo[Attrs] 
 }
 
 val attributes = TableQuery[AttrTable]
 ```
 
-Now our table is defined on a plain Scala class,
-we can query and modify the data using regular data objects as normal:
+Notice the pattern is:
+
+```scala
+ def * = (some hlist).mapTo[case class with the same fields]
+```
+
+With this in place our table is defined on a plain Scala case class.
+We can query and modify the data as normal:
 
 ```tut:book
 val program: DBIO[Seq[Attrs]] = for {
@@ -628,18 +620,7 @@ val program: DBIO[Seq[Attrs]] = for {
 exec(program)
 ```
 
-As you can see, typing all of the code to define `HList` mappings by hand
-is error prone and likely to induce stress. There are two ways to improve on this:
-
-- The first is to know that Slick can _generate_ this code for us from an existing database.
-  If our main use for `HList`s is to map legacy database tables,
-  code generation is the way to go.
-
-- Second, we can improve the readability of our `HList`s
-  by using _value classes_ to replace more vanilla column types like `String` and `Int`.
-  This can increase verbosity but significantly reduces errors.
-  We'll see this in the section on [value classes](#value-classes),
-  later in this chapter.
+`mapTo` is your friend when working with case classes and HLists.
 
 <div class="callout callout-info">
 **Code Generation**
@@ -653,11 +634,10 @@ When the database is considered the source truth in your organisation,
 the [Slick code generator][link-ref-gen] is an important tool.
 It allows you to connect to a database, generate the table definitions,
 and customize the code produced.
+For tables with wide rows, it produces an HList representation.
 
 Prefer it to manually reverse engineering a schema by hand.
 </div>
-
-
 
 ## Table and Column Representation
 
@@ -1647,13 +1627,15 @@ using traits and self-types.
 
 The most important points are:
 
-- We can separate the specific profile for our database (H2, Postgres, etc).
+- We can separate the specific profile for our database (H2, Postgres, etc) from our tables.
   We assemble a database layer from a number of traits,
   leaving the profile as an abstract field
   that can be implemented at runtime.
 
 - We can represent rows in a variety of ways: tuples, `HList`s,
   and arbitrary classes and case classes via the `<>` method.
+
+- An `HList` can be mapped to a case class with the `mapTo` macro.
 
 - We can represent individual values in columns
   using arbitrary Scala data types
