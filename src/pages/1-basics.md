@@ -200,16 +200,6 @@ final case class Message(
   id:      Long = 0L)
 ```
 
-We also define a helper method to create a few test `Messages` for demonstration purposes:
-
-```tut:book
-def freshTestData = Seq(
-  Message("Dave", "Hello, HAL. Do you read me, HAL?"),
-  Message("HAL",  "Affirmative, Dave. I read you."),
-  Message("Dave", "Open the pod bay doors, HAL."),
-  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.")
-)
-```
 
 Next we define a `Table` object, which corresponds to our database table and tells Slick how to map back and forth between database data and instances of our case class:
 
@@ -220,15 +210,15 @@ final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def sender  = column[String]("sender")
   def content = column[String]("content")
 
-  def * = (sender, content, id) <> (Message.tupled, Message.unapply)
+  def * = (sender, content, id).mapTo[Message]
 }
 ```
 
 `MessageTable` defines three `column`s: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
 
-The `*` method provides a *default projection* that maps between columns in the table and instances of our case class.
-Slick's `<>` method defines a two-way mapping between three columns and the three fields in `Message`,
-via the standard `tupled` and `unapply` methods generated as part of the case class.
+The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. 
+Slick's `mapTo` macro creates a two-way mapping between the three columns and the three fields in `Message`.
+
 We'll cover projections and default projections in detail in [Chapter 5](#Modelling).
 For now, all we need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
 
@@ -365,20 +355,39 @@ val result = Await.result(future, 2.seconds)
 
 ### Inserting Data
 
-Once our table is set up, we need to insert some test data. This is also an action:
+Once our table is set up, we need to insert some test data. We'll define a helper method to create a few test `Messages` for demonstration purposes:
+
+```tut:book
+def freshTestData = Seq(
+  Message("Dave", "Hello, HAL. Do you read me, HAL?"),
+  Message("HAL",  "Affirmative, Dave. I read you."),
+  Message("Dave", "Open the pod bay doors, HAL."),
+  Message("HAL",  "I'm sorry, Dave. I'm afraid I can't do that.")
+)
+```
+
+The insert of this test data is an action:
 
 ```tut:book
 val insert: DBIO[Option[Int]] = messages ++= freshTestData
 ```
 
-The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (recall that `freshTestData` is just a regular Scala `Seq[Message]`). We run the `insert` via `db.run`, and when the future completes our table is populated with data:
+The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (`freshTestData` is a regular Scala `Seq[Message]`).
+We run the `insert` via `db.run`, and when the future completes our table is populated with data:
 
 ```tut:book
 val result: Future[Option[Int]] = db.run(insert)
 ```
 
-The result of an insert operation is the number of rows inserted. The `freshTestData` contains four messages, so in this case the result is `Some(4)`.  The result is optional because the underlying Java APIs do not guarantee a count of rows for batch inserts---some databases simply return `None`.  We discuss single and batch inserts and updates further in [Chapter 3](#Modifying).
+The result of an insert operation is the number of rows inserted.
+The `freshTestData` contains four messages, so in this case the result is `Some(4)` when the future completes:
 
+```tut:book
+val rowCount = Await.result(result, 2.seconds)
+```
+
+The result is optional because the underlying Java APIs do not guarantee a count of rows for batch inserts---some databases simply return `None`.
+We discuss single and batch inserts and updates further in [Chapter 3](#Modifying).
 
 ### Selecting Data
 
@@ -411,8 +420,7 @@ assert(sql == """select "sender", "content", "id" from "message"""", s"Expected:
 
 In our applications we should avoid blocking on `Future`s whenever possible.
 However, in the examples in this book we'll be making heavy use of `Await.result`.
-We will introduce a simple helper method called `exec` to reduce typing
-and make the examples easier to read:
+We will introduce a helper method called `exec` to make the examples easier to read:
 
 ```tut:book
 def exec[T](action: DBIO[T]): T =
@@ -435,7 +443,7 @@ to a `Future` of an HTTP response and send that to the client.
 If we want to retrieve a subset of the messages in our table,
 we can run a modified version of our query.
 For example, calling `filter` on `messages` creates a modified query with
-a `WHERE` expression that retrieves the expected subset of results:
+a `WHERE` expression that retrieves the expected rows:
 
 ```tut:book
 messages.filter(_.sender === "HAL").result.statements.mkString
@@ -455,10 +463,15 @@ We can get exactly the same results from the database by running this variable i
 exec(halSays.result)
 ```
 
-Notice that we created our original `halSays` before connecting to the database. This demonstrates perfectly the notion of composing a query from small parts and running it later on. We can even stack modifiers to create queries with multiple additional clauses. For example, we can `map` over the query to retrieve a subset of the data, modifying the `SELECT` clause in the SQL and the return type of the `result`:
+Notice that we created our original `halSays` before connecting to the database.
+This demonstrates perfectly the notion of composing a query from small parts and running it later on.
+
+We can even stack modifiers to create queries with multiple additional clauses.
+For example, we can `map` over the query to retrieve a subset of the columns.
+This modifies the `SELECT` clause in the SQL and the return type of the `result`:
 
 ```tut:book
-halSays.map(_.id).result.statements
+halSays.map(_.id).result.statements.mkString
 
 exec(halSays.map(_.id).result)
 ```
@@ -518,7 +531,7 @@ In [Chapter 4](#combining) we'll see this, and also that actions can be composed
 <div class="callout callout-danger">
 *Queries, Actions, Futures... Oh My!*
 
-The difference between queries, actions, and futures is the biggest point of confusion for newcomers to Slick 3. The three types share many properties: they all have methods like `map`, `flatMap`, and `filter`, they are all compatible with for comprehensions, and they all flow seamlessly into one another through methods in the Slick API. However, their semantics are quite different:
+The difference between queries, actions, and futures is a big point of confusion for newcomers to Slick 3. The three types share many properties: they all have methods like `map`, `flatMap`, and `filter`, they are all compatible with for comprehensions, and they all flow seamlessly into one another through methods in the Slick API. However, their semantics are quite different:
 
  - `Query` is used to build SQL for a single query. Calls to `map` and `filter` modify clauses to the SQL, but only one query is created.
 
