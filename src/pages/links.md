@@ -10,7 +10,7 @@
 [link-slick-hlist]:          http://slick.lightbend.com/doc/3.2.0/api/#slick.collection.heterogeneous.HList
 [link-source-dbPublisher]:   http://slick.lightbend.com/doc/3.2.0/api/index.html#slick.basic.DatabasePublisher
 [link-source-extmeth]:       https://github.com/slick/slick/blob/3.2.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
-[link-slick-streaming]:      http://slick.lightbend.com/doc/3.2.0/database.html#streaming
+[link-slick-streaming]:      http://slick.lightbend.com/doc/3.2.0/dbio.html#streaming
 
 [link-hikari]:               http://brettwooldridge.github.io/HikariCP/
 [link-config]:               https://github.com/typesafehub/config
