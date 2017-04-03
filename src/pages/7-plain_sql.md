@@ -34,7 +34,7 @@ case class Room(title: String, id: Long = 0L)
 class RoomTable(tag: Tag) extends Table[Room](tag, "room") {
  def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
  def title = column[String]("title")
- def * = (title, id) <> (Room.tupled, Room.unapply)
+ def * = (title, id).mapTo[Room]
 }
 
 lazy val rooms = TableQuery[RoomTable]
@@ -498,7 +498,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
  def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
  def name  = column[String]("name")
  def email = column[Option[String]]("email")
- def * = (name, email, id) <> (User.tupled, User.unapply)
+ def * = (name, email, id).mapTo[User]
 }
 
 lazy val users = TableQuery[UserTable]
@@ -510,7 +510,7 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
  def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
  def senderId = column[Long]("sender_id")
  def content  = column[String]("content")
- def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
+ def * = (senderId, content, id).mapTo[Message]
 }
 
 lazy val messages = TableQuery[MessageTable]
