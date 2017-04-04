@@ -379,7 +379,7 @@ In the last section we removed all the rows for HAL. Before continuing with upda
 exec(messages.delete andThen (messages ++= freshTestData) andThen messages.result)
 ```
 
-_Action combinators_, such as `asThen`, are the subject of the next chapter.
+_Action combinators_, such as `andThen`, are the subject of the next chapter.
 </div>
 
 ### Updating a Single Field
