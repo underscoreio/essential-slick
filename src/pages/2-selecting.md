@@ -27,8 +27,7 @@ final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def sender  = column[String]("sender")
   def content = column[String]("content")
 
-  def * = (sender, content, id) <>
-    (Message.tupled, Message.unapply)
+  def * = (sender, content, id).mapTo[Message]
 }
 
 lazy val messages = TableQuery[MessageTable]
@@ -149,16 +148,10 @@ We'll see another example of using a `from`-less query in [Chapter 3](#moreContr
 
 ## Transforming Results
 
-### The *map* Method
-
-Sometimes we don't want to select all of the columns in a `Table`.
-We can use the `map` method on a `Query` to select specific columns for inclusion in the results.
-This changes both the mixed type and the unpacked type of the query:
-
 <div class="callout callout-info">
 **`exec`**
 
-Just as we did in Chapter 1, we're using a simple helper method to run queries in the REPL:
+Just as we did in Chapter 1, we're using a helper method to run queries in the REPL:
 
 ```tut:silent
 import scala.concurrent.{Await,Future}
@@ -187,6 +180,12 @@ def freshTestData = Seq(
 exec(messages.schema.create andThen (messages ++= freshTestData))
 ```
 </div>
+
+### The *map* Method
+
+Sometimes we don't want to select all of the columns in a `Table`.
+We can use the `map` method on a `Query` to select specific columns for inclusion in the results.
+This changes both the mixed type and the unpacked type of the query:
 
 ```tut:book
 messages.map(_.content)
@@ -238,17 +237,16 @@ The mixed and unpacked types change accordingly,
 and the SQL is modified as we might expect:
 
 ```tut:book
-messages.map(t => (t.id, t.content)).result.statements
+messages.map(t => (t.id, t.content)).result.statements.mkString
 ```
 
-We can even map sets of columns to Scala data structures using the
-projection operator, `<>` (we'll look at this in detail in [Chapter 5](#Modelling)):
+We can even map sets of columns to Scala data structures using `mapTo`:
 
 ```tut:book
 case class TextOnly(id: Long, content: String)
 
 val contentQuery = messages.
-  map(t => (t.id, t.content) <> (TextOnly.tupled, TextOnly.unapply))
+  map(t => (t.id, t.content).mapTo[TextOnly])
 
 exec(contentQuery.result)
 ```
@@ -609,8 +607,16 @@ Scala Code             SQL Equivalent
 We'll look at each in turn, starting with an example of `sortBy`. Say we want want messages in order of the sender's name:
 
 ```tut:book
-exec(messages.sortBy(_.sender).result)
+exec(messages.sortBy(_.sender).result).foreach(println)
 ```
+
+Or the reverse order:
+
+```tut:book
+exec(messages.sortBy(_.sender.desc).result).foreach(println)
+```
+
+
 
 To sort by multiple columns, return a tuple of columns:
 

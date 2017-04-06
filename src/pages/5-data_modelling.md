@@ -171,7 +171,7 @@ case classes, and `HList`s.
 Let's investigate these by looking in more detail
 at how Slick relates columns in our database to fields in our classes.
 
-### Projections, `ProvenShapes`, and `<>`
+### Projections, `ProvenShapes`, `mapTo`, and `<>`
 
 When we declare a table in Slick, we are required to implement a `*` method
 that specifies a "default projection":
@@ -291,6 +291,11 @@ allows us to map a wide variety of types.
 As long as we can convert a tuple of columns to and from some type `B`,
 we can store instances of `B` in a database.
 
+We've not seen `<>` until now because the `mapTo` macro builds a projection for us.
+In most situations `mapTo` is both more convenient and more efficient to use than `<>`.
+However, `<>` is available and worth knowing about if we need more control over the mapping.
+It will also be a method you see a great deal in code bases created before Slick 3.2.
+
 The two arguments to `<>` are:
 
 * a function from `A => B`, which converts
@@ -324,6 +329,9 @@ via `User.tupled` and `User.unapply`, so we don't need to build them ourselves.
 However it is useful to remember that we can provide our own functions
 for more elaborate packaging and unpackaging of rows.
 We will see this in one of the exercises in this chapter.
+
+In this section we've looked at the details of projections.
+In general, though, the `mapTo` macro is sufficient for many situations.
 
 ### Tuples versus Case Classes
 
@@ -363,20 +371,17 @@ for these reasons.
 
 We've seen how Slick can map database tables to tuples and case classes.
 Scala veterans identify a key weakness in this approach---tuples
-and case classes don't scale beyond 22 fields[^scala211-limit22].
+and case classes don't run into limitations at 22 fields[^scala211-limit22].
 
 [^scala211-limit22]: Scala 2.11 introduced the ability
 to define case classes with more than 22 fields,
-but tuple and function arities are still limited to 22.
+but tuples and functions are still limited to 22.
+We've written about this in [a blog post](https://underscore.io/blog/posts/2016/10/11/twenty-two.html).
 
 Many of us have heard horror stories of legacy tables in enterprise databases
-that have tens or hundreds of columns.
-We can't map everything in these tables using the tuple approach described above[^slick32].
+that have tens or hundreds of columns. How do we map these rows?
 Fortunately, Slick provides an [`HList`][link-slick-hlist] implementation
 to support tables with very large numbers of columns.
-
-[^slick32]: Slick 3.2 is planned to have a new macro, `mapTo`, which will replace `<>` and allow
-mapping to tables with more than 22 columns.
 
 To motivate this, let's consider a poorly-designed legacy table
 for storing product attributes:
@@ -419,10 +424,10 @@ final class AttrTable(tag: Tag) extends Table[Attr](tag, "attrs") {
 Hopefully you don't have a table like this at your organization,
 but accidents do happen.
 
-This table has 26 columns---too many to model using tuples and `<>`.
+This table has 26 columns---too many to model using flat tuples.
 Fortunately, Slick provides an alternative mapping representation
 that scales to arbitrary numbers of columns.
-This new representation is called a _heterogeneous list_ or `HList`[^hlist].
+This representation is called a _heterogeneous list_ or `HList`[^hlist].
 
 [^hlist]: You may have heard of `HList` via other libraries, such as [shapeless][link-shapeless].
 We're talking here about Slick's own implementation of `HList`, not the shapless one.
@@ -433,10 +438,11 @@ It has an arbitrary length like a `List`,
 but each element can be a different type like a tuple.
 Here are some examples:
 
-```tut:book
+```tut:silent
 import slick.collection.heterogeneous.{HList, HCons, HNil}
 import slick.collection.heterogeneous.syntax._
-
+```
+```tut:book
 val emptyHList = HNil
 
 val shortHList: Int :: HNil = 123 :: HNil
@@ -464,13 +470,17 @@ to map `HList`s of columns to `HList`s of their values.
 For example, the shape for a `Rep[Int] :: Rep[String] :: HNil`
 maps values of type `Int :: String :: HNil`.
 
+#### Using HLists Directly
+
 We can use an `HList` to map the large table in our example above.
 Here's what the default projection looks like:
 
-```tut:book
+```tut:silent
 import slick.collection.heterogeneous.{ HList, HCons, HNil }
 import slick.collection.heterogeneous.syntax._
 import scala.language.postfixOps
+```
+```tut:book
 
 type AttrHList =
   Long :: Long ::
@@ -520,8 +530,8 @@ val attributes = TableQuery[AttrTable]
 ```
 
 Writing `HList` types and values is cumbersome and error prone,
-so we've introduced a type alias for `AttrHList`
-to avoid as much typing as we can.
+so we've introduced a type alias of `AttrHList`
+to help us.
 
 ```tut:invisible
 import slick.jdbc.H2Profile.api._
@@ -563,38 +573,22 @@ val id: Long = myAttrs.head
 val productId: Long = myAttrs.tail.head
 val name1: String = myAttrs(2)
 val value1: Int = myAttrs(3)
-// And so on...
 ```
 
-In practice we'll want to map instances of `AttrHList`
-to a regular class to make them easier to work with.
-Fortunately Slick's `<>` operator works with `HList` shapes as well as tuple shapes.
-We have to produce our own mapping functions in place of `apply` and `unapply`,
+#### Using HLists and Case Classes
+
+In practice we'll want to map an HList representation
+to a regular class to make it easier to work with.
+Slick's `<>` operator works with `HList` shapes as well as tuple shapes.
+To use it we'd have to produce our own mapping functions in place of the case class `apply` and `unapply`,
 but otherwise this approach is the same as we've seen for tuples.
 
+However, the `mapTo` macro will generate the mapping between an HList and a case class for us:
+
 ```tut:book
-// An object so Attrs can be companions when run in the REPL
-object AttrModule {
-
-  case class Attrs(id: Long, productId: Long,
-    name1: String, value1: Int, name2: String, value2: Int /* etc */)
-
-  object Attrs {
-    type AttrHList = Long :: Long ::
-      String :: Int :: String :: Int :: /* etc */ HNil
-
-    def hlistApply(hlist: AttrHList): Attrs = hlist match {
-      case id :: pId :: n1 :: v1 :: n2 :: v2 /* etc */ :: HNil =>
-        Attrs(id, pId, n1, v1, n2, v2 /* etc */)
-    }
-
-    def hlistUnapply(a: Attrs): Option[AttrHList] =
-      Some(a.id :: a.productId ::
-        a.name1 :: a.value1 :: a.name2 :: a.value2 /* etc */ :: HNil)
-  }
-}
-
-import AttrModule._
+// A case class for our very wide row:
+case class Attrs(id: Long, productId: Long,
+  name1: String, value1: Int, name2: String, value2: Int /* etc */)
 
 final class AttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
   def id        = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -607,16 +601,22 @@ final class AttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
 
   def * = (
     id :: productId ::
-    name1 :: value1 :: name2 :: value2 /* etc */ :: 
+    name1 :: value1 :: name2 :: value2 /* etc */ ::
     HNil
-  ) <> (Attrs.hlistApply, Attrs.hlistUnapply)
+  ).mapTo[Attrs]
 }
 
 val attributes = TableQuery[AttrTable]
 ```
 
-Now our table is defined on a plain Scala class,
-we can query and modify the data using regular data objects as normal:
+Notice the pattern is:
+
+```scala
+ def * = (some hlist).mapTo[case class with the same fields]
+```
+
+With this in place our table is defined on a plain Scala case class.
+We can query and modify the data as normal using case classes:
 
 ```tut:book
 val program: DBIO[Seq[Attrs]] = for {
@@ -627,19 +627,6 @@ val program: DBIO[Seq[Attrs]] = for {
 
 exec(program)
 ```
-
-As you can see, typing all of the code to define `HList` mappings by hand
-is error prone and likely to induce stress. There are two ways to improve on this:
-
-- The first is to know that Slick can _generate_ this code for us from an existing database.
-  If our main use for `HList`s is to map legacy database tables,
-  code generation is the way to go.
-
-- Second, we can improve the readability of our `HList`s
-  by using _value classes_ to replace more vanilla column types like `String` and `Int`.
-  This can increase verbosity but significantly reduces errors.
-  We'll see this in the section on [value classes](#value-classes),
-  later in this chapter.
 
 <div class="callout callout-info">
 **Code Generation**
@@ -653,11 +640,10 @@ When the database is considered the source truth in your organisation,
 the [Slick code generator][link-ref-gen] is an important tool.
 It allows you to connect to a database, generate the table definitions,
 and customize the code produced.
+For tables with wide rows, it produces an HList representation.
 
 Prefer it to manually reverse engineering a schema by hand.
 </div>
-
-
 
 ## Table and Column Representation
 
@@ -684,7 +670,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def name  = column[String]("name")
   def email = column[Option[String]]("email")
 
-  def * = (name, email, id) <> (User.tupled, User.unapply)
+  def * = (name, email, id).mapTo[User]
 }
 
 lazy val users = TableQuery[UserTable]
@@ -821,7 +807,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name   = column[String]("name")
 
-  def * = (id.?, name) <> (User.tupled, User.unapply)
+  def * = (id.?, name).mapTo[User]
 }
 
 lazy val users = TableQuery[UserTable]
@@ -869,7 +855,7 @@ case class Room(title: String, id: Long = 0L)
 class RoomTable(tag: Tag) extends Table[Room](tag, "room") {
  def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
  def title = column[String]("title")
- def * = (title, id) <> (Room.tupled, Room.unapply)
+ def * = (title, id).mapTo[Room]
 }
 
 lazy val rooms = TableQuery[RoomTable]
@@ -890,7 +876,7 @@ class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
 
   def pk = primaryKey("room_user_pk", (roomId, userId))
 
-  def * = (roomId, userId) <> (Occupant.tupled, Occupant.unapply)
+  def * = (roomId, userId).mapTo[Occupant]
 }
 
 lazy val occupants = TableQuery[OccupantTable]
@@ -916,7 +902,7 @@ Using the `occupant` table is no different from any other table:
 val program: DBIO[Int] = for {
    _        <- rooms.schema.create
    _        <- occupants.schema.create
-  elenaId    <- insertUser += User(None, "Elena")
+  elenaId   <- insertUser += User(None, "Elena")
   airLockId <- insertRoom += Room("Air Lock")
   // Put Elena in the Room:
   rowsAdded <- occupants += Occupant(airLockId, elenaId)
@@ -978,7 +964,7 @@ Foreign keys are declared in a similar manner to compound primary keys.
 The method `foreignKey` takes four required parameters:
 
  * a name;
- 
+
  * the column, or columns, that make up the foreign key;
 
  * the `TableQuery` that the foreign key belongs to; and
@@ -1001,7 +987,7 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def senderId = column[Long]("sender")
   def content  = column[String]("content")
 
-  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, id).mapTo[Message]
 
   def sender = foreignKey("sender_fk", senderId, users)(_.id)
 }
@@ -1045,7 +1031,7 @@ class AltMsgTable(tag: Tag) extends Table[Message](tag, "message") {
   def senderId = column[Long]("sender")
   def content  = column[String]("content")
 
-  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, id).mapTo[Message]
 
   def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
 }
@@ -1204,7 +1190,7 @@ class PhotoTable(tag: Tag) extends Table[PhotoUser](tag, "user") {
 
   def avatar = column[Option[Array[Byte]]]("avatar", O.SqlType("BINARY(2048)"))
 
-  def * = (name, avatar, id) <> (PhotoUser.tupled, PhotoUser.unapply)
+  def * = (name, avatar, id).mapTo[PhotoUser]
 }
 ```
 
@@ -1288,11 +1274,10 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def content   = column[String]("content")
   def timestamp = column[DateTime]("timestamp")
 
-  def * = (senderId, content, timestamp, id) <>
-    (Message.tupled, Message.unapply)
+  def * = (senderId, content, timestamp, id).mapTo[Message]
 }
 
-lazy val messages      = TableQuery[MessageTable]
+lazy val messages = TableQuery[MessageTable]
 lazy val insertMessage = messages returning messages.map(_.id)
 ```
 
@@ -1420,7 +1405,7 @@ case class User(name: String, id: UserPK = UserPK(0L))
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
-  def * = (name, id) <> (User.tupled, User.unapply)
+  def * = (name, id).mapTo[User]
 }
 
 lazy val users = TableQuery[UserTable]
@@ -1440,7 +1425,7 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def senderId  = column[UserPK]("sender")
   def content   = column[String]("content")
 
-  def * = (senderId, content, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, id).mapTo[Message]
 
   def sender = foreignKey("sender_fk", senderId, users) (_.id, onDelete=ForeignKeyAction.Cascade)
 }
@@ -1484,12 +1469,12 @@ object GenericPKModule {
     def id    = column[PK[UserTable]]("id", O.AutoInc, O.PrimaryKey)
     def name  = column[String]("name")
 
-    def * = (name, id) <> (User.tupled, User.unapply)
+    def * = (name, id).mapTo[User]
   }
 
   lazy val users = TableQuery[UserTable]
 
-  val exampleQuery = 
+  val exampleQuery =
     users.filter(_.id === PK[UserTable](0L))
 }
 ```
@@ -1551,8 +1536,7 @@ implicit val flagType =
     })
 ```
 
-This is similar to the enumeration pattern from the last set of exercises.
-In this case, however, the compiler can ensure we've covered all the cases.
+We like sum types because the compiler can ensure we've covered all the cases.
 If we add a new flag (`OffTopic` perhaps),
 the compiler will issue warnings
 until we add it to our `Flag => Char` function.
@@ -1569,7 +1553,7 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "flagmessage") {
   def content  = column[String]("content")
   def flag     = column[Option[Flag]]("flag")
 
-  def * = (senderId, content, flag, id) <> (Message.tupled, Message.unapply)
+  def * = (senderId, content, flag, id).mapTo[Message]
 
   def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
 }
@@ -1647,13 +1631,15 @@ using traits and self-types.
 
 The most important points are:
 
-- We can separate the specific profile for our database (H2, Postgres, etc).
+- We can separate the specific profile for our database (H2, Postgres, etc) from our tables.
   We assemble a database layer from a number of traits,
   leaving the profile as an abstract field
   that can be implemented at runtime.
 
 - We can represent rows in a variety of ways: tuples, `HList`s,
-  and arbitrary classes and case classes via the `<>` method.
+  and arbitrary classes and case classes via the `mapTo` macro.
+
+- If we need more control over a mapping from columns to other data structures, the `<>` method is avaiilable.
 
 - We can represent individual values in columns
   using arbitrary Scala data types
@@ -1689,112 +1675,6 @@ complex queries involving joins and aggregate functions.
 
 ## Exercises
 
-### Turning a Row into Many Case Classes
-
-Our `HList` example mapped a table with many columns.
-It's not the only way to deal with lots of columns.
-
-Use custom functions with `<>` and map `UserTable` into a tree of case classes.
-To do this you will need to define the schema, define a `User`, insert data, and query the data.
-
-To make this easier, we're just going to map six of the columns.
-Here are the case classes to use:
-
-```tut:book:silent
-case class EmailContact(name: String, email: String)
-case class Address(street: String, city: String, country: String)
-case class User(contact: EmailContact, address: Address, id: Long = 0L)
-```
-
-You'll find a definition of `UserTable` that you can copy and paste in the example code in the file _chapter-05/src/main/scala/nested_case_class.scala_.
-
-<div class="solution">
-
-In our huge legacy table we will use custom functions with `<>`...
-
-```tut:book
-final class LegacyUserTable(tag: Tag) extends Table[User](tag, "legacy") {
-  def id           = column[Long]("id", O.PrimaryKey, O.AutoInc)
-  def name         = column[String]("name")
-  def age          = column[Int]("age")
-  def gender       = column[Char]("gender")
-  def height       = column[Float]("height")
-  def weight       = column[Float]("weight_kg")
-  def shoeSize     = column[Int]("shoe_size")
-  def email        = column[String]("email_address")
-  def phone        = column[String]("phone_number")
-  def accepted     = column[Boolean]("terms")
-  def sendNews     = column[Boolean]("newsletter")
-  def street       = column[String]("street")
-  def city         = column[String]("city")
-  def country      = column[String]("country")
-  def faveColor    = column[String]("fave_color")
-  def faveFood     = column[String]("fave_food")
-  def faveDrink    = column[String]("fave_drink")
-  def faveTvShow   = column[String]("fave_show")
-  def faveMovie    = column[String]("fave_movie")
-  def faveSong     = column[String]("fave_song")
-  def lastPurchase = column[String]("sku")
-  def lastRating   = column[Int]("service_rating")
-  def tellFriends  = column[Boolean]("recommend")
-  def petName      = column[String]("pet")
-  def partnerName  = column[String]("partner")
-
-  // The tuple representation we will use:
-  type Row = (String, String, String, String, String, Long)
-
-  // One function from Row to User
-  def pack(row: Row): User = User(
-    EmailContact(row._1, row._2),
-    Address(row._3, row._4, row._5),
-    row._6
-  )
-
-  // Another method from User to Row:
-  def unpack(user: User): Option[Row] = Some(
-    (user.contact.name, user.contact.email, user.address.street,
-     user.address.city, user.address.country, user.id)
-  )
-
-  def * = (name, email, street, city, country, id) <> (pack, unpack)
-}
-
-lazy val legacyUsers = TableQuery[LegacyUserTable]
-```
-
-We can insert and query as normal:
-
-```tut:book
-exec(legacyUsers.schema.create)
-
-exec(
-  legacyUsers += User(
-    EmailContact("Dr. Dave Bowman", "dave@example.org"),
-    Address("123 Some Street", "Any Town", "USA")
-   )
-)
-```
-
-And we can fetch results:
-
-```tut:book
-exec(legacyUsers.result)
-```
-
-You can continue to select just some fields:
-
-```tut:book
-exec(legacyUsers.map(_.email).result)
-```
-
-However, notice that if you used `legacyUsers.schema.create`, only the columns defined in the default projection were created in the H2 database:
-
-```tut:book
-legacyUsers.schema.createStatements.foreach(println)
-```
-</div>
-
-
 
 ### Filtering Optional Columns
 
@@ -1821,7 +1701,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "filtering") {
   def name   = column[String]("name")
   def email  = column[Option[String]]("email")
 
-  def * = (name, email, id) <> (User.tupled, User.unapply)
+  def * = (name, email, id).mapTo[User]
 }
 
 lazy val users = TableQuery[UserTable]
@@ -1933,7 +1813,7 @@ We get a runtime exception as we have violated referential integrity.
 There is no row in the `user` table with a primary id of `3000`.
 
 ```tut:book
-val action = messages += Message(UserPK(3000L), "Hello HAL!") 
+val action = messages += Message(UserPK(3000L), "Hello HAL!")
 exec(action.asTry)
 ```
 
@@ -1992,7 +1872,7 @@ class UserTable(tag: Tag) extends Table[User](tag, "user_with_role") {
   def name = column[String]("name")
   def role = column[UserRole]("role", O.Length(1,false))
 
-  def * = (name, role, id) <> (User.tupled, User.unapply)
+  def * = (name, role, id).mapTo[User]
 }
 
 lazy val users = TableQuery[UserTable]
@@ -2056,3 +1936,110 @@ implicit val priorityType =
 
 The table definition would need a `column[Priority]`.
 </div>
+
+### Turning a Row into Many Case Classes
+
+Our `HList` example mapped a table with many columns.
+It's not the only way to deal with lots of columns.
+
+Use custom functions with `<>` and map `UserTable` into a tree of case classes.
+To do this you will need to define the schema, define a `User`, insert data, and query the data.
+
+To make this easier, we're just going to map six of the columns.
+Here are the case classes to use:
+
+```tut:book:silent
+case class EmailContact(name: String, email: String)
+case class Address(street: String, city: String, country: String)
+case class User(contact: EmailContact, address: Address, id: Long = 0L)
+```
+
+You'll find a definition of `UserTable` that you can copy and paste in the example code in the file _chapter-05/src/main/scala/nested_case_class.scala_.
+
+<div class="solution">
+
+In our huge legacy table we will use custom functions with `<>`...
+
+```tut:book
+final class LegacyUserTable(tag: Tag) extends Table[User](tag, "legacy") {
+  def id           = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name         = column[String]("name")
+  def age          = column[Int]("age")
+  def gender       = column[Char]("gender")
+  def height       = column[Float]("height")
+  def weight       = column[Float]("weight_kg")
+  def shoeSize     = column[Int]("shoe_size")
+  def email        = column[String]("email_address")
+  def phone        = column[String]("phone_number")
+  def accepted     = column[Boolean]("terms")
+  def sendNews     = column[Boolean]("newsletter")
+  def street       = column[String]("street")
+  def city         = column[String]("city")
+  def country      = column[String]("country")
+  def faveColor    = column[String]("fave_color")
+  def faveFood     = column[String]("fave_food")
+  def faveDrink    = column[String]("fave_drink")
+  def faveTvShow   = column[String]("fave_show")
+  def faveMovie    = column[String]("fave_movie")
+  def faveSong     = column[String]("fave_song")
+  def lastPurchase = column[String]("sku")
+  def lastRating   = column[Int]("service_rating")
+  def tellFriends  = column[Boolean]("recommend")
+  def petName      = column[String]("pet")
+  def partnerName  = column[String]("partner")
+
+  // The tuple representation we will use:
+  type Row = (String, String, String, String, String, Long)
+
+  // One function from Row to User
+  def pack(row: Row): User = User(
+    EmailContact(row._1, row._2),
+    Address(row._3, row._4, row._5),
+    row._6
+  )
+
+  // Another method from User to Row:
+  def unpack(user: User): Option[Row] = Some(
+    (user.contact.name, user.contact.email, user.address.street,
+     user.address.city, user.address.country, user.id)
+  )
+
+  def * = (name, email, street, city, country, id) <> (pack, unpack)
+}
+
+lazy val legacyUsers = TableQuery[LegacyUserTable]
+```
+
+We can insert and query as normal:
+
+```tut:book
+exec(legacyUsers.schema.create)
+
+exec(
+  legacyUsers += User(
+    EmailContact("Dr. Dave Bowman", "dave@example.org"),
+    Address("123 Some Street", "Any Town", "USA")
+   )
+)
+```
+
+And we can fetch results:
+
+```tut:book
+exec(legacyUsers.result)
+```
+
+You can continue to select just some fields:
+
+```tut:book
+exec(legacyUsers.map(_.email).result)
+```
+
+However, notice that if you used `legacyUsers.schema.create`, only the columns defined in the default projection were created in the H2 database:
+
+```tut:book
+legacyUsers.schema.createStatements.foreach(println)
+```
+</div>
+
+

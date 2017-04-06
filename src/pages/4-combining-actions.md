@@ -12,7 +12,7 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def sender  = column[String]("sender")
   def content = column[String]("content")
 
-  def * = (sender, content, id) <> (Message.tupled, Message.unapply)
+  def * = (sender, content, id).mapTo[Message]
 }
 
 lazy val messages = TableQuery[MessageTable]
@@ -79,7 +79,7 @@ Method              Arguments                       Result Type
 
 `asTry`                                             `DBIO[Try[T]]`
 
-`andThen` or `>>`   `DBIO[R]`                       `DBIO[Unit]`
+`andThen` or `>>`   `DBIO[R]`                       `DBIO[R]`
 
 `andFinally`        `DBIO[_]`                       `DBIO[T]`
 
@@ -211,7 +211,7 @@ Therefore, you do not need an execution context available for `andThen`.
 You'll know if you need an execution context, because the compiler will tell you:
 
 ~~~
-error: Cannot find an implicit ExecutionContext. You might pass
+Cannot find an implicit ExecutionContext. You might pass
   an (implicit ec: ExecutionContext) parameter to your method
   or import scala.concurrent.ExecutionContext.Implicits.global.
 ~~~
@@ -415,7 +415,7 @@ We want to summarize all these reports to a single number.
 
 ```tut:book
 // Pretend these two reports are complicated queries
-// that return an Important Business Metric:
+// that return Important Business Metrics:
 val report1: DBIO[Int] = DBIO.successful(41)
 val report2: DBIO[Int] = DBIO.successful(1)
 
@@ -883,7 +883,7 @@ final case class Room(name: String, connectsTo: String)
 final class FloorPlan(tag: Tag) extends Table[Room](tag, "floorplan") {
   def name       = column[String]("name")
   def connectsTo = column[String]("next")
-  def * = (name, connectsTo) <> (Room.tupled, Room.unapply)
+  def * = (name, connectsTo).mapTo[Room]
 }
 
 lazy val floorplan = TableQuery[FloorPlan]
