@@ -42,10 +42,12 @@
 
 [link-h2-home]:              http://www.h2database.com
 [link-h2-jdbc-url]:          http://www.h2database.com/html/tutorial.html#connecting_using_jdbc
+[link-sqlserver-download]:   https://www.microsoft.com/en-au/sql-server/sql-server-downloads
 [link-mysql-download]:       http://dev.mysql.com/downloads/mysql/
 [link-mysql]:                http://www.mysql.com/
 [link-postgres-download]:    http://www.postgresql.org/download/
 [link-postgres]:             http://www.postgresql.org/
+
 
 [link-twitter-jono]:         http://twitter.com/jonoabroad
 [link-twitter-noel]:         http://twitter.com/noelwelsh

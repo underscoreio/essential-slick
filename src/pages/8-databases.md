@@ -138,11 +138,10 @@ Replace `Database.forURL` parameters with:
 
 ~~~ json
 chapter01 = {
-  connectionPool      = jdbc:mysql://localhost:3306/chapter-01
+  url                 = jdbc:mysql://localhost:3306/chapter-01
                                       &useUnicode=true
                                       &characterEncoding=UTF-8
                                       &autoReconnect=true
-  url                 = jdbc:postgresql:chapter-01
   driver              = com.mysql.jdbc.Driver
   keepAliveConnection = true
   users               = essential
@@ -150,7 +149,7 @@ chapter01 = {
 }
 ~~~
 
-Note that we've formatted the `connectionPool` line to make it legible.
+Note that we've formatted the `url` line to make it legible.
 In reality all those `&` parameters will be on the same line.
 
 
@@ -197,7 +196,7 @@ Replace
 with
 
 ~~~ scala
-"com.microsoft.sqlserver" % "mssql-jdbc"      % "6.1.4.jre8-preview"
+"com.microsoft.sqlserver" % "mssql-jdbc" % "6.1.4.jre8-preview"
 ~~~
 
 If you are already in SBT, type `reload` to load this changed build file.
@@ -218,14 +217,14 @@ chapter01 =  {
   host = "localhost"
   port = "1433"
   server = "Gillian3/SQLEXPRESS"
-  databaseName = "scdb"
-  user = "scuser"
-  password = "mydog"
+  databaseName = "chapter01"
+  user = "essential"
+  password = "trustno1"
 }
 ~~~
 
-Note that we've formatted the `connectionPool` line to make it legible.
-In reality all those `&` parameters will be on the same line.
+Note that we've formatted the `url` line to make it legible.
+In reality all those parameters will be on the same line.
 
 
 ### Update Slick DriverProfile
@@ -242,3 +241,40 @@ to
 import slick.jdbc.SQLServerProfile.api._
 ```
 
+### Connection pool
+
+Example application configuration with a HikariCP connection pool.
+
+~~~json
+chapter01 = {
+  url = "jdbc:sqlserver://"${sqlserver.host}":"${sqlserver.port}";
+                              instanceName="${sqlserver.server}";
+                              databaseName="${sqlserver.databaseName}";
+                              user="${sqlserver.user}";
+                              password="${sqlserver.password}";"
+  connectionPool = HikariCP
+  host = "localhost"
+  port = "1433"
+  server = "Gillian3/SQLEXPRESS"
+  databaseName = "chapter01"
+  user = "essential"
+  password = "trustno1"
+}
+~~~
+
+### Connection pool and data source
+
+Example application configuration with a HikariCP connection pool and datasource.
+
+~~~json
+chapter01 =  {
+  dataSourceClass = "com.microsoft.sqlserver.jdbc.SQLServerDataSource"
+  connectionPool = HikariCP
+  host = "localhost"
+  port = "1433"
+  server = "Gillian3/SQLEXPRESS"
+  databaseName = "chapter01"
+  user = "essential"
+  password = "trustno1"
+}
+~~~
