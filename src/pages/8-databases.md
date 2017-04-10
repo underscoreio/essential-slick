@@ -140,8 +140,8 @@ Replace `Database.forURL` parameters with:
 chapter01 = {
   connectionPool      = jdbc:mysql://localhost:3306/chapter-01
                                       &useUnicode=true
-                                      &amp;characterEncoding=UTF-8
-                                      &amp;autoReconnect=true
+                                      &characterEncoding=UTF-8
+                                      &autoReconnect=true
   url                 = jdbc:postgresql:chapter-01
   driver              = com.mysql.jdbc.Driver
   keepAliveConnection = true
@@ -156,7 +156,7 @@ In reality all those `&` parameters will be on the same line.
 
 ### Update Slick DriverProfile
 
-Change the import from 
+Change the import from
 
 ```scala
 slick.jdbc.H2Profile.api._
@@ -167,3 +167,78 @@ to
 ```scala
 slick.jdbc.MySQLProfile.api._
 ```
+
+## SQL Server
+
+If it is not currently installed, it can be downloaded from the [SQL Server website][link-sqlserver-download].
+
+### Create a Database
+
+Create a database named `chapter-01` with user `essential`. This will be used for all examples and can be created with the following:
+
+~~~ sql
+TODO
+~~~
+
+Confirm the database has been created and can be accessed:
+
+~~~ bash
+TODO
+~~~
+
+### Update `build.sbt` Dependencies
+
+Replace
+
+~~~ scala
+"com.h2database" % "h2" % "1.4.185"
+~~~
+
+with
+
+~~~ scala
+"com.microsoft.sqlserver" % "mssql-jdbc"      % "6.1.4.jre8-preview"
+~~~
+
+If you are already in SBT, type `reload` to load this changed build file.
+If you are using an IDE, don't forget to regenerate any IDE project files.
+
+### Update JDBC References
+
+Replace `Database.forURL` parameters with:
+
+~~~ json
+chapter01 =  {
+  url = "jdbc:sqlserver://"${sqlserver.host}":"${sqlserver.port}";
+                              instanceName="${sqlserver.server}";
+                              databaseName="${sqlserver.databaseName}";
+                              user="${sqlserver.user}";
+                              password="${sqlserver.password}";"
+  connectionPool = disabled
+  host = "localhost"
+  port = "1433"
+  server = "Gillian3/SQLEXPRESS"
+  databaseName = "scdb"
+  user = "scuser"
+  password = "mydog"
+}
+~~~
+
+Note that we've formatted the `connectionPool` line to make it legible.
+In reality all those `&` parameters will be on the same line.
+
+
+### Update Slick DriverProfile
+
+Change the import from
+
+```scala
+slick.jdbc.H2Profile.api._
+```
+
+to
+
+```scala
+import slick.jdbc.SQLServerProfile.api._
+```
+
