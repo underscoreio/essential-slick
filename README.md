@@ -1,66 +1,73 @@
-Essential Slick
---------------
+# Essential Slick
 
-Getting Started
----------------
+[slick]: http://slick.lightbend.com
+[Gumroad]: https://gumroad.com/l/essential-slick
+[ebook-template]: https://github.com/underscoreio/underscore-ebook-template
+[tut]: https://github.com/tpolecat/tut
 
-You need to have installed docker. Then...
+<a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons Licence" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/Text" property="dct:title" rel="dct:type">Essential Slick</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://underscore.io" property="cc:attributionName" rel="cc:attributionURL">Richard Dallaway, Jonathan Ferguson, Underscore Consulting LLP</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
 
-~~~
-$ ./go.sh
-$ npm install
-$ sbt
-sbt> pdf
-~~~
+## Overview
 
-To avoid running out of MetaSpace you'll also maybe want to:
+Essential Slick is a book to get you started building application using the [Slick] database library.
+It is aimed at Scala developers who need to become productive with Slick quickly.
+
+It follows a tutorial style and includes exercises.
+
+You can download the PDF, EPUB, and HTML versions for free from [Gumroad].
+
+## Table of Contents
+
+  1. Basics
+
+  2. Selecting Data
+
+  3. Creating and Modifying Data
+
+  4. Action Combinators and Transactions
+
+  5. Data Modelling
+
+  6. Joins and Aggregates
+
+  7. Plain SQL
+
+  A. Using Different Database Products
+
+  B. Solutions to Exercises
+
+## Building the Book
+
+This book uses [Underscore's ebook build system][ebook-template].
+
+The simplest way to build the book is to use [Docker Compose](http://docker.com):
+
+- install Docker Compose (`brew install docker-compose` on OS X; or download from [docker.com](http://docker.com/)); and
+- run `go.sh` (or `docker-compose run book bash` if `go.sh` doesn't work).
+
+This will open a `bash` shell running inside the Docker container which contains all the dependencies to build the book. From the shell run:
+
+- `npm install`; and then
+- `sbt`.
+
+To avoid running out of MetaSpace you'll also want to:
 
 ```
 export JAVA_OPTS="-Xmx3g -XX:+TieredCompilation -XX:ReservedCodeCacheSize=256m -XX:+UseNUMA -XX:+UseParallelGC -XX:+CMSClassUnloadingEnabled"
 ```
 
-For upgrading:
+Within `sbt` you can issue the commands `pdf`, `html`, `epub`, or `all` to build the desired format(s) of the book. Targets are placed in the `dist` directory.
 
-~~~
-rm -rf node_modules
-npm install
-~~~
+## Writing
 
-Writing
--------
+Essential Slick uses [tut] to check the Scala code on the book.
+To avoid running out of MetaSpace you'll also want to:
 
-The source files are in _src/pages_.  Scala blocks are executed by tut when marked as:
-
-```tut:book
-your code here
+```
+export JAVA_OPTS="-Xmx3g -XX:+TieredCompilation -XX:ReservedCodeCacheSize=256m -XX:+UseNUMA -XX:+UseParallelGC -XX:+CMSClassUnloadingEnabled"
 ```
 
-Note:
+The source files are in `src/pages`.
+The tut converted sources are output to `target/pages`.
 
-- no space before tut in the code block
-- `~~~tut` isn't recognized by tut
 
-For each chapter you'll need to update _src/main/rsources/application.conf_ to include the chapter database configuration.
-
-The tut converted sources are output to _target/pages_.
-
-The `dist` directory contains the PDF etc.
-
-Publishing a Preview
---------------------
-
-The `grunt` command generates `essential-scala-3-preview.pdf` but this does not include the full TOC.
-To create a version of the preview with the full TOC:
-
-~~~
-$ cd  ..
-$ git checkout https://github.com/d6y/toctastic
-$ cd toctastic
-$ sh eslick.sh
-~~~
-
-This will create `dist/essential-slick-3-preview-with-full-toc.pdf`.
-
-Upload this file to the Underscore S3 account, in the `book-sample` bucket.
-It should have world-read permissions on it.
-Check that you can download it from the book page to be sure.
