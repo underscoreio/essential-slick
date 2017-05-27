@@ -1,7 +1,7 @@
 # Essential Slick
 
 [slick]: http://slick.lightbend.com
-[Gumroad]: https://gumroad.com/l/essential-slick
+[download]: https://underscore.io/books/essential-slick/
 [ebook-template]: https://github.com/underscoreio/underscore-ebook-template
 [tut]: https://github.com/tpolecat/tut
 
@@ -14,7 +14,10 @@ It is aimed at Scala developers who need to become productive with Slick quickly
 
 It follows a tutorial style and includes exercises.
 
-You can download the PDF, EPUB, and HTML versions for free from [Gumroad].
+## Download
+
+You can download the PDF, EPUB, and HTML formats of
+this book for [free from the book web page][download].
 
 ## Table of Contents
 
