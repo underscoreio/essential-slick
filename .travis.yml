@@ -3,5 +3,14 @@ sudo: required
 services:
   - docker
 
+language: scala
+
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt/boot
+
 script:
+  - sudo mkdir .sbt
   - docker-compose run book npm install && ./sbt.sh pdf
+
