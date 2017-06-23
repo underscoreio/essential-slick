@@ -1,5 +1,7 @@
 # Essential Slick
 
+[![Build Status](https://travis-ci.org/underscoreio/essential-slick.svg?branch=3.2)](https://travis-ci.org/underscoreio/essential-slick)
+
 [slick]: http://slick.lightbend.com
 [download]: https://underscore.io/books/essential-slick/
 [ebook-template]: https://github.com/underscoreio/underscore-ebook-template
