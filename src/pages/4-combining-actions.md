@@ -334,7 +334,8 @@ def insertIfNotExists(m: Message): DBIO[Int] = {
 
 ...but as we saw earlier in ["More Control over Inserts"](#moreControlOverInserts) you can achieve the same effect with a single SQL statement.
 
-One query can often (but doesn't always) perform better than a sequence of queries. You mileage may vary.
+One query can often (but doesn't always) perform better than a sequence of queries.
+Your mileage may vary.
 </div>
 
 
