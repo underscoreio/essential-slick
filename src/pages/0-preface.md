@@ -2,10 +2,6 @@
 
 ## What is Slick? {-}
 
-```tut:book
-make-this-build-fail
-```
-
 [Slick][link-slick] is a Scala library for working with relational databases.
 That means it allows you to model a schema, run queries, insert data, and update data.
 
