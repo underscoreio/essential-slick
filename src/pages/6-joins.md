@@ -168,7 +168,7 @@ Note how this time we're using `msg.senderId`, not the foreign key `sender`.
 This produces the same query when we joined using `sender`.
 
 You'll see plenty of examples of this style of join.
-They look straight-forward to read, and are natural to write.
+They look straightforward to read, and are natural to write.
 The cost is that Slick has to translate the monadic expression down
 to something that SQL is capable of running.
 
@@ -237,7 +237,7 @@ Also, a _message_ can be in a _room_, which is a join to the _room_ table.
 ](src/img/Schema.png)
 
 For now we will add one more table.
-This is be a `Room` that a `User` can be in, giving us channels for our chat conversations:
+This is a `Room` that a `User` can be in, giving us channels for our chat conversations:
 
 ```tut:book
 case class Room(title: String, id: Long = 0L)
@@ -311,10 +311,10 @@ Now let's get to work and join across all these tables.
 ### Inner Join
 
 An inner join selects data from multiple tables, where the rows in each table match up in some way.
-Typically the matching up is by comparing primary keys.
+Typically, the matching up is done by comparing primary keys.
 If there are rows that don't match up, they won't appear in the join results.
 
-Let's lookup messages that have a sender in the user table, and a room in the rooms table:
+Let's look up messages that have a sender in the user table, and a room in the rooms table:
 
 ```tut:book
 val usersAndRooms =
@@ -324,7 +324,7 @@ val usersAndRooms =
 ```
 
 We're joining `messages` to `users`, and `messages` to `rooms`.
-We use a binary function to the first call to `on`
+We use a binary function on the first call to `on`
 and a pattern matching function on our second call, to illustrate two styles.
 
 Because each join results in a query of a tuple,
@@ -395,7 +395,7 @@ val airLockMsgs =
   filter { case (_, room) => room.title === "Air Lock" }
 ```
 
-As with other queries, the filter become a `WHERE` clause in SQL.
+As with other queries, the filter becomes a `WHERE` clause in SQL.
 Something like this:
 
 ~~~ SQL
@@ -418,7 +418,7 @@ If we find no matching record on the left,
 we will end up with `NULL` values in our results.
 
 For an example from our chat schema,
-observe that messages can optionally in be a room.
+observe that messages can optionally be in a room.
 Let's suppose we want a list of all the messages and the room they are sent to.
 Visually the left outer join is as shown below:
 
@@ -439,7 +439,7 @@ This query, `left`, is going to fetch messages
 and look up their corresponding room from the room table.
 Not all messages are in a room, so in that case the `roomId` column will be `NULL`.
 
-Slick will lift those possibly null value into
+Slick will lift those possibly null values into
 something more comfortable: `Option`.
 The full type of `left` is:
 
