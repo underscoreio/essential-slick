@@ -17,6 +17,6 @@ script:
   - sudo mkdir .sbt
   - sudo mkdir dist
   - docker-compose run book npm install
-  - docker-compose run book ./sbt.sh pdf ; export SBT_RESULT=$?
+  - docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
   - exit $SBT_RESULT
 
