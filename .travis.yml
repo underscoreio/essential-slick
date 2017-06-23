@@ -15,6 +15,7 @@ cache:
 
 script:
   - sudo mkdir .sbt
+  - sudo mkdir dist
   - docker-compose run book npm install
   - docker-compose run book ./sbt.sh pdf
 
