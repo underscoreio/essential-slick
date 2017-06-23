@@ -5,6 +5,9 @@ services:
 
 language: scala
 
+scala:
+  - 2.12.2
+
 cache:
   directories:
     - $HOME/.ivy2/cache
