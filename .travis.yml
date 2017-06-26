@@ -14,7 +14,7 @@ script:
 - docker-compose run book npm install
 - docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
 - exit $SBT_RESULT
-after_sucess:
+after_success:
   - "./github_pages_deploy.sh"
 env:
   global:
