@@ -1,22 +1,22 @@
 sudo: required
-
 services:
-  - docker
-
+- docker
 language: scala
-
 scala:
-  - 2.12.2
-
+- 2.12.2
 cache:
   directories:
-    - $HOME/.ivy2/cache
-    - $HOME/.sbt/boot
-
+  - "$HOME/.ivy2/cache"
+  - "$HOME/.sbt/boot"
 script:
-  - sudo mkdir .sbt
-  - sudo mkdir dist
-  - docker-compose run book npm install
-  - docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
-  - exit $SBT_RESULT
-
+- sudo mkdir .sbt
+- sudo mkdir dist
+- docker-compose run book npm install
+- docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
+- exit $SBT_RESULT
+after_sucess:
+  - "./github_pages_deploy.sh"
+env:
+  global:
+  - secure: WoAl16UmJUPWviwhV8X5i2dmFcl4YQhA6GKRChRNst5F+oIsUzFv7QP0jwGJ3uhvMFcDJcYr7ga9cc1SkEIPI89Kn5ROKXrj+w9wc2B/x+zMrGhpMf0fM7U8dlO8fXygjjCgzqYvUOGGpJWus6JRL6CY7BYfpx1nyDPpe5oFMhpYTf9XrPuy6TFrSP8JnSGPJDC4bjwaSpCh4NgoPSLHe2MotahzqjZA7dvWunfsp6jq5bRL0+kueK7Aijm7Z2RIhMqPZj9oN0/IXGtgoLSe9tXkISaX/BkZB7+hP2WKgFxZGr6QVO4kS5lfgVj+i1+LXOmI7jpDimmbMvufuBspwWZZdE1Kk1bkr3DzJO2UpDDP7KJqnXstt24SW8P0R6m9s7iJo0BEv/rx0Ye8nRfKg6EUxcMdk11mvClqMNN3hJBLpuNveRMI43Vbis/A5s/3iVdwX3NL1Cp7DnC0gYGfcZTP6tNGbu+REvukqvZQfF6ErWCyBkR9Yxqa+brD3Q2RNLW/F9WwvXqrG9GJGXvafkhUTbcpcn1tPC46jlAoJIMBReOVcsBBHRvwBqZ9M4FMv3qzZlEPZMt7ESDIbwuPeV8EHH2zNZQoFTi/5b1A97XZ91l/6qGQxNI/8TvGKDBWs/T9DlqDbZokjL2lF9+5x3WWB4S1V+MiDWcAK2kkEPY=
+  - secure: JZkRBHFN3yOOkVbo1KiQ5NGqfxzlTy0FQeJtVNPaoMmge3gzhYNzvcg9ou8FayZ501r61/0DENenf4FOtXnxV9U/Y4a7kIPV4lhUqfvSbO4ppvZ9G5DZ1uqDawMFIydwIL2VzQf4thP4b+D8E/Xc9rKmhdYZzcp0HAeg3BvqkK6x0avsoE3O4bPCFkrcwssZYaJzBBe3u4S0MuRAdLemW20S/E0GNjhvIj3z9Lw88t1IuR/5O7CCehIPnwao7eMbibESrULEVKHq/lYzNpVqQ2+bbnFuYxQe+k+HOTVH2jgS2l7JKFm+TbuMWriYLAVzKnGxK6M5bGLQddFEnTALla5U9ehYsm/PBfG1XJs/5Xa1SVnDV2nT5FgywXXVho14MnQZjWh20vy+PpJjES1WKRsA6ek9YSjbsZIAeN6cxllwecdq1ACqx6US1/jt0Eq3WjLk/F/qJp2SExFfDJl18rwAMkt9BXD2w+TU9sUcBWR4j2KbHQmnXGNuVlIwug8/WS6R1trEGHp3efy5cESCqgtFKPo+6VgpmuwkP9II3dQelfy56dUmvS32WUs5L6wkrfXVjC2CULzGhdIXidDaJo4GPkCHOwfuiPXnBRaIm9KEANTHnVB+1qEAQjF02j22M+M5PTw+awPmBXEcWCss4QoD6D90cxhKifdaIYSFokU=
