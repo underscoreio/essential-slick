@@ -1,6 +1,6 @@
 set -e
 
-if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
+#if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
   echo -e "Host github.com\n\tStrictHostKeyChecking no\nIdentityFile ~/.ssh/deploy.key\n" >> ~/.ssh/config
   openssl aes-256-cbc -k "$SERVER_KEY" -in essential_slick_deploy_key.enc -d -a -out deploy.key
   cp deploy.key ~/.ssh/
@@ -20,4 +20,4 @@ if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
   git add books/essential-slick
   git commit -m "auto commit Essential Slick via travis $TRAVIS_JOB_NUMBER $TRAVIS_COMMIT [ci skip]"
   git push git@github.com:underscoreio/books.git master:master
-fi
+#fi
