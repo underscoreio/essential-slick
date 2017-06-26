@@ -13,7 +13,7 @@ script:
 - sudo mkdir dist
 - docker-compose run book npm install
 - docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
-- [ "$SBT_RESULT" == "0" ]
+- test "$SBT_RESULT" == "0"
 after_success:
   - echo "OK"
   - ./github_pages_deploy.sh
