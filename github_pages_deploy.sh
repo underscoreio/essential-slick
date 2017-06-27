@@ -8,13 +8,10 @@ set -e
 #if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
 
 # Configuration
-# 1. Location of the book to deploy:
-export SRC_DIR=~/underscoreio/essential-slick
-
-# 2. The key for writing into the other repository:
+# 1. The key for writing into the other repository:
 export KEY_FILENAME=essential_slick_deploy.enc
 
-# 3. Folder inside target of where to place the artifacts:
+# 2. Folder inside target of where to place the artifacts:
 export TARGET_PATH=books/essential-slick/
 # End of configuration
 
@@ -27,6 +24,9 @@ chmod 600 ~/.ssh/deploy.key
 git config --global user.email "hello@underscore.io"
 git config --global user.name "Travis Build"
 
+export SRC_DIR=`pwd`
+echo "Source dir is:"
+echo $SRC_DIR
 export TARGET_DIR=/tmp/dist
 mkdir $TARGET_DIR
 cd $TARGET_DIR
