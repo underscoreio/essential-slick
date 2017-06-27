@@ -5,7 +5,9 @@
 #
 set -e
 
-if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
+if [[ "${TRAVIS_PULL_REQUEST}" == "false" && 
+      "${TRAVIS_BRANCH}" == "master" 
+]]; then
 
 # Configuration
 # 1. The key for writing into the other repository:
