@@ -29,10 +29,11 @@ export TARGET_DIR=/tmp/dist
 mkdir $TARGET_DIR
 cd $TARGET_DIR
 git clone git@github.com:underscoreio/books.git
+cd $TARGET_PATH
 
-cp $SRC_DIR/dist/*.pdf $TARGET_PATH
-cp $SRC_DIR/dist/*.html $TARGET_PATH
-cp $SRC_DIR/dist/*.epub $TARGET_PATH
+cp $SRC_DIR/dist/*.pdf .
+cp $SRC_DIR/dist/*.html .
+cp $SRC_DIR/dist/*.epub .
 
 pwd
 ls -lart
