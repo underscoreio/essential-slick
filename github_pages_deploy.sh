@@ -15,7 +15,7 @@ export SRC_DIR=~/underscoreio/essential-slick
 export KEY_FILENAME=essential_slick_deploy.enc
 
 # 3. Folder inside target of where to place the artifacts:
-export $TARGET_PATH=books/essential-slick/
+export TARGET_PATH=books/essential-slick/
 # End of configuration
 
 echo "Starting deploy to github pages"
