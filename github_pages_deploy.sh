@@ -24,9 +24,7 @@ chmod 600 ~/.ssh/deploy.key
 git config --global user.email "hello@underscore.io"
 git config --global user.name "Travis Build"
 
-export SRC_DIR=`pwd`
-echo "Source dir is:"
-echo $SRC_DIR
+export SRC_DIR=`pwd` # e.g., /home/travis/build/underscoreio/essential-slick
 export TARGET_DIR=/tmp/dist
 mkdir $TARGET_DIR
 cd $TARGET_DIR
@@ -36,7 +34,10 @@ cp $SRC_DIR/dist/*.pdf $TARGET_PATH
 cp $SRC_DIR/dist/*.html $TARGET_PATH
 cp $SRC_DIR/dist/*.epub $TARGET_PATH
 
-git add $TARGET_PATH
+pwd
+ls -lart
+
+git add .
 git commit -m "auto commit via travis $TRAVIS_JOB_NUMBER $TRAVIS_COMMIT [ci skip]"
 git push git@github.com:underscoreio/books.git master:master
 
