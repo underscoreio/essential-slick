@@ -5,7 +5,7 @@
 #
 set -e
 
-#if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
+if [[ "${TRAVIS_PULL_REQUEST}" == "false" ]]; then
 
 # Configuration
 # 1. The key for writing into the other repository:
@@ -35,12 +35,9 @@ cp $SRC_DIR/dist/*.pdf .
 cp $SRC_DIR/dist/*.html .
 cp $SRC_DIR/dist/*.epub .
 
-pwd
-ls -lart
-
 git add .
 git commit -m "auto commit via travis $TRAVIS_JOB_NUMBER $TRAVIS_COMMIT [ci skip]"
 git push git@github.com:underscoreio/books.git master:master
 
 rm -rf $TARGET_DIR
-#fi
+fi
