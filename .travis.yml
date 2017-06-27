@@ -15,9 +15,7 @@ script:
 - docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
 - test "$SBT_RESULT" == "0"
 after_success:
-  - echo "OK"
   - ./github_pages_deploy.sh
-  - echo "DONE"
 env:
   global:
   - secure: WoAl16UmJUPWviwhV8X5i2dmFcl4YQhA6GKRChRNst5F+oIsUzFv7QP0jwGJ3uhvMFcDJcYr7ga9cc1SkEIPI89Kn5ROKXrj+w9wc2B/x+zMrGhpMf0fM7U8dlO8fXygjjCgzqYvUOGGpJWus6JRL6CY7BYfpx1nyDPpe5oFMhpYTf9XrPuy6TFrSP8JnSGPJDC4bjwaSpCh4NgoPSLHe2MotahzqjZA7dvWunfsp6jq5bRL0+kueK7Aijm7Z2RIhMqPZj9oN0/IXGtgoLSe9tXkISaX/BkZB7+hP2WKgFxZGr6QVO4kS5lfgVj+i1+LXOmI7jpDimmbMvufuBspwWZZdE1Kk1bkr3DzJO2UpDDP7KJqnXstt24SW8P0R6m9s7iJo0BEv/rx0Ye8nRfKg6EUxcMdk11mvClqMNN3hJBLpuNveRMI43Vbis/A5s/3iVdwX3NL1Cp7DnC0gYGfcZTP6tNGbu+REvukqvZQfF6ErWCyBkR9Yxqa+brD3Q2RNLW/F9WwvXqrG9GJGXvafkhUTbcpcn1tPC46jlAoJIMBReOVcsBBHRvwBqZ9M4FMv3qzZlEPZMt7ESDIbwuPeV8EHH2zNZQoFTi/5b1A97XZ91l/6qGQxNI/8TvGKDBWs/T9DlqDbZokjL2lF9+5x3WWB4S1V+MiDWcAK2kkEPY=
