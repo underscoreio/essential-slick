@@ -18,8 +18,8 @@ scalacOptions ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "3.2.0",
-  "com.typesafe.slick" %% "slick-hikaricp"  % "3.2.0",
+  "com.typesafe.slick" %% "slick"           % "3.2.1",
+  "com.typesafe.slick" %% "slick-hikaricp"  % "3.2.1",
   "com.h2database"      % "h2"              % "1.4.185",
   "ch.qos.logback"      % "logback-classic" % "1.1.2",
   "joda-time"           % "joda-time"       % "2.6",
