@@ -9,7 +9,7 @@ if [[ "${TRAVIS_PULL_REQUEST}" == "false" &&
 ]]; then
 # Configuration
 # 1. The key for writing into the other repository:
-ANALYTICS_LINK='<link rel="import" href="../../analytics.html">'
+ANALYTICS_LINK='<script src="../analytics.js"/>'
 SRC_DIR=`pwd` # e.g., /home/travis/build/underscoreio/essential-slick
 SRC_FILE="$SRC_DIR/dist/*.html"
 # End of configuration
