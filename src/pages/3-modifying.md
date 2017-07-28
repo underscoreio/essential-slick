@@ -285,7 +285,7 @@ where
     select
       "id", "sender", "content"
     from
-      "messages" where "name" = 'Stanley'
+      "messages" where "sender" = 'Stanley'
                  and   "content" = 'Cut!')
 ~~~
 
