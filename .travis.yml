@@ -15,6 +15,7 @@ script:
 - docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
 - test "$SBT_RESULT" == "0"
 after_success:
+  - ./inject_analytics.sh
   - ./github_pages_deploy.sh
 env:
   global:
