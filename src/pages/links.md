@@ -46,21 +46,21 @@
 [link-postgres-download]:    http://www.postgresql.org/download/
 [link-postgres]:             http://www.postgresql.org/
 
-[link-twitter-jono]:         http://twitter.com/jonoabroad
-[link-twitter-noel]:         http://twitter.com/noelwelsh
-[link-twitter-dave]:         http://twitter.com/davegurnell
-[link-twitter-richard]:      http://twitter.com/d6y
+[link-twitter-jono]:         https://twitter.com/jonoabroad
+[link-twitter-noel]:         https://twitter.com/noelwelsh
+[link-twitter-dave]:         https://twitter.com/davegurnell
+[link-twitter-richard]:      https://twitter.com/d6y
 [link-twitter-underscore]:   https://twitter.com/underscoreio
 [link-underscore-gitter]:    https://gitter.im/underscoreio/scala
-[link-underscore]:           http://underscore.io
+[link-underscore]:           https://underscore.io
 [link-email-underscore]:     mailto:hello@underscore.io?subject=Essential%20Slick
-[link-newsletter]:           http://underscore.io/blog/newsletters/
-[link-essential-scala]:      http://underscore.io/training/courses/essential-scala
+[link-newsletter]:           https://underscore.io/blog/newsletters/
+[link-essential-scala]:      https://underscore.io/training/courses/essential-scala
 
 [link-sbt]:                  http://scala-sbt.org
-[link-sbt-tutorial]:         http://www.scala-sbt.org/0.13/tutorial/index.html
+[link-sbt-tutorial]:         http://www.scala-sbt.org/1.x/docs/Getting-Started.html
 
-[link-essential-play]:       http://underscore.io/training/courses/essential-play/
+[link-essential-play]:       https://underscore.io/training/courses/essential-play/
 [link-tut]:                  https://github.com/tpolecat/tut
 [link-renato]:               https://twitter.com/renatocaval
 [link-ottinger]:             https://github.com/jottinger

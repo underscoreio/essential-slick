@@ -90,7 +90,7 @@ The first time you run sbt, it will download a lot of library dependencies from 
  - you need a working Internet connection to get started; and
  - the first `compile` command you issue could take a while to complete.
 
-If you haven't used sbt before, you may find the [sbt Tutorial][link-sbt-tutorial] useful.
+If you haven't used sbt before, you may find the [sbt Getting Started Guide][link-sbt-tutorial] useful.
 </div>
 
 ## Working Interactively in the sbt Console
