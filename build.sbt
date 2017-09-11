@@ -1,5 +1,4 @@
-lazy val root = project.in(file("."))
-  .settings(tutSettings)
+lazy val root = project.in(file(".")).enablePlugins(TutPlugin)
 
 tutSourceDirectory := sourceDirectory.value / "pages"
 
@@ -66,8 +65,9 @@ lazy val pdfPreview = taskKey[Unit]("Builds the PDF preview of the book")
 lazy val html = taskKey[Unit]("Build the HTML version of the book")
 lazy val epub = taskKey[Unit]("Build the ePub version of the book")
 
-pdf  := { tutQuick.value ; "grunt pdf"  ! }
-pdfPreview  := { tutQuick.value ; "grunt pandoc:pdf:preview"  ! }
+import sys.process._
+pdf  := { tutQuick.value ; "grunt pdf" ! }
+pdfPreview  := { tutQuick.value ; "grunt pandoc:pdf:preview" ! }
 html := { tutQuick.value ; "grunt html" ! }
 epub := { tutQuick.value ; "grunt epub" ! }
 
