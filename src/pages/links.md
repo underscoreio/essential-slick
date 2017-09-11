@@ -1,16 +1,16 @@
-[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/3.0
+[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/3.2
 
 [link-slick]:                http://slick.lightbend.com/
-[link-ref-dbs]:              http://slick.lightbend.com/doc/3.2.0/supported-databases.html
-[link-ref-gen]:              http://slick.lightbend.com/doc/3.2.0/code-generation.html
-[link-ref-h2driver]:         http://slick.lightbend.com/doc/3.2.0/api/#slick.jdbc.H2Profile
-[link-ref-orm]:              http://slick.lightbend.com/doc/3.2.0/orm-to-slick.html
-[link-ref-actions]:          http://slick.lightbend.com/doc/3.2.0/dbio.html
-[link-slick-column-options]: http://slick.lightbend.com/doc/3.2.0/api/index.html#slick.ast.ColumnOption
-[link-slick-hlist]:          http://slick.lightbend.com/doc/3.2.0/api/#slick.collection.heterogeneous.HList
-[link-source-dbPublisher]:   http://slick.lightbend.com/doc/3.2.0/api/index.html#slick.basic.DatabasePublisher
-[link-source-extmeth]:       https://github.com/slick/slick/blob/3.2.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
-[link-slick-streaming]:      http://slick.lightbend.com/doc/3.2.0/dbio.html#streaming
+[link-ref-dbs]:              http://slick.lightbend.com/doc/3.2.1/supported-databases.html
+[link-ref-gen]:              http://slick.lightbend.com/doc/3.2.1/code-generation.html
+[link-ref-h2driver]:         http://slick.lightbend.com/doc/3.2.1/api/#slick.jdbc.H2Profile
+[link-ref-orm]:              http://slick.lightbend.com/doc/3.2.1/orm-to-slick.html
+[link-ref-actions]:          http://slick.lightbend.com/doc/3.2.1/dbio.html
+[link-slick-column-options]: http://slick.lightbend.com/doc/3.2.1/api/index.html#slick.ast.ColumnOption
+[link-slick-hlist]:          http://slick.lightbend.com/doc/3.2.1/api/#slick.collection.heterogeneous.HList
+[link-source-dbPublisher]:   http://slick.lightbend.com/doc/3.2.1/api/index.html#slick.basic.DatabasePublisher
+[link-slick-streaming]:      http://slick.lightbend.com/doc/3.2.1/dbio.html#streaming
+[link-source-extmeth]:       https://github.com/slick/slick/blob/3.2.1/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
 
 [link-hikari]:               http://brettwooldridge.github.io/HikariCP/
 [link-config]:               https://github.com/typesafehub/config
@@ -38,7 +38,6 @@
 [link-scala-option]:         http://www.scala-lang.org/api/current/#scala.Option
 [link-scala-value-classes]:  http://docs.scala-lang.org/overviews/core/value-classes.html
 [link-sip-named-default]:    http://docs.scala-lang.org/sips/completed/named-and-default-arguments.html
-[link-scala-type-alias-bug]: https://issues.scala-lang.org/browse/SI-7139
 
 [link-h2-home]:              http://www.h2database.com
 [link-h2-jdbc-url]:          http://www.h2database.com/html/tutorial.html#connecting_using_jdbc
@@ -61,12 +60,7 @@
 [link-sbt]:                  http://scala-sbt.org
 [link-sbt-tutorial]:         http://www.scala-sbt.org/0.13/tutorial/index.html
 
-[link-play]:                 https://www.playframework.com/documentation/2.4.0
-[link-play-slick]:           https://www.playframework.com/documentation/2.4.0/PlaySlick
 [link-essential-play]:       http://underscore.io/training/courses/essential-play/
-[link-play-example]:         https://github.com/underscoreio/play-slick-example
-[link-play-slick-github]:    https://github.com/playframework/play-slick
-[link-play-slick-dbconfig]:  https://www.playframework.com/documentation/2.4.x/PlaySlick#Database-Configuration
 [link-tut]:                  https://github.com/tpolecat/tut
 [link-renato]:               https://twitter.com/renatocaval
 [link-ottinger]:             https://github.com/jottinger
