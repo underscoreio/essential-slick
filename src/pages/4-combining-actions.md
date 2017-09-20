@@ -553,40 +553,57 @@ Slick uses a logging interface called [SLF4J][link-slf4j]. We can configure this
 <logger name="slick.jdbc.JdbcBackend.statement" level="DEBUG"/>
 ```
 
-This causes Slick to log every query, even modifications to the schema:
+This causes Slick to log every query, including modifications to the schema:
 
 ```
 DEBUG slick.jdbc.JdbcBackend.statement - Preparing statement:
   delete from "message" where "message"."sender" = 'HAL'
 ```
 
-We can change the level of various loggers, as shown in the table below:
+We can change the level of various loggers, as shown in the table below.
 
-------------------------------------------------------------------------------------------------------------------------
-Logger                                                        Effect
-------------------------------------------------------------  ----------------------------------------------------------
-`slick.jdbc.JdbcBackend.statement`                            Logs SQL sent to the database as described above.
+-----------------------------------------------------------------------------------------------------------------------------
+Logger                                                             Will log...
+-----------------------------------------------------------------  ----------------------------------------------------------
+`slick.jdbc.JdbcBackend.statement`                                 SQL sent to the database.
 
-`slick.jdbc.StatementInvoker.result`                          Logs the first few results of each query.
+`slick.jdbc.JdbcBackend.parameter`                                 Parameters passed to a query.
 
-`slick.session`                                               Logs session events such as opening/closing connections.
+`slick.jdbc.StatementInvoker.result`                               The first few results of each query.
 
-`slick`                                                       Logs everything! Equivalent to changing all of the above.
-------------------------------------------------------------  ----------------------------------------------------------
+`slick.session`                                                    Session events such as opening/closing connections.
+
+`slick`                                                            Everything!
+-----------------------------------------------------------------  ----------------------------------------------------------
 
 : Slick loggers and their effects.
 
-The `StatementInvoker.result` logger, in particular, is pretty cute:
+The `StatementInvoker.result` logger, in particular, is pretty cute.
+Here's an example from running a select query:
 
 ```
-SI.result - /--------+----------------------+----\
-SI.result - | sender | content              | id |
-SI.result - +--------+----------------------+----+
-SI.result - | HAL    | Affirmative, Dave... | 2  |
-SI.result - | HAL    | I'm sorry, Dave. ... | 4  |
-SI.result - \--------+----------------------+----/
+result - /--------+----------------------+----\
+result - | sender | content              | id |
+result - +--------+----------------------+----+
+result - | HAL    | Affirmative, Dave... | 2  |
+result - | HAL    | I'm sorry, Dave. ... | 4  |
+result - \--------+----------------------+----/
 ```
 
+The combination of `parameter` and `statement` can show you the values bound to `?` placeholders.
+For example, when adding rows we can see the values being inserted:
+
+```
+statement - Preparing statement: insert into "message" 
+   ("sender","content")  values (?,?)
+parameter - /--------+---------------------------\
+parameter - | 1      | 2                         |
+parameter - | String | String                    |
+parameter - |--------+---------------------------|
+parameter - | Dave   | Hello, HAL. Do you rea... |
+parameter - | HAL    | I'm sorry, Dave. I'm a... |
+parameter - \--------+---------------------------/
+```
 
 
 
