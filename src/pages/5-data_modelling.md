@@ -1170,12 +1170,13 @@ namely `O.PrimaryKey` and `O.AutoInc`.
 Column options are defined in [`ColumnOption`][link-slick-column-options],
 and as you have seen are accessed via `O`.
 
-The following example introduces three new options:
-`O.Length`, `O.SqlType`, and `O.Default`.
+The following example introduces four new options:
+`O.Length`, `O.SqlType`, `O.Unique`, and `O.Default`.
 
 ```tut:book
 case class PhotoUser(
   name   : String,
+  email  : String,
   avatar : Option[Array[Byte]] = None,
   id     : Long = 0L)
 
@@ -1188,13 +1189,15 @@ class PhotoTable(tag: Tag) extends Table[PhotoUser](tag, "user") {
                  O.Default("Anonymous Coward")
                 )
 
+  def email = column[String]("email", O.Unique)
+
   def avatar = column[Option[Array[Byte]]]("avatar", O.SqlType("BINARY(2048)"))
 
-  def * = (name, avatar, id).mapTo[PhotoUser]
+  def * = (name, email, avatar, id).mapTo[PhotoUser]
 }
 ```
 
-In this example we've done three things:
+In this example we've done four things:
 
 1. We've used `O.Length` to give the `name` column a maximum length.
    This modifies the type of the column in the DDL statement.
@@ -1206,9 +1209,10 @@ In this example we've done three things:
 2. We've used `O.Default` to give the `name` column a default value.
    This adds a `DEFAULT` clause to the column definition in the DDL statement.
 
-3. We've used `O.SqlType` to control the exact type used by the database.
-   The values allowed here depend on the database we're using.
+3. We added a uniqueness constraint on the `email` column.
 
+4. We've used `O.SqlType` to control the exact type used by the database.
+   The values allowed here depend on the database we're using.
 
 
 ## Custom Column Mappings
