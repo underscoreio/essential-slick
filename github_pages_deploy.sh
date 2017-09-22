@@ -6,7 +6,7 @@
 set -e
 
 if [[ "${TRAVIS_PULL_REQUEST}" == "false" && 
-      "${TRAVIS_BRANCH}" == "master" 
+      "${TRAVIS_BRANCH}" == "3.2" 
 ]]; then
 
 # Configuration
