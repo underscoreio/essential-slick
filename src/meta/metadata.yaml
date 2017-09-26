@@ -9,6 +9,9 @@ copyright: "2017"
 tocDepth: 3
 pages:
   - 0-preface.md
+  - 0-contributors.md
+  - 0-backers.md
+  - 0-conventions.md
   - 1-basics.md
   - 2-selecting.md
   - 3-modifying.md
