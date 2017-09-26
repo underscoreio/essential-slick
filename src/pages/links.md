@@ -1,4 +1,7 @@
 [link-example]:              https://github.com/underscoreio/essential-slick-code/tree/3.2
+[link-book-issues]:          https://github.com/underscoreio/essential-slick/issues
+[link-book-pr]:              https://github.com/underscoreio/essential-slick/pulls
+[link-book-repo]:            https://github.com/underscoreio/essential-slick/
 
 [link-slick]:                http://slick.lightbend.com/
 [link-ref-dbs]:              http://slick.lightbend.com/doc/3.2.1/supported-databases.html
