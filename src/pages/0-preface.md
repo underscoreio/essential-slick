@@ -34,6 +34,8 @@ The material presented focuses on Slick version 3.2. Examples use [H2][link-h2-h
 
 You can provide feedback on this text via:
 
+* [issues][link-book-issues] and [pull requests][link-book-pr] on the [source repository][link-book-repo] for this text;
+
 * [our Gitter channel][link-underscore-gitter]; or
 
 * email to [hello@underscore.io][link-email-underscore] using the subject line of "Essential Slick".
