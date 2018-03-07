@@ -5,7 +5,7 @@ filenameStem: "essential-slick-3"
 # Used by Pandoc to generate the PDF cover...
 # see src/css/book.less for HTML/ePub covers:
 coverColor: "F58B40"
-copyright: "2017"
+copyright: "2018"
 tocDepth: 3
 pages:
   - 0-preface.md
