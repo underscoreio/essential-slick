@@ -660,7 +660,7 @@ But here's a look at what sorting a nullable column is like:
 users.sortBy(_.name.nullsFirst)
 ~~~
 
-The generated SQL for the above quiery would be:
+The generated SQL for the above query would be:
 
 ~~~ sql
 select "name", "email", "id"
