@@ -477,7 +477,7 @@ Two main string interpolators for SQL are provided: `sql` and `sqlu`:
 
 - Custom types can be used with the interpolators providing an implicit `GetResult` (select) or `SetParameter` (update) is in scope for the type.
 
-- Raw values can be spliced into a query with `$#`. Use this with care: end-user supplied information should never be spliced into a query.
+- Raw values can be spliced into a query with `#$`. Use this with care: end-user supplied information should never be spliced into a query.
 
 The `tsql` interpolator will check Plain SQL queries against a database at compile time.  The database connection is used to validate the query syntax, and also discover the types of the columns being selected. To make best use of this, always declare the type of the query you expect from `tsql`.
 
