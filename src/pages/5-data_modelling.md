@@ -430,7 +430,7 @@ that scales to arbitrary numbers of columns.
 This representation is called a _heterogeneous list_ or `HList`[^hlist].
 
 [^hlist]: You may have heard of `HList` via other libraries, such as [shapeless][link-shapeless].
-We're talking here about Slick's own implementation of `HList`, not the shapless one.
+We're talking here about Slick's own implementation of `HList`, not the shapeless one.
 You can use the shapeless `HList` via a library we've provided called [slickless][link-slickless].
 
 An `HList` is a sort of hybrid of a list and a tuple.
