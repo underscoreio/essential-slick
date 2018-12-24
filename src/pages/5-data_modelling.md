@@ -1256,7 +1256,7 @@ What we're providing here is two functions to `MappedColumnType.base`:
   a database-friendly `java.sql.Timestamp`; and
 
 - one that does the reverse, taking a `Timestamp`
-  and converting it to a `DataTime`.
+  and converting it to a `DateTime`.
 
 Once we have declared this custom column type,
 we are free to create columns containing `DateTimes`:
