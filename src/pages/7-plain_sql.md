@@ -292,7 +292,7 @@ action.statements.head
 Working with basic types like `String` and `Int` is fine, but sometimes you want to update using a richer type.
 We saw the `GetResult` type class for mapping select results, and for updates this is mirrored with the `SetParameter` type class.
 
-We can teach Slick how to set `DataTime` parameters like this:
+We can teach Slick how to set `DateTime` parameters like this:
 
 ```tut:book
 import slick.jdbc.SetParameter
