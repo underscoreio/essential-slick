@@ -4,7 +4,7 @@ tutSourceDirectory := sourceDirectory.value / "pages"
 
 tutTargetDirectory := target.value / "pages"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.8"
 
 // Adapted from: https://tpolecat.github.io/2017/04/25/scalac-flags.html
 scalacOptions ++= Seq(
@@ -52,8 +52,8 @@ scalacOptions ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "3.2.3",
-  "com.typesafe.slick" %% "slick-hikaricp"  % "3.2.3",
+  "com.typesafe.slick" %% "slick"           % "3.3.0",
+  "com.typesafe.slick" %% "slick-hikaricp"  % "3.3.0",
   "com.h2database"      % "h2"              % "1.4.185",
   "ch.qos.logback"      % "logback-classic" % "1.1.2",
   "joda-time"           % "joda-time"       % "2.6",
