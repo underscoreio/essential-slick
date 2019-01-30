@@ -160,10 +160,10 @@ name := "essential-slick-chapter-01"
 
 version := "1.0.0"
 
-scalaVersion := "2.12.6"
+scalaVersion := "2.12.8"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "3.2.3",
+  "com.typesafe.slick" %% "slick"           % "3.3.0",
   "com.h2database"      % "h2"              % "1.4.185",
   "ch.qos.logback"      % "logback-classic" % "1.1.2"
 )

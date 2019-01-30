@@ -1,19 +1,19 @@
-[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/3.2
+[link-example]:              https://github.com/underscoreio/essential-slick-code/tree/3.3
 [link-book-issues]:          https://github.com/underscoreio/essential-slick/issues
 [link-book-pr]:              https://github.com/underscoreio/essential-slick/pulls
 [link-book-repo]:            https://github.com/underscoreio/essential-slick/
 
 [link-slick]:                http://slick.lightbend.com/
-[link-ref-dbs]:              http://slick.lightbend.com/doc/3.2.3/supported-databases.html
-[link-ref-gen]:              http://slick.lightbend.com/doc/3.2.3/code-generation.html
-[link-ref-h2driver]:         http://slick.lightbend.com/doc/3.2.3/api/#slick.jdbc.H2Profile
-[link-ref-orm]:              http://slick.lightbend.com/doc/3.2.3/orm-to-slick.html
-[link-ref-actions]:          http://slick.lightbend.com/doc/3.2.3/dbio.html
-[link-slick-column-options]: http://slick.lightbend.com/doc/3.2.3/api/index.html#slick.ast.ColumnOption
-[link-slick-hlist]:          http://slick.lightbend.com/doc/3.2.3/api/#slick.collection.heterogeneous.HList
-[link-source-dbPublisher]:   http://slick.lightbend.com/doc/3.2.3/api/index.html#slick.basic.DatabasePublisher
-[link-slick-streaming]:      http://slick.lightbend.com/doc/3.2.3/dbio.html#streaming
-[link-source-extmeth]:       https://github.com/slick/slick/blob/3.2.3/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
+[link-ref-dbs]:              http://slick.lightbend.com/doc/3.3.0/supported-databases.html
+[link-ref-gen]:              http://slick.lightbend.com/doc/3.3.0/code-generation.html
+[link-ref-h2driver]:         http://slick.lightbend.com/doc/3.3.0/api/#slick.jdbc.H2Profile
+[link-ref-orm]:              http://slick.lightbend.com/doc/3.3.0/orm-to-slick.html
+[link-ref-actions]:          http://slick.lightbend.com/doc/3.3.0/dbio.html
+[link-slick-column-options]: http://slick.lightbend.com/doc/3.3.0/api/index.html#slick.ast.ColumnOption
+[link-slick-hlist]:          http://slick.lightbend.com/doc/3.3.0/api/#slick.collection.heterogeneous.HList
+[link-source-dbPublisher]:   http://slick.lightbend.com/doc/3.3.0/api/index.html#slick.basic.DatabasePublisher
+[link-slick-streaming]:      http://slick.lightbend.com/doc/3.3.0/dbio.html#streaming
+[link-source-extmeth]:       https://github.com/slick/slick/blob/3.3.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
 
 [link-hikari]:               http://brettwooldridge.github.io/HikariCP/
 [link-config]:               https://github.com/typesafehub/config
