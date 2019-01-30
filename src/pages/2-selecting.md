@@ -709,7 +709,7 @@ An easy way to try things out is to use  _triggered execution_ with SBT:
 
 ~~~ bash
 $ cd example-02
-$ ./sbt.sh
+$ sbt
 > ~run
 ~~~
 

@@ -60,8 +60,8 @@
 [link-newsletter]:           https://underscore.io/blog/newsletters/
 [link-essential-scala]:      https://underscore.io/training/courses/essential-scala
 
-[link-sbt]:                  http://scala-sbt.org
-[link-sbt-tutorial]:         http://www.scala-sbt.org/1.x/docs/Getting-Started.html
+[link-sbt]:                  https://scala-sbt.org
+[link-sbt-tutorial]:         https://www.scala-sbt.org/1.x/docs/Getting-Started.html
 
 [link-essential-play]:       https://underscore.io/training/courses/essential-play/
 [link-tut]:                  https://github.com/tpolecat/tut

@@ -53,12 +53,12 @@ Each chapter of the book is associated with a separate sbt project that provides
 
 We'll be using a running example of a chat application similar to *Slack*, *Gitter*, or *IRC*. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
 
-For now, we will start with a simple conversation between two famous celebrities. Change to the `chapter-01` directory now, use the `sbt.sh` script to start sbt, and compile and run the example to see what happens:
+For now, we will start with a simple conversation between two famous celebrities. Change to the `chapter-01` directory now, use the `sbt` command to start sbt, and compile and run the example to see what happens:
 
 ~~~ bash
 bash$ cd chapter-01
 
-bash$ ./sbt.sh
+bash$ sbt
 # sbt log messages...
 
 > compile
@@ -562,12 +562,12 @@ The query language is the one of the richest and most significant parts of Slick
 ## Exercise: Bring Your Own Data
 
 Let's get some experience with Slick by running queries against the example database.
-Start sbt using `sbt.sh` and type `console` to enter the interactive Scala console.
+Start sbt using the `sbt` command and type `console` to enter the interactive Scala console.
 We've configured sbt to run the example application before giving you control,
 so you should start off with the test database set up and ready to go:
 
 ~~~ bash
-bash$ ./sbt.sh
+bash$ sbt
 # sbt logging...
 
 > console
