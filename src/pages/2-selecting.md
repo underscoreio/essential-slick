@@ -656,9 +656,9 @@ The `nullsDefault` behaviour will use the SQL engines preference.
 We don't have any nullable fields in our example yet.
 But here's a look at what sorting a nullable column is like:
 
-~~~ scala
+```scala
 users.sortBy(_.name.nullsFirst)
-~~~
+```
 
 The generated SQL for the above query would be:
 
@@ -670,6 +670,88 @@ order by "name" nulls first
 
 We cover nullable columns in [Chapter 5](#Modelling) and include an example of sorting on nullable columns in [example project][link-example] the code is in _nulls.scala_ in the folder _chapter-05_.
 </div>
+
+
+## Conditional Filtering
+
+So far we've seen query operations such as  `map`, `filter`, and `take`,
+and in later chapters we'll see joins and aggregations.
+Much of your work with Slick will likely be with just these few operations.
+
+There are two other methods, `filterOpt` and `filterIf`,
+that help with dynamic queries, where you may (or may not) want to filter rows based on some condition.
+
+For example, suppose we want to give our user the option to filter by crew member (message sender).
+That is, if you don't specify a crew member, you'll get everyone's messages.
+
+Our first attempt at this might be:
+
+```tut:book
+def query(name: Option[String]) =
+  messages.filter(msg => msg.sender === name)
+```
+
+That's a valid query, but if you feed it `None`, you'll get no results, rather than all results.
+We could add more checks to the query, such as also adding `|| name.isEmpty`.
+But what we want to do is only filter when we have a value. And that's what `filterOpt` does:
+
+```tut:book
+def query(name: Option[String]) =
+  messages.filterOpt(name)( (row, value) => row.sender === value )
+```
+
+You can read this query as: we're going to optionally filter on `name`,
+and if `name` has a value, we can use the `value` to filter the `row`s in the query.
+
+The upshot of that is, when there's no crew member provided, there's no condition on the SQL:
+
+```tut:book
+query(None).result.statements.mkString
+```
+
+And when there is, the condition applies:
+
+```tut:book
+query(Some("Dave")).result.statements.mkString
+```
+
+<div class="callout callout-info">
+Once you're in the swing of using `filterOpt`, you may prefer to use a short-hand version:
+
+```tut:book
+def query(name: Option[String]) =
+  messages.filterOpt(name)(_.sender === _)
+```
+
+The behaviour of `query` is the same if you use this short version or the longer version
+we used in the main text.
+</div>
+
+`filterIf` is a similar capability, but turns a where condition on or off.
+For example, we can give the user an option to exclude "old" messages:
+
+```tut:book
+val hideOldMessages = true
+val query = messages.filterIf(hideOldMessages)(_.id > 100L)
+query.result.statements.mkString
+```
+
+Here we see a condition of `ID > 100` added to the query because `hideOldMessages` is `true`.
+If it where false, the query would not contain the where clause.
+
+The great convenience of `filterIf` and `filterOpt` is that you can chain them one after another
+to build up concise dynamic queries:
+
+```tut:book
+val person = Some("Dave")
+val hideOldMessages = true
+
+val queryToRun = messages.
+  filterOpt(person)(_.sender === _).
+  filterIf(hideOldMessages)(_.id > 100L)
+
+queryToRun.result.statements.mkString
+```
 
 
 ## Take Home Points
