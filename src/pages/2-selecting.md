@@ -415,7 +415,6 @@ The `<`, `>`, `<=`, and `>=` methods can operate on any type of `Rep`
 ```tut:book
 messages.filter(_.sender < "HAL").result.statements
 
-
 messages.filter(m => m.sender >= m.content).result.statements
 ```
 
@@ -532,6 +531,15 @@ Scala Code              Operand Column Types               Result Type        SQ
 
 : Boolean column methods.
   Operand and result types should be interpreted as parameters to `Rep[_]`.
+
+### Date and Time Methods
+
+Slick provides column mappings for: `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, and `ZonedDateTime`.
+That means you can use all of those types as columns in your table definitions.
+The [Slick 3.3 Upgrade Guide][link-slick-ug-time] shows how these values are mapped into SQL columns.
+
+There are no special methods for the `java.time` types.
+However, as all types have the equality methods, you can use `===`, `>`, `<=`, and so on as you'd expect.
 
 ### Option Methods and Type Equivalence {#type_equivalence}
 
