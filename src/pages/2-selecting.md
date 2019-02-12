@@ -536,10 +536,35 @@ Scala Code              Operand Column Types               Result Type        SQ
 
 Slick provides column mappings for: `Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, and `ZonedDateTime`.
 That means you can use all of those types as columns in your table definitions.
-The [Slick 3.3 Upgrade Guide][link-slick-ug-time] shows how these values are mapped into SQL columns.
 
-There are no special methods for the `java.time` types.
-However, as all types have the equality methods, you can use `===`, `>`, `<=`, and so on as you'd expect.
+How your columns are mapped will depend on the database you're using,
+as different databases have different capabilities when it comes to time and date.
+The table below shows the SQL types used for three common databases:
+
+--------------------------------------------------------------------------
+Scala Type           H2 Column Type   PostgreSQL         MySQL
+-------------------- ---------------- ----------------- ------------------
+`Instant`            `TIMESTAMP`      `TIMESTAMP`        `TEXT`
+
+`LocalDate`          `DATE`           `DATE`             `DATE`
+
+`LocalTime`          `VARCHAR`        `TIME`             `TEXT`
+
+`LocalDateTime`      `TIMESTAMP`      `TIMESTAMP`        `TEXT`
+
+`OffsetTime`         `VARCHAR`        `TIMETZ`           `TEXT`
+
+`OffsetDateTime`     `VARCHAR`        `VARCHAR`          `TEXT`
+
+`ZonedDateTime`      `VARCHAR`        `VARCHAR`          `TEXT`
+
+--------------------------------------------------------------------------
+
+: Mapping from `java.time` types to SQL column types for three databases.
+  There's a full list as part of the The [Slick 3.3 Upgrade Guide][link-slick-ug-time].
+
+Unlike the `String` and `Boolean` types, there are no special methods for the `java.time` types.
+However, as all types have the equality methods, you can use `===`, `>`, `<=`, and so on with date and time types as you'd expect.
 
 ### Option Methods and Type Equivalence {#type_equivalence}
 
