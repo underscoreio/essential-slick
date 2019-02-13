@@ -1647,7 +1647,7 @@ The most important points are:
 - We can represent rows in a variety of ways: tuples, `HList`s,
   and arbitrary classes and case classes via the `mapTo` macro.
 
-- If we need more control over a mapping from columns to other data structures, the `<>` method is avaiilable.
+- If we need more control over a mapping from columns to other data structures, the `<>` method is available.
 
 - We can represent individual values in columns
   using arbitrary Scala data types
