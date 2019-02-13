@@ -13,6 +13,7 @@
 [link-slick-hlist]:          http://slick.lightbend.com/doc/3.3.0/api/#slick.collection.heterogeneous.HList
 [link-source-dbPublisher]:   http://slick.lightbend.com/doc/3.3.0/api/index.html#slick.basic.DatabasePublisher
 [link-slick-streaming]:      http://slick.lightbend.com/doc/3.3.0/dbio.html#streaming
+[link-slick-ug-time]:        http://slick.lightbend.com/doc/3.3.0/upgrade.html#support-for-java.time-columns 
 [link-source-extmeth]:       https://github.com/slick/slick/blob/v3.3.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
 
 [link-hikari]:               https://brettwooldridge.github.io/HikariCP/

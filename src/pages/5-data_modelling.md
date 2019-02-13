@@ -1231,9 +1231,13 @@ Slick also lets us control how individual columns are mapped to Scala types.
 For example, perhaps we'd like to use
 [Joda Time][link-jodatime]'s `DateTime` class
 for anything date and time related.
-Slick doesn't provide native support for Joda Time,
+Slick doesn't provide native support for Joda Time[^time],
 but it's painless for us to implement it via Slick's
 `ColumnType` type class:
+
+[^time]: However since Slick 3.3.0 there is built-in support for `java.time.Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, and `ZonedDateTime`.
+You'll very likely want to use these over the older Joda Time library.
+
 
 ```tut:book:silent
 import java.sql.Timestamp
@@ -1643,7 +1647,7 @@ The most important points are:
 - We can represent rows in a variety of ways: tuples, `HList`s,
   and arbitrary classes and case classes via the `mapTo` macro.
 
-- If we need more control over a mapping from columns to other data structures, the `<>` method is avaiilable.
+- If we need more control over a mapping from columns to other data structures, the `<>` method is available.
 
 - We can represent individual values in columns
   using arbitrary Scala data types
