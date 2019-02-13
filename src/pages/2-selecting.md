@@ -257,7 +257,7 @@ We can also select column expressions as well as single columns:
 messages.map(t => t.id * 1000L).result.statements.mkString
 ```
 
-This all means that `map` is a powerful combinator for controling the `SELECT` part of your query.
+This all means that `map` is a powerful combinator for controlling the `SELECT` part of your query.
 
 <div class="callout callout-info">
 **Query's *flatMap* Method**
@@ -348,7 +348,7 @@ You can also add your own `Effect` types by extending the existing types.
 To execute an action, we pass it to one of two methods on our `db` object:
 
  - `db.run(...)` runs the action and returns all the results in a single collection.
-   These are known as a _materalized_ result.
+   These are known as a _materialized_ result.
 
  - `db.stream(...)` runs the action and returns its results in a `Stream`,
    allowing us to process large datasets incrementally without consuming large amounts of memory.
