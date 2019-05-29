@@ -54,10 +54,10 @@ scalacOptions ++= Seq(
 libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick"           % "3.3.0",
   "com.typesafe.slick" %% "slick-hikaricp"  % "3.3.0",
-  "com.h2database"      % "h2"              % "1.4.185",
-  "ch.qos.logback"      % "logback-classic" % "1.1.2",
-  "joda-time"           % "joda-time"       % "2.6",
-  "org.joda"            % "joda-convert"    % "1.2"
+  "com.h2database"      % "h2"              % "1.4.199",
+  "ch.qos.logback"      % "logback-classic" % "1.2.3",
+  "joda-time"           % "joda-time"       % "2.10.2",
+  "org.joda"            % "joda-convert"    % "2.2.1"
 )
 
 lazy val pdf = taskKey[Unit]("Builds the PDF version of the book")
