@@ -1116,7 +1116,7 @@ exec(frankMsgs.result).foreach(println)
 A join on messages and senders will produce a row for every message.
 Each row will be a tuple of the user and message:
 
-```tut:book
+```scala
 users.join(messages).on(_.id === _.senderId)
 // res1: slick.lifted.Query[
 //  (UserTable, MessageTable),

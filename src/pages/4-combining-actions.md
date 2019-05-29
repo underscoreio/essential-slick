@@ -759,7 +759,8 @@ In the example data there is only one message that contains the word "Sorry", so
 
 ```tut:book
 val happy = messages.filter(_.content like "%sorry%").result
-
+```
+```scala
 // We expect... 
 // exec(onlyOne(happy))
 // ...to return a message.
@@ -769,7 +770,8 @@ However, there are two messages containing the word "I". In this case `onlyOne` 
 
 ```tut:book
 val boom  = messages.filter(_.content like "%I%").result
-
+```
+```scala
 // If we run this...
 // exec(onlyOne(boom))
 // we want a failure, such as:
