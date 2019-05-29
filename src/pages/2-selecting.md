@@ -1094,7 +1094,7 @@ There will be three results: "_Do_ you read me", "Open the pod bay *do*ors", and
 What does this do and why?
 
 ```scala
-exec(messages.map(_.content + "!").result)
+exec(messages.map(_.content.toString + "!").result)
 ```
 
 <div class="solution">
@@ -1106,19 +1106,16 @@ select '(message Ref @421681221).content!' from "message"
 
 ```tut:invisible
 {
-  val weird = exec(messages.map(_.content + "!").result).head
+  val weird = exec(messages.map(_.content.toString + "!").result).head
   assert(weird contains "Ref", s"Expected 'Ref' inside $weird")
 }
 ```
 
 That is a select expression for a strange constant string.
 
-The `_.content + "!"` expression converts `content` to a string and appends the exclamation point.
+The `_.content.toString + "!"` expression converts `content` to a string and appends the exclamation point.
 What is `content`? It's a `Rep[String]`, not a `String` of the content.
 The end result is that we're seeing something of the internal workings of Slick.
-
-This is an unfortunate effect of Scala allowing automatic conversion to a `String`.
-If you are interested in disabling this Scala behaviour, tools like [WartRemover][link-wartremover] can help.
 
 It is possible to do this mapping in the database with Slick.
 We need to remember to work in terms of `Rep[T]` classes:

@@ -51,8 +51,10 @@ lazy val insertUser = users returning users.map(_.id)
 
 ...and add `Message`:
 
-```tut:book
+```scala
 // Note that messages have senders, which are references to users
+```
+```tut:book
 final case class Message(
   senderId : Long,
   content  : String,
@@ -382,14 +384,20 @@ As an example, we can use our `usersAndRooms` query and
 modify it to focus on a particular room.
 Perhaps we want to use our join for the Air Lock room:
 
-```tut:book
+```scala
 // The query we've already seen...
+```
+```tut:book
 val usersAndRooms =
   messages.
   join(users).on(_.senderId === _.id).
   join(rooms).on { case ((msg,user), room) => msg.roomId === room.id }
+```
 
+```scala
 // ...modified to focus on one room:
+```
+```tut:book
 val airLockMsgs =
   usersAndRooms.
   filter { case (_, room) => room.title === "Air Lock" }
@@ -585,11 +593,16 @@ xs zip xs.drop(1)
 Slick provides the equivalent `zip` method for queries, plus two variations.
 Let's say we want to pair up adjacent messages into what we'll call a "conversation":
 
-```tut:book
+```scala
 // Select message content, ordered by id:
+```
+```tut:book
 val msgs = messages.sortBy(_.id.asc).map(_.content)
-
+```
+```scala
 // Pair up adjacent messages:
+```
+```tut:book
 val conversations = msgs zip msgs.drop(1)
 ```
 
@@ -635,13 +648,19 @@ Not all databases support zip joins.
 Check for the `relational.zip` capability in the `capabilities` field
 of your chosen database profile:
 
-```tut:book
+```scala
 // H2 supports zip
+```
+```tut:book
 slick.jdbc.H2Profile.capabilities.
   map(_.toString).
   contains("relational.zip")
-
+```
+  
+```scala
 // SQLite does not support zip
+```
+```tut:book
 slick.jdbc.SQLiteProfile.capabilities.
   map(_.toString).
   contains("relational.zip")
@@ -1098,8 +1117,12 @@ At this point in the book, only Frank has more than two messages:
 
 ```tut:book
 exec(msgsPerUser.result)
+```
 
+```scala
 // Let's check:
+```
+```tut:book
 val frankMsgs = 
   messages.join(users).on {
     case (msg,user) => msg.senderId === user.id && user.name === "Frank" 
@@ -1142,13 +1165,16 @@ That's close, but the values in the map are still a tuple of the name and the me
 We can go further and reduce this to:
 
 ```tut:book:silent
-val correct = almost.mapValues { values =>
+val correct = almost.view.mapValues { values =>
   values.map{ case (name, msg) => msg }
 }
 ```
 ```tut:book
 correct.foreach(println)
 ```
+
+The `.view` call is required in Scala 2.13 to convert the lazy evaluated map into a strict map.
+A future version of Scala will remove the need for the `.view` call.
 
 Go ahead and write a method to encapsulate this for a join:
 
@@ -1162,12 +1188,19 @@ You need all the code in the question and also what you know about action combin
 ```tut:book
 def userMessages: DBIO[Map[User,Seq[Message]]] =
   users.join(messages).on(_.id === _.senderId).result.
-  map { rows =>
-    rows.groupBy{ case (user, message) => user }.
-    mapValues(values => values.map{ case (name, msg) => msg })
+  map { rows => rows
+    .groupBy{ case (user, message) => user }
+    .view
+    .mapValues(values => values.map{ case (name, msg) => msg })
+    .toMap
   }
 
 exec(userMessages).foreach(println)
 ```
+
+You may have been tripped up on the call to `toMap` at the end.
+We didn't need this in the examples in the text because we were not being explicit that we wanted a `Map[User,Seq[Message]]`.
+However, `userMessages` does define the result type, and as such we need to explicitly covert the sequence of tuples into a `Map`.
+
 </div>
 
