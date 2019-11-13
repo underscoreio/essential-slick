@@ -1,2 +1,2 @@
-addSbtPlugin("org.tpolecat" % "tut-plugin" % "0.6.13")
+addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.0.1" )
 

@@ -12,16 +12,16 @@ In [Chapter 6](#joins) we'll look at more complex queries involving joins, aggre
 
 The simplest select query is the `TableQuery` generated from a `Table`. In the following example, `messages` is a `TableQuery` for `MessageTable`:
 
-```tut:silent
+```scala mdoc:silent
 import slick.jdbc.H2Profile.api._
 ```
-```tut:book
-final case class Message(
+```scala mdoc
+case class Message(
   sender:  String,
   content: String,
   id:      Long = 0L)
 
-final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
   def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def sender  = column[String]("sender")
@@ -37,7 +37,7 @@ The type of `messages` is `TableQuery[MessageTable]`, which is a subtype of a mo
 
 We can see the SQL of the select query by calling `result.statements`:
 
-```tut:book
+```scala mdoc
 messages.result.statements.mkString
 ```
 
@@ -49,7 +49,7 @@ Our `TableQuery` is the equivalent of the SQL `select * from message`.
 Like many of the methods discussed below, the `result` method is actually an extension method applied to `Query` via an implicit conversion.
 You'll need to have everything from `H2Profile.api` in scope for this to work:
 
-```tut:silent
+```scala mdoc:silent
 import slick.jdbc.H2Profile.api._
 ```
 </div>
@@ -58,13 +58,13 @@ import slick.jdbc.H2Profile.api._
 
 We can create a query for a subset of rows using the `filter` method:
 
-```tut:book
+```scala mdoc
 messages.filter(_.sender === "HAL")
 ```
 
 The parameter to `filter` is a function from an instance of `MessageTable` to a value of type `Rep[Boolean]` representing a `WHERE` clause for our query:
 
-```tut:book
+```scala mdoc
 messages.filter(_.sender === "HAL").result.statements.mkString
 ```
 
@@ -97,7 +97,7 @@ trait TableQuery[T <: Table[_]] extends Query[T, T#TableElementType, Seq] {
 A `TableQuery` is actually a `Query` that uses a `Table` (e.g. `MessageTable`) as its mixed type and the table's element type (the type parameter in the constructor, e.g. `Message`) as its unpacked type.
 In other words, the function we provide to `messages.filter` is actually passed a parameter of type `MessageTable`:
 
-```tut:book
+```scala mdoc
 messages.filter { messageTable: MessageTable =>
   messageTable.sender === "HAL"
 }
@@ -112,7 +112,7 @@ allowing us to directly reference the columns on the `Table` when we're using co
 Every column knows its own data type, so Slick can ensure we only compare columns of compatible types.
 If we try to compare `sender` to an `Int`, for example, we get a type error:
 
-```tut:fail
+```scala mdoc:fail
 messages.filter(_.sender === 123)
 ```
 
@@ -126,13 +126,13 @@ However you should know that you can also construct constant queries, such as `s
 
 We can use the `Query` companion object for this. So...
 
-```tut:silent
+```scala mdoc:silent
 Query(1)
 ```
 
 will produce this query:
 
-```tut:book
+```scala mdoc
 Query(1).result.statements.mkString
 ```
 
@@ -153,12 +153,12 @@ We'll see another example of using a `from`-less query in [Chapter 3](#moreContr
 
 Just as we did in Chapter 1, we're using a helper method to run queries in the REPL:
 
-```tut:silent
+```scala mdoc:silent
 import scala.concurrent.{Await,Future}
 import scala.concurrent.duration._
 ```
 
-```tut:book
+```scala mdoc
 val db = Database.forConfig("chapter02")
 
 def exec[T](action: DBIO[T]): T =
@@ -169,7 +169,7 @@ This is included in the example source code for this chapter, in the `main.scala
 
 We have also set up the schema and sample data:
 
-```tut:book
+```scala mdoc
 def freshTestData = Seq(
   Message("Dave", "Hello, HAL. Do you read me, HAL?"),
   Message("HAL",  "Affirmative, Dave. I read you."),
@@ -187,7 +187,7 @@ Sometimes we don't want to select all of the columns in a `Table`.
 We can use the `map` method on a `Query` to select specific columns for inclusion in the results.
 This changes both the mixed type and the unpacked type of the query:
 
-```tut:book
+```scala mdoc
 messages.map(_.content)
 ```
 
@@ -195,7 +195,7 @@ Because the unpacked type (second type parameter) has changed to `String`,
 we now have a query that selects `String`s when run.
 If we run the query we see that only the `content` of each message is retrieved:
 
-```tut:book
+```scala mdoc
 val query = messages.map(_.content)
 
 exec(query.result)
@@ -205,14 +205,14 @@ exec(query.result)
 Also notice that the generated SQL has changed.
 Slick isn't cheating: it is actually telling the database to restrict the results to that column in the SQL:
 
-```tut:book
+```scala mdoc
 messages.map(_.content).result.statements.mkString
 ```
 
 Finally, notice that the mixed type (first type parameter) of our new query has changed to `Rep[String]`.
 This means we are only passed the `content` column when we `filter` or `map` over this query:
 
-```tut:book
+```scala mdoc
 val pods = messages.
   map(_.content).
   filter{content:Rep[String] => content like "%pod%"}
@@ -229,20 +229,20 @@ This includes individual `Rep`s and `Table`s,
 as well as `Tuple`s of the above.
 For example, we can use `map` to select the `id` and `content` columns of messages:
 
-```tut:book
+```scala mdoc
 messages.map(t => (t.id, t.content))
 ```
 
 The mixed and unpacked types change accordingly,
 and the SQL is modified as we might expect:
 
-```tut:book
+```scala mdoc
 messages.map(t => (t.id, t.content)).result.statements.mkString
 ```
 
 We can even map sets of columns to Scala data structures using `mapTo`:
 
-```tut:book
+```scala mdoc
 case class TextOnly(id: Long, content: String)
 
 val contentQuery = messages.
@@ -253,7 +253,7 @@ exec(contentQuery.result)
 
 We can also select column expressions as well as single columns:
 
-```tut:book
+```scala mdoc
 messages.map(t => t.id * 1000L).result.statements.mkString
 ```
 
@@ -273,7 +273,7 @@ For this we have `exists`, which will return `true` if the result set is not emp
 
 Let's look at quick example to show how we can use an existing query with the `exists` keyword:
 
-```tut:book
+```scala mdoc
 val containsBay = for {
   m <- messages
   if m.content like "%bay%"
@@ -357,7 +357,7 @@ In this book we will deal exclusively with materialized queries.
 `db.run` returns a `Future` of the final result of our action.
 We need to have an `ExecutionContext` in scope when we make the call:
 
-```tut:book
+```scala mdoc
 import scala.concurrent.ExecutionContext.Implicits.global
 
 val futureMessages = db.run(messages.result)
@@ -403,7 +403,7 @@ You can find a complete list in [ExtensionMethods.scala][link-source-extmeth] in
 The `===` and `=!=` methods operate on any type of `Rep` and produce a `Rep[Boolean]`.
 Here are some examples:
 
-```tut:book
+```scala mdoc
 messages.filter(_.sender === "Dave").result.statements
 
 messages.filter(_.sender =!= "Dave").result.statements.mkString
@@ -412,7 +412,7 @@ messages.filter(_.sender =!= "Dave").result.statements.mkString
 The `<`, `>`, `<=`, and `>=` methods can operate on any type of `Rep`
 (not just numeric columns):
 
-```tut:book
+```scala mdoc
 messages.filter(_.sender < "HAL").result.statements
 
 messages.filter(m => m.sender >= m.content).result.statements
@@ -442,13 +442,13 @@ Scala Code       Operand Types        Result Type        SQL Equivalent
 
 Slick provides the `++` method for string concatenation (SQL's `||` operator):
 
-```tut:book
+```scala mdoc
 messages.map(m => m.sender ++ "> " ++ m.content).result.statements.mkString
 ```
 
 and the `like` method for SQL's classic string pattern matching:
 
-```tut:book
+```scala mdoc
 messages.filter(_.content like "%pod%").result.statements.mkString
 ```
 
@@ -587,14 +587,14 @@ What do we mean by type equivalence?
 Slick type-checks our column expressions to make sure the operands are of compatible types.
 For example, we can compare `String`s for equality but we can't compare a `String` and an `Int`:
 
-```tut:fail
+```scala mdoc:fail
 messages.filter(_.id === "foo")
 ```
 
 Interestingly, Slick is very finickity about numeric types.
 For example, comparing an `Int` to a `Long` is considered a type error:
 
-```tut:fail
+```scala mdoc:fail
 messages.filter(_.id === 123)
 ```
 
@@ -602,19 +602,19 @@ On the flip side of the coin,
 Slick is clever about the equivalence of optional and non-optional columns.
 As long as the operands are some combination of the types `A` and `Option[A]` (for the same value of `A`), the query will normally compile:
 
-```tut:book
+```scala mdoc
 messages.filter(_.id === Option(123L)).result.statements
 ```
 
 However, any optional arguments must be strictly of type `Option`, not `Some` or `None`:
 
-```tut:fail
+```scala mdoc:fail
 messages.filter(_.id === Some(123L)).result.statements
 ```
 
 If you find yourself in this situation, remember you can always provide a type ascription to the value:
 
-```tut:book
+```scala mdoc
 messages.filter(_.id === (Some(123L): Option[Long]) )
 ```
 
@@ -639,13 +639,13 @@ Scala Code             SQL Equivalent
 
 We'll look at each in turn, starting with an example of `sortBy`. Say we want want messages in order of the sender's name:
 
-```tut:book
+```scala mdoc
 exec(messages.sortBy(_.sender).result).foreach(println)
 ```
 
 Or the reverse order:
 
-```tut:book
+```scala mdoc
 exec(messages.sortBy(_.sender.desc).result).foreach(println)
 ```
 
@@ -653,19 +653,19 @@ exec(messages.sortBy(_.sender.desc).result).foreach(println)
 
 To sort by multiple columns, return a tuple of columns:
 
-```tut:book
+```scala mdoc
 messages.sortBy(m => (m.sender, m.content)).result.statements
 ```
 
 Now we know how to sort results, perhaps we want to show only the first five rows:
 
-```tut:book
+```scala mdoc
 messages.sortBy(_.sender).take(5)
 ```
 
 If we are presenting information in pages, we'd need a way to show the next page (rows 6 to 10):
 
-```tut:book
+```scala mdoc
 messages.sortBy(_.sender).drop(5).take(5)
 ```
 
@@ -719,8 +719,8 @@ That is, if you don't specify a crew member, you'll get everyone's messages.
 
 Our first attempt at this might be:
 
-```tut:book
-def query(name: Option[String]) =
+```scala mdoc
+def query1(name: Option[String]) =
   messages.filter(msg => msg.sender === name)
 ```
 
@@ -728,8 +728,8 @@ That's a valid query, but if you feed it `None`, you'll get no results, rather t
 We could add more checks to the query, such as also adding `|| name.isEmpty`.
 But what we want to do is only filter when we have a value. And that's what `filterOpt` does:
 
-```tut:book
-def query(name: Option[String]) =
+```scala mdoc
+def query2(name: Option[String]) =
   messages.filterOpt(name)( (row, value) => row.sender === value )
 ```
 
@@ -738,21 +738,21 @@ and if `name` has a value, we can use the `value` to filter the `row`s in the qu
 
 The upshot of that is, when there's no crew member provided, there's no condition on the SQL:
 
-```tut:book
-query(None).result.statements.mkString
+```scala mdoc
+query2(None).result.statements.mkString
 ```
 
 And when there is, the condition applies:
 
-```tut:book
-query(Some("Dave")).result.statements.mkString
+```scala mdoc
+query2(Some("Dave")).result.statements.mkString
 ```
 
 <div class="callout callout-info">
 Once you're in the swing of using `filterOpt`, you may prefer to use a short-hand version:
 
-```tut:book
-def query(name: Option[String]) =
+```scala mdoc
+def queryShortHand(name: Option[String]) =
   messages.filterOpt(name)(_.sender === _)
 ```
 
@@ -763,10 +763,10 @@ we used in the main text.
 `filterIf` is a similar capability, but turns a where condition on or off.
 For example, we can give the user an option to exclude "old" messages:
 
-```tut:book
+```scala mdoc
 val hideOldMessages = true
-val query = messages.filterIf(hideOldMessages)(_.id > 100L)
-query.result.statements.mkString
+val queryIf = messages.filterIf(hideOldMessages)(_.id > 100L)
+queryIf.result.statements.mkString
 ```
 
 Here we see a condition of `ID > 100` added to the query because `hideOldMessages` is `true`.
@@ -775,9 +775,8 @@ If it where false, the query would not contain the where clause.
 The great convenience of `filterIf` and `filterOpt` is that you can chain them one after another
 to build up concise dynamic queries:
 
-```tut:book
+```scala mdoc
 val person = Some("Dave")
-val hideOldMessages = true
 
 val queryToRun = messages.
   filterOpt(person)(_.sender === _).
@@ -839,12 +838,12 @@ How would you count the number of messages?
 Hint: in the Scala collections the method `length` gives you the size of the collection.
 
 <div class="solution">
-```tut:book
+```scala mdoc
 val results = exec(messages.length.result)
 ```
 
 You could also use `size`, which is an alias for `length`.
-```tut:invisible
+```scala mdoc:invisible
 messages.size
 ```
 </div>
@@ -859,17 +858,17 @@ Hint: our IDs are `Long`s.
 Adding `L` after a number in Scala, such as `99L`, makes it a long.
 
 <div class="solution">
-```tut:book
-val query = for {
+```scala mdoc
+val id1query = for {
   message <- messages if message.id === 1L
 } yield message
 
-val results = exec(query.result)
+val id1result = exec(id1query.result)
 ```
 
 Asking for `999`, when there is no row with that ID, will give back an empty collection.
 
-```tut:invisible
+```scala mdoc:invisible
 {
   val nnn = messages.filter(_.id === 999L)
   val rows = exec(nnn.result)
@@ -884,8 +883,8 @@ Re-write the query from the last exercise to not use a for comprehension.
 Which style do you prefer? Why?
 
 <div class="solution">
-```tut:book
-val results = exec(messages.filter(_.id === 1L).result)
+```scala mdoc
+val filterResults = exec(messages.filter(_.id === 1L).result)
 ```
 </div>
 
@@ -899,7 +898,7 @@ What does this tell you about the way `filter` has been mapped to SQL?
 <div class="solution">
 The code you need to run is:
 
-```tut:book
+```scala mdoc
 val sql = messages.filter(_.id === 1L).result.statements
 println(sql.head)
 ```
@@ -915,23 +914,23 @@ but only return a boolean value from the database.
 <div class="solution">
 That's right, we want to know if HAL `exists`:
 
-```tut:book
-val query = messages.filter(_.sender === "HAL").exists
+```scala mdoc
+val queryHalExists = messages.filter(_.sender === "HAL").exists
 
-exec(query.result)
+exec(queryHalExists.result)
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 {
 val found = exec(query.result)
-assert(found, s"Expected to find HAL, not: $found")
+assert(found.isEmpty == false, s"Expected to find HAL, not: $found")
 }
 ```
 
 The query will return `true` as we do have records from HAL,
 and Slick will generate the following SQL:
 
-```tut:book
+```scala mdoc
 query.result.statements.head
 ```
 </div>
@@ -947,21 +946,21 @@ Hint: think of messages as a collection and what you would do to a collection to
 Check what SQL would be executed for this query.
 
 <div class="solution">
-```tut:book
-val query = messages.map(_.content)
-exec(query.result)
+```scala mdoc
+val contents = messages.map(_.content)
+exec(contents.result)
 ```
 
 You could have also said:
 
-```tut:book
-val query = for { message <- messages } yield message.content
+```scala mdoc
+val altQuery = for { message <- messages } yield message.content
 ```
 
 The query will return only the `content` column from the database:
 
-```tut:book
-query.result.statements.head
+```scala mdoc
+altQuery.result.statements.head
 ```
 </div>
 
@@ -974,7 +973,7 @@ Find the first message that HAL sent.
 What happens if you use `head` to find a message from "Alice" (note that Alice has sent no messages).
 
 <div class="solution">
-```tut:book
+```scala mdoc
 val msg1 = messages.filter(_.sender === "HAL").map(_.content).result.head
 ```
 
@@ -982,7 +981,7 @@ You should get an action that produces "Affirmative, Dave. I read you."
 
 For Alice, `head` will throw a run-time exception as we are trying to return the head of an empty collection. Using `headOption` will prevent the exception.
 
-```tut:book
+```scala mdoc
 exec(messages.filter(_.sender === "Alice").result.headOption)
 ```
 </div>
@@ -998,7 +997,7 @@ What if we'd asked for HAL's tenth through to twentieth message?
 <div class="solution">
 It's `drop` and `take` to the rescue:
 
-```tut:book
+```scala mdoc
 val msgs = messages.filter(_.sender === "HAL").drop(1).take(5).result
 ```
 
@@ -1009,7 +1008,7 @@ Therefore our result set should contain one messages
 Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 {
   val nextFive = exec(msgs)
   assert(nextFive.length == 1, s"Expected 1 msgs, not: $nextFive")
@@ -1018,8 +1017,8 @@ Message(HAL,I'm sorry, Dave. I'm afraid I can't do that.,4)
 
 And asking for any more messages will result in an empty collection.
 
-```tut:book
-val msgs = exec(
+```scala mdoc
+val allMsgs = exec(
             messages.
               filter(_.sender === "HAL").
               drop(10).
@@ -1028,9 +1027,9 @@ val msgs = exec(
           )
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 {
-  assert(msgs.length == 0, s"Expected 0 msgs, not: $msgs")
+  assert(allMsgs.length == 0, s"Expected 0 msgs, not: $msgs")
 }
 ```
 
@@ -1045,13 +1044,13 @@ Find the message that starts with "Open".
 How is that query implemented in SQL?
 
 <div class="solution">
-```tut:book
+```scala mdoc
 messages.filter(_.content startsWith "Open")
 ```
 
 The query is implemented in terms of `LIKE`:
 
-```tut:book
+```scala mdoc
 messages.filter(_.content startsWith "Open").result.statements.head
 ```
 </div>
@@ -1066,13 +1065,13 @@ Can you make this case insensitive?
 <div class="solution">
 If you have familiarity with SQL `like` expressions, it probably wasn't too hard to find a case-sensitive version of this query:
 
-```tut:book
+```scala mdoc
 messages.filter(_.content like "%do%")
 ```
 
 To make it case sensitive you could use `toLowerCase` on the `content` field:
 
-```tut:book
+```scala mdoc
 messages.filter(_.content.toLowerCase like "%do%")
 ```
 
@@ -1080,7 +1079,7 @@ We can do this because `content` is a `Rep[String]` and that `Rep` has implement
 That means, the `toLowerCase` will be translated into meaningful SQL.
 
 There will be three results: "_Do_ you read me", "Open the pod bay *do*ors", and "I'm afraid I can't _do_ that".
-```tut:invisible
+```scala mdoc:invisible
 {
   val likeDo = exec( messages.filter(_.content.toLowerCase like "%do%").result )
 
@@ -1104,7 +1103,7 @@ The query Slick generates looks something like this:
 select '(message Ref @421681221).content!' from "message"
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 {
   val weird = exec(messages.map(_.content.toString + "!").result).head
   assert(weird contains "Ref", s"Expected 'Ref' inside $weird")
@@ -1120,7 +1119,7 @@ The end result is that we're seeing something of the internal workings of Slick.
 It is possible to do this mapping in the database with Slick.
 We need to remember to work in terms of `Rep[T]` classes:
 
-```tut:book
+```scala mdoc
 messages.map(m => m.content ++ LiteralColumn("!"))
 ```
 
@@ -1135,7 +1134,7 @@ select "content"||'!' from "message"
 
 You can also write:
 
-```tut:book
+```scala mdoc
 messages.map(m => m.content ++ "!")
 ```
 
