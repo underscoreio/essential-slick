@@ -1,7 +1,7 @@
-```tut:invisible
+```scala mdoc:invisible
 import slick.jdbc.H2Profile.api._
 
-final case class Message(
+case class Message(
   sender:  String,
   content: String,
   id:      Long = 0L)
@@ -119,7 +119,7 @@ Method       Arguments                       Result Type
 The simplest way to run one action after another is perhaps `andThen`.
 The combined actions are both run, but only the result of the second is returned:
 
-```tut:book
+```scala mdoc
 val reset: DBIO[Int] =
   messages.delete andThen messages.size.result
 
@@ -144,8 +144,8 @@ db.run(actions.transactionally)
 
 If you have a bunch of actions you want to run, you can use `DBIO.seq` to combine them:
 
-```tut:book
-val reset: DBIO[Unit] =
+```scala mdoc:silent
+val resetSeq: DBIO[Unit] =
   DBIO.seq(messages.delete, messages.size.result)
 ```
 
@@ -159,7 +159,7 @@ The transformation will run on the result of the action when it is returned by t
 
 As an example, we can create an action to return the content of a message, but reverse the text:
 
-```tut:book
+```scala mdoc
 // Restore the data we deleted in the previous section
 exec(messages ++= freshTestData)
 
@@ -189,7 +189,7 @@ Combinators everywhere!
 This example transformed an `Option[String]` to another `Option[String]`.
 As you may expect if `map` changes the type of a value, the type of `DBIO` changes too:
 
-```tut:book
+```scala mdoc
 text.map(os => os.map(_.length))
 ```
 
@@ -225,16 +225,16 @@ The Slick manual discusses this in the section on [Database I/O Actions][link-re
 When combining actions you will sometimes need to create an action that represents a simple value.
 Slick provides `DBIO.successful` for that purpose:
 
-```tut:book
-val v: DBIO[Int] = DBIO.successful(100)
+```scala mdoc:silent
+val ok: DBIO[Int] = DBIO.successful(100)
 ```
 
 We'll see an example of this when we discuss `flatMap`.
 
 And for failures, the value is a `Throwable`:
 
-```tut:book
-val v: DBIO[Nothing] =
+```scala mdoc:silent
+val err: DBIO[Nothing] =
   DBIO.failed(new RuntimeException("pod bay door unexpectedly locked"))
 ```
 
@@ -257,7 +257,7 @@ That is, we give `flatMap` a function that depends on the value from an action, 
 As an example, let's write a method to remove all the crew's messages, and post a message saying how many messages were removed.
 This will involve an `INSERT` and a `DELETE`, both of which we're familiar with:
 
-```tut:book
+```scala mdoc:silent
 val delete: DBIO[Int] =
   messages.delete
 
@@ -267,7 +267,7 @@ def insert(count: Int) =
 
 The first thing `flatMap` allows us to do is run these actions in order:
 
-```tut:book
+```scala mdoc
 import scala.concurrent.ExecutionContext.Implicits.global
 
 val resetMessagesAction: DBIO[Int] =
@@ -280,17 +280,17 @@ The `1` we see is the result of `insert`, which is the number of rows inserted.
 
 This single action produces the two SQL expressions you'd expect:
 
-~~~ sql
+``` sql
 delete from "message";
 insert into "message" ("sender","content")
   values ('NOBODY', 'I removed 4 messages');
-~~~
+```
 
 Beyond sequencing, `flatMap` also gives us control over which actions are run.
-To illustrate this we will change `resetMessagesAction` to not insert a message if no messages were removed in the first step:
+To illustrate this we will produce a variation of `resetMessagesAction` which will not insert a message if no messages were removed in the first step:
 
-```tut:book
-val resetMessagesAction: DBIO[Int] =
+```scala mdoc:silent:silent
+val logResetAction: DBIO[Int] =
   delete.flatMap {
     case 0 => DBIO.successful(0)
     case n => insert(n)
@@ -304,9 +304,9 @@ Occasionally the compiler will complain about a `flatMap` and need your help to 
 Recall that `DBIO[T]` is an alias for `DBIOAction[T,S,E]`, encoding streaming and effects.
 When mixing effects, such as inserts and selects, you may need to explicitly specify the type parameters to apply to the resulting action:
 
-~~~ scala
+``` scala
 query.flatMap[Int, NoStream, Effect.All] { result => ... }
-~~~
+```
 
 ...but in many cases the compiler will figure these out for you.
 
@@ -320,7 +320,7 @@ If you can do that, you're probably better off doing it.
 
 As an example, you could implement "insert if not exists" like this:
 
-```tut:book
+```scala mdoc:silent:silent
 // Not the best way:
 def insertIfNotExists(m: Message): DBIO[Int] = {
   val alreadyExists =
@@ -349,7 +349,7 @@ That's a bit of a mouthful, but an example may help.
 Let's say we want to reverse the text of every message (row) in the database.
 We start with this:
 
-```tut:book
+```scala mdoc:silent
 def reverse(msg: Message): DBIO[Int] =
   messages.filter(_.id === msg.id).
   map(_.content).
@@ -357,11 +357,11 @@ def reverse(msg: Message): DBIO[Int] =
 ```
 
 That's a straightforward method that returns an update action for one message.
-We can apply it to every message....
+We can apply it to every message...
 
-```tut:book
+```scala mdoc:silent
 // Don't do this
-val updates: DBIO[Seq[DBIO[Int]]] =
+val manyUpdates: DBIO[Seq[DBIO[Int]]] =
   messages.result.
   map(msgs => msgs.map(reverse))
 ```
@@ -375,7 +375,7 @@ The puzzle is how to run this kind of a beast.
 This is where `DBIO.sequence` saves us.
 Rather than produce many actions via `msgs.map(reverse)` we use `DBIO.sequence` to return a single action:
 
-```tut:book
+```scala mdoc:silent
 val updates: DBIO[Seq[Int]] =
   messages.result.
   flatMap(msgs => DBIO.sequence(msgs.map(reverse)))
@@ -402,7 +402,7 @@ update "message" set "content" = ? where "message"."id" = 4
 
 Recall that many Scala collections support `fold` as a way to combine values:
 
-```tut:book
+```scala mdoc
 List(3,5,7).fold(1) { (a,b) => a * b }
 
 1 * 3 * 5 * 7
@@ -414,7 +414,7 @@ when you need to run a sequence of actions, and reduce the results down to a val
 As an example, suppose we have a number of reports to run.
 We want to summarize all these reports to a single number.
 
-```tut:book
+```scala mdoc:silent
 // Pretend these two reports are complicated queries
 // that return Important Business Metrics:
 val report1: DBIO[Int] = DBIO.successful(41)
@@ -428,13 +428,13 @@ We can `fold` those `reports` with a function.
 
 But we also need to consider our starting position:
 
-```tut:book
+```scala mdoc:silent
 val default: Int = 0
 ```
 
 Finally we can produce an action to summarize the reports:
 
-```tut:book
+```scala mdoc
 val summary: DBIO[Int] =
   DBIO.fold(reports, default) {
     (total, report) => total + report
@@ -454,7 +454,7 @@ We've seen how `DBIO.seq` combines actions and ignores the results.
 We've also seen that `andThen` combines actions and keeps one result.
 If you want to keep both results, `zip` is the combinator for you:
 
-```tut:book
+```scala mdoc
 val zip: DBIO[(Int, Seq[Message])] =
   messages.size.result zip messages.filter(_.sender === "HAL").result
 
@@ -474,7 +474,7 @@ The two methods `cleanUp` and `andFinally` act a little like Scala's `catch` and
 
 `cleanUp` runs after an action completes, and has access to any error information as an `Option[Throwable]`:
 
-```tut:book
+```scala mdoc:silent
 // An action to record problems we encounter:
 def log(err: Throwable): DBIO[Int] =
   messages += Message("SYSTEM", err.getMessage)
@@ -490,21 +490,17 @@ val action: DBIO[Int] = work.cleanUp {
 
 The result of running this `action` is still the original exception...
 
-```tut:invisible:fail
+```scala mdoc:crash
 exec(action)
-```
-```scala
-java.lang.RuntimeException: Boom!
-... 45 elided
 ```
 
 ...but `cleanUp` has produced a side-effect for us:
 
-```tut:book
+```scala mdoc
 exec(messages.filter(_.sender === "SYSTEM").result)
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 {
   val c = exec(messages.filter(_.sender === "SYSTEM").length.result)
   assert(c == 1, s"Expected one result not $c")
@@ -521,19 +517,19 @@ This means you can work in terms of Scala's `Success[T]` and `Failure` instead o
 
 Suppose we had an action that might throw an exception:
 
-```tut:book
-val work = DBIO.failed(new RuntimeException("Boom!"))
+```scala mdoc:silent
+val tryAction = DBIO.failed(new RuntimeException("Boom!"))
 ```
 
 We can place this inside `Try` by combining the action with `asTry`:
 
-```tut:book
+```scala mdoc
 exec(work.asTry)
 ```
 
 And successful actions will evaluate to a `Success[T]`:
 
-```tut:book
+```scala mdoc
 exec(messages.size.result.asTry)
 ```
 
@@ -615,7 +611,7 @@ We often want to tie sets of modifications together in a *transaction* so that t
 
 As an example, let's re-write the movie script. We want to make sure the script changes all complete or nothing changes. We can do this by finding the old script text and replacing it with some new text:
 
-```tut:book
+```scala mdoc
 def updateContent(old: String) =
   messages.filter(_.content === old).map(_.content)
 
@@ -632,7 +628,7 @@ The changes we make in the `transactionally` block are temporary until the block
 
 To manually force a rollback you need to call `DBIO.failed` with an appropriate exception.
 
-```tut:book
+```scala mdoc
 val willRollback = (
   (messages += Message("HAL",  "Daisy, Daisy..."))                   >>
   (messages += Message("Dave", "Please, anything but your singing")) >>
@@ -671,7 +667,7 @@ This exercise expects to start with an empty database.
 If you're already in the REPL and the database exists,
 you'll need to drop the table first:
 
-```tut:book
+```scala mdoc
 val drop:     DBIO[Unit]        = messages.schema.drop
 val create:   DBIO[Unit]        = messages.schema.create
 val populate: DBIO[Option[Int]] = messages ++= freshTestData
@@ -682,16 +678,16 @@ exec(drop)
 <div class="solution">
 Using the values we've provided, you can create a new database with a single action:
 
-```tut:invisible
+```scala mdoc:invisible
 exec(drop.asTry >> create)
 ```
-```tut:book
+```scala mdoc
 exec(drop andThen create andThen populate)
 ```
 
 If we don't care about any of the values we could also use `DBIO.seq`:
 
-```tut:book
+```scala mdoc
 val allInOne = DBIO.seq(drop,create,populate)
 val result = exec(allInOne)
 ```
@@ -704,8 +700,8 @@ automatically insert the message "First!" before it.
 
 Your method signature should be:
 
-```tut:book
-def insert(m: Message): DBIO[Int] = ???
+```scala
+def prefixFirst(m: Message): DBIO[Int] = ???
 ```
 
 Use your knowledge of the `flatMap` action combinator to achieve this.
@@ -717,10 +713,10 @@ There are two elements to this problem:
 
 2. combining two inserts via `andThen`.
 
-```tut:book
+```scala mdoc
 import scala.concurrent.ExecutionContext.Implicits.global
 
-def insert(m: Message): DBIO[Int] =
+def prefixFirst(m: Message): DBIO[Int] =
   messages.size.result.flatMap {
     case 0 =>
       (messages += Message(m.sender, "First!")) andThen (messages += m)
@@ -733,7 +729,7 @@ exec(messages.delete)
 
 // Try out the method:
 exec {
-  insert(Message("Me", "Hello?"))
+  prefixFirst(Message("Me", "Hello?"))
 }
 
 // What's in the database?
@@ -748,7 +744,7 @@ If the action returns anything other than one result, the method should fail wit
 
 Below is the method signature and two test cases:
 
-```tut:book
+```scala
 def onlyOne[T](ms: DBIO[Seq[T]]): DBIO[T] = ???
 ```
 
@@ -757,7 +753,7 @@ The return from the method is an action that will return a single value.
 
 In the example data there is only one message that contains the word "Sorry", so we expect `onlyOne` to return that row:
 
-```tut:book
+```scala mdoc
 val happy = messages.filter(_.content like "%sorry%").result
 ```
 ```scala
@@ -768,7 +764,7 @@ val happy = messages.filter(_.content like "%sorry%").result
 
 However, there are two messages containing the word "I". In this case `onlyOne` should fail:
 
-```tut:book
+```scala mdoc
 val boom  = messages.filter(_.content like "%I%").result
 ```
 ```scala
@@ -787,7 +783,7 @@ Hints:
 <div class="solution">
 The basis of our solution is to `flatMap` the action we're given into a new action with the type we want:
 
-```tut:book
+```scala mdoc:silent
 def onlyOne[T](action: DBIO[Seq[T]]): DBIO[T] = action.flatMap { ms =>
   ms match {
     case m +: Nil => DBIO.successful(m)
@@ -803,15 +799,15 @@ If you've not seen `+:` before: it is "cons" for `Seq` (a standard part of Scala
 Our `flatMap` is taking the results from the action, `ms`, and in the case it is a single message, we return it.
 In the case it's something else, we fail with an informative message.
 
-```tut:book
+```scala mdoc
 exec(populate)
 ```
 
-```tut:book:fail
+```scala mdoc:crash
 exec(onlyOne(boom))
 ```
 
-```tut:book
+```scala mdoc
 exec(onlyOne(happy))
 ```
 </div>
@@ -827,14 +823,14 @@ Then rerun the test cases.
 There are several ways we could have implemented this.
 Perhaps the simplest is using `asTry`:
 
-```tut:book
+```scala mdoc
 import scala.util.Try
 def exactlyOne[T](action: DBIO[Seq[T]]): DBIO[Try[T]] = onlyOne(action).asTry
 
 exec(exactlyOne(happy))
 ```
 
-```tut:book
+```scala mdoc
 exec(exactlyOne(boom))
 ```
 </div>
@@ -850,7 +846,7 @@ It can take some alternative action when the filter predicate fails.
 
 The signature could be:
 
-```tut:book
+```scala
 def myFilter[T](action: DBIO[T])(p: T => Boolean)(alternative: => T) = ???
 ```
 
@@ -858,7 +854,7 @@ If you're not comfortable with the `[T]` type parameter,
 or the by name parameter on `alternative`,
 just use `Int` instead:
 
-```tut:book
+```scala
 def myFilter(action: DBIO[Int])(p: Int => Boolean)(alternative: Int) = ???
 ```
 
@@ -874,7 +870,7 @@ myFilter(messages.size.result)( _ > 100)(100)
 <div class="solution">
 This is a fairly straightforward example of using `map`:
 
-```tut:book
+```scala mdoc:silent
 def myFilter[T](action: DBIO[T])(p: T => Boolean)(alternative: => T) =
   action.map {
     case t if p(t) => t
@@ -897,10 +893,10 @@ You can follow a link between rows, possibly recording what you find as you foll
 
 As an example, let's pretend the crew's ship is a set of rooms, one connected to just one other:
 
-```tut:book
-final case class Room(name: String, connectsTo: String)
+```scala mdoc
+case class Room(name: String, connectsTo: String)
 
-final class FloorPlan(tag: Tag) extends Table[Room](tag, "floorplan") {
+class FloorPlan(tag: Tag) extends Table[Room](tag, "floorplan") {
   def name       = column[String]("name")
   def connectsTo = column[String]("next")
   def * = (name, connectsTo).mapTo[Room]
@@ -937,7 +933,7 @@ and will follow all the connections until there are no more connecting rooms.
 
 The signature of `unfold` _could_ be:
 
-```tut:book
+```scala
 def unfold(
   z: String,
   f: String => DBIO[Option[String]]
@@ -951,7 +947,7 @@ If `unfold` is given `"Podbay"` as a starting point it should return an action w
 You'll want to accumulate results of the rooms you visit.
 One way to do that would be to use a different signature:
 
-```tut:book
+```scala
 def unfold(
   z: String,
   f: String => DBIO[Option[String]],
@@ -971,7 +967,7 @@ The trick here is to recognize that:
 
 In code...
 
-```tut:book
+```scala mdoc:silent
 def unfold(
   z: String,
   f: String => DBIO[Option[String]],
@@ -989,7 +985,7 @@ Otherwise we add the room to the list of rooms, and recurse starting from the ro
 
 Here's how we'd use it:
 
-```tut:book
+```scala mdoc
 def nextRoom(roomName: String): DBIO[Option[String]] =
   floorplan.filter(_.name === roomName).map(_.connectsTo).result.headOption
 
@@ -998,7 +994,7 @@ val path: DBIO[Seq[String]] = unfold("Podbay", nextRoom)
 exec(path)
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 {
   val r = exec(path)
   assert(r == List("Podbay", "Galley", "Computer", "Engine Room"), s"Expected 4 specific rooms, but got $r")
