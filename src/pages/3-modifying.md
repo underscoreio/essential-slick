@@ -103,7 +103,7 @@ It is the `O.AutoInc` option that determines the behaviour of `+=`.
 
 Sometimes we want to override the database's default auto-incrementing behaviour and specify our own primary key. Slick provides a `forceInsert` method that does just this:
 
-```scala mdoc
+```scala mdoc:silent
 val forceInsertAction = messages forceInsert Message(
    "HAL",
    "I'm a computer, what would I do with a Christmas card anyway?",
@@ -220,7 +220,7 @@ messages.map(_.sender)
 
 ... so we execute this query by passing it a `String` for the `sender`:
 
-```scala mdoc:silent:fail
+```scala mdoc:silent:crash
 exec(messages.map(_.sender) += "HAL")
 ```
 
@@ -302,7 +302,7 @@ val data = Query(("Stanley", "Cut!"))
 
 We also need to be able to test to see if the data already exists. That's straightforward:
 
-```scala mdoc
+```scala mdoc:silent
 val exists =
   messages.
    filter(m => m.sender === "Stanley" && m.content === "Cut!").
@@ -311,7 +311,7 @@ val exists =
 
 We want to use the `data` when the row _doesn't_ exist, so combine the `data` and `exists` with `filterNot` rather than `filter`:
 
-```scala mdoc
+```scala mdoc:silent
 val selectExpression = data.filterNot(_ => exists)
 ```
 
