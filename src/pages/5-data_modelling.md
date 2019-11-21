@@ -34,7 +34,7 @@ folder _chapter-05_, file _structure.scala_.
 Let's look at how we can write code that works with multiple different database profiles.
 When we previously wrote...
 
-```tut:book
+```scala mdoc:silent
 import slick.jdbc.H2Profile.api._
 ```
 
@@ -42,7 +42,7 @@ import slick.jdbc.H2Profile.api._
 We want to write an import that works with a variety of profiles.
 Fortunately, Slick provides a common supertype for profiles---a trait called `JdbcProfile`:
 
-```tut:book
+```scala mdoc:silent
 import slick.jdbc.JdbcProfile
 ```
 
@@ -58,7 +58,7 @@ and import from that. The basic pattern we'll use is as follows:
 
 Here's a simple form of this pattern:
 
-```tut:book
+```scala mdoc:silent
 trait DatabaseModule {
   // Declare an abstract profile:
   val profile: JdbcProfile
@@ -69,7 +69,7 @@ trait DatabaseModule {
   // Write our database code here...
 }
 
-object Main extends App {
+object Main1 extends App {
   // Instantiate the database module, assigning a concrete profile:
   val databaseLayer = new DatabaseModule {
     val profile = slick.jdbc.H2Profile
@@ -89,7 +89,7 @@ As our applications get bigger,
 we need to split our code up into multiple files to keep it manageable.
 We can do this by extending the pattern above to a family of traits:
 
-```tut:book
+```scala mdoc:silent
 trait Profile {
   val profile: JdbcProfile
 }
@@ -113,7 +113,7 @@ class DatabaseLayer(val profile: JdbcProfile) extends
   DatabaseModule2
 
 // Instantiate the modules and inject a profile:
-object Main extends App {
+object Main2 extends App {
   val databaseLayer = new DatabaseLayer(slick.jdbc.H2Profile)
 }
 ```
@@ -126,7 +126,7 @@ This allows us to share the `profile` across our family of modules.
 To work with a different database, we inject a different profile
 when we instantiate the database code:
 
-```tut:book
+```scala mdoc
 val anotherDatabaseLayer = new DatabaseLayer(slick.jdbc.PostgresProfile)
 ```
 
@@ -176,8 +176,8 @@ at how Slick relates columns in our database to fields in our classes.
 When we declare a table in Slick, we are required to implement a `*` method
 that specifies a "default projection":
 
-```tut:book
-final class MyTable(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
+```scala mdoc:silent
+class MyTable(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
   def column1 = column[String]("column1")
   def column2 = column[Int]("column2")
   def * = (column1, column2)
@@ -219,18 +219,25 @@ If we look at the rules for `ProvenShape` generation,
 we will get an idea about what data types we can map.
 Here are the three most common use cases:
 
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
 
-```tut:invisible
 // Because I can't get the code in the enumerated list to render and indent nicely with tut yet.
+// ...and I've not tried with mdoc
 
 // 1
-    final class MyTable(tag: Tag) extends Table[String](tag, "mytable") {
+    class MyTable1(tag: Tag) extends Table[String](tag, "mytable") {
       def column1 = column[String]("column1")
       def * = column1
     }
 
 // 2
-  final class MyTable(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
+  class MyTable2(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
     def column1 = column[String]("column1")
     def column2 = column[Int]("column2")
     def * = (column1, column2)
@@ -238,7 +245,7 @@ Here are the three most common use cases:
 
 // 3
     case class User(name: String, id: Long)
-    final class UserTable(tag: Tag) extends Table[User](tag, "user") {
+    class UserTable3(tag: Tag) extends Table[User](tag, "user") {
       def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
       def name = column[String]("name")
       def * = (name, id) <> (User.tupled, User.unapply)
@@ -250,7 +257,7 @@ to a value of the column's type parameter.
 For example, a column of `Rep[String]` maps a value of type `String`:
 
     ```scala
-    final class MyTable(tag: Tag) extends Table[String](tag, "mytable") {
+    class MyTable1(tag: Tag) extends Table[String](tag, "mytable") {
       def column1 = column[String]("column1")
       def * = column1
     }
@@ -261,7 +268,7 @@ For example, a column of `Rep[String]` maps a value of type `String`:
 For example, `(Rep[String], Rep[Int])` is mapped to `(String, Int)`:
 
     ```scala
-    final class MyTable(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
+    class MyTable2(tag: Tag) extends Table[(String, Int)](tag, "mytable") {
       def column1 = column[String]("column1")
       def column2 = column[Int]("column2")
       def * = (column1, column2)
@@ -278,8 +285,7 @@ and Slick builds the resulting shape. Here our `B` is the `User` case class:
     ```scala
     case class User(name: String, id: Long)
 
-    final class UserTable(tag: Tag) extends Table[User](tag, "user") {
-    class UserTable(tag: Tag) extends Table[User](tag, "user") {
+    class UserTable3(tag: Tag) extends Table[User](tag, "user") {
       def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
       def name = column[String]("name")
       def * = (name, id) <> (User.tupled, User.unapply)
@@ -307,7 +313,7 @@ The two arguments to `<>` are:
 
 We can supply these functions by hand if we want:
 
-```scala mdoc
+```scala mdoc:silent
 def intoUser(pair: (String, Long)): User =
   User(pair._1, pair._2)
 
@@ -317,8 +323,8 @@ def fromUser(user: User): Option[(String, Long)] =
 
 and write:
 
-```scala mdoc
-class AlternativeUserTable(tag: Tag) extends Table[User](tag, "user") {
+```scala mdoc:silent
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
   def * = (name, id) <> (intoUser, fromUser)
@@ -344,8 +350,8 @@ However, case classes differ from tuples in two important respects.
 First, case classes have field names, which improves code readability:
 
 ```scala mdoc
-val user = User("Dave", 0L)
-user.name // case class field access
+val dave = User("Dave", 0L)
+dave.name // case class field access
 
 val tuple = ("Dave", 0L)
 tuple._1 // tuple field access
@@ -354,14 +360,15 @@ tuple._1 // tuple field access
 Second, case classes have types that distinguish them
 from other case classes with the same field types:
 
-```scala mdoc
+```scala mdoc:fail
 case class Dog(name: String, id: Long)
 
-val daveUser = User("Dave", 0L)
-val lassieDog  = Dog("Lassie", 0L)
-```
-```scala mdoc:fail
-daveUser == lassieDog // different types
+val user = User("Dave", 0L)
+val dog  = Dog("Lassie", 0L)
+
+
+// Different types (a warning, but when compiled -Xfatal-warnings....)
+user == dog
 ```
 
 As a general rule, we recommend using case classes to represent database rows
@@ -387,7 +394,7 @@ to support tables with very large numbers of columns.
 To motivate this, let's consider a poorly-designed legacy table
 for storing product attributes:
 
-```scala
+```scala mdoc
 case class Attr(id: Long, productId: Long /* ...etc */)
 
 class AttrTable(tag: Tag) extends Table[Attr](tag, "attrs") {
@@ -476,6 +483,10 @@ maps values of type `Int :: String :: HNil`.
 We can use an `HList` to map the large table in our example above.
 Here's what the default projection looks like:
 
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+```
+
 ```scala mdoc:silent
 import slick.collection.heterogeneous.{ HList, HCons, HNil }
 import slick.collection.heterogeneous.syntax._
@@ -550,7 +561,7 @@ instances of `AttrHList`. For example:
 ```scala mdoc
 import scala.concurrent.ExecutionContext.Implicits.global
 
-val hlistProgram: DBIO[Seq[AttrHList]] = for {
+val program: DBIO[Seq[AttrHList]] = for {
   _ <- attributes.schema.create
   _ <- attributes += 0L :: 100L ::
         "name1"  :: 1  :: "name2"  :: 2  :: "name3"  :: 3  ::
@@ -562,7 +573,7 @@ val hlistProgram: DBIO[Seq[AttrHList]] = for {
 } yield rows
 
 
-val myAttrs: AttrHList = exec(hlistProgram).head
+val myAttrs: AttrHList = exec(program).head
 ```
 
 We can extract values from our query results `HList` using pattern matching
@@ -586,12 +597,24 @@ but otherwise this approach is the same as we've seen for tuples.
 
 However, the `mapTo` macro will generate the mapping between an HList and a case class for us:
 
-```scala mdoc
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import slick.collection.heterogeneous.{ HList, HCons, HNil }
+import slick.collection.heterogeneous.syntax._
+import scala.language.postfixOps
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
+
+```scala mdoc:silent
 // A case class for our very wide row:
 case class Attrs(id: Long, productId: Long,
   name1: String, value1: Int, name2: String, value2: Int /* etc */)
 
-final class SmallAttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
+class AttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
   def id        = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def productId = column[Long]("product_id")
   def name1     = column[String]("name1")
@@ -607,7 +630,7 @@ final class SmallAttrTable(tag: Tag) extends Table[Attrs](tag, "attributes") {
   ).mapTo[Attrs]
 }
 
-val smallAttributes = TableQuery[SmallAttrTable]
+val attributes = TableQuery[AttrTable]
 ```
 
 Notice the pattern is:
@@ -621,9 +644,9 @@ We can query and modify the data as normal using case classes:
 
 ```scala mdoc
 val program: DBIO[Seq[Attrs]] = for {
-  _    <- smallAttributes.schema.create
-  _    <- smallAttributes += Attrs(0L, 100L, "n1", 1, "n2", 2 /* etc */)
-  rows <- smallAttributes.filter(_.productId === 100L).result
+  _    <- attributes.schema.create
+  _    <- attributes += Attrs(0L, 100L, "n1", 1, "n2", 2 /* etc */)
+  rows <- attributes.filter(_.productId === 100L).result
 } yield rows
 
 exec(program)
@@ -663,37 +686,46 @@ you want a nullable column you model it naturally in Scala as an `Option[T]`.
 
 Let's create a variant of `User` with an optional email address:
 
-```scala mdoc
-case class UserO(name: String, email: Option[String] = None, id: Long = 0L)
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
 
-class UserTableO(tag: Tag) extends Table[UserO](tag, "user_o") {
+```scala mdoc
+case class User(name: String, email: Option[String] = None, id: Long = 0L)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name  = column[String]("name")
   def email = column[Option[String]]("email")
 
-  def * = (name, email, id).mapTo[UserO]
+  def * = (name, email, id).mapTo[User]
 }
 
-lazy val usersO = TableQuery[UserTableO]
-lazy val insertUserO = usersO returning usersO.map(_.id)
+lazy val users = TableQuery[UserTable]
+lazy val insertUser = users returning users.map(_.id)
 ```
 
 We can insert users with or without an email address:
 
 ```scala mdoc
-val insertProg = (
-  usersO.schema.create >>
-  (usersO += User("Dave", Some("dave@example.org"))) >>
-  (usersO += User("HAL"))
+val program = (
+  users.schema.create >>
+  (users += User("Dave", Some("dave@example.org"))) >>
+  (users += User("HAL"))
 )
 
-exec(insertProg)
+exec(program)
 ```
 
 and retrieve them again with a select query:
 
 ```scala mdoc
-exec(usersO.result).foreach(println)
+exec(users.result).foreach(println)
 ```
 
 So far, so ordinary.
@@ -703,7 +735,7 @@ You might expect the following to find the one row that has no email address:
 ```scala mdoc
 // Don't do this
 val none: Option[String] = None
-val broken = exec(usersO.filter(_.email === none).result)
+val badQuery = exec(users.filter(_.email === none).result)
 ```
 
 Despite the fact that we do have
@@ -743,11 +775,10 @@ Scala Code              Operand Column Types               Result Type        SQ
   The `?` method is described in the next section.
 
 
-
 We can fix our query by replacing our equality check with `isEmpty`:
 
 ```scala mdoc
-val myUsers = exec(usersO.filter(_.email.isEmpty).result)
+val myUsers = exec(users.filter(_.email.isEmpty).result)
 ```
 
 which translates to the following SQL:
@@ -801,18 +832,27 @@ This approach has advantages and disadvantages:
 Let's look at the changes we need to make to our `UserTable`
 to make this work:
 
-```scala mdoc
-case class UserOptId(id: Option[Long], name: String)
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
 
-class UserTableOptId(tag: Tag) extends Table[UserOptId](tag, "user") {
+```scala mdoc
+case class User(id: Option[Long], name: String)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name   = column[String]("name")
 
-  def * = (id.?, name).mapTo[UserOptId]
+  def * = (id.?, name).mapTo[User]
 }
 
-lazy val usersOptId = TableQuery[UserTable]
-lazy val insertUserOptId = usersOptId returning usersOptId.map(_.id)
+lazy val users = TableQuery[UserTable]
+lazy val insertUser = users returning users.map(_.id)
 ```
 
 The key thing to notice here is that
@@ -900,7 +940,7 @@ ADD CONSTRAINT "room_user_pk" PRIMARY KEY("room", "user")
 Using the `occupant` table is no different from any other table:
 
 ```scala mdoc
-val occupantProg: DBIO[Int] = for {
+val program: DBIO[Int] = for {
    _        <- rooms.schema.create
    _        <- occupants.schema.create
   elenaId   <- insertUser += User(None, "Elena")
@@ -909,7 +949,7 @@ val occupantProg: DBIO[Int] = for {
   rowsAdded <- occupants += Occupant(airLockId, elenaId)
 } yield rowsAdded
 
-exec(occupantProg)
+exec(program)
 ```
 
 ```scala mdoc:invisible
@@ -978,22 +1018,22 @@ We do this by changing the definition of `message` to reference
 the `id` of its sender instead of their name:
 
 ```scala mdoc
-case class MessageFK(
+case class Message(
   senderId : Long,
   content  : String,
   id       : Long = 0L)
 
-class MessageTableFK(tag: Tag) extends Table[MessageFK](tag, "message") {
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id       = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def senderId = column[Long]("sender")
   def content  = column[String]("content")
 
-  def * = (senderId, content, id).mapTo[MessageFK]
+  def * = (senderId, content, id).mapTo[Message]
 
   def sender = foreignKey("sender_fk", senderId, users)(_.id)
 }
 
-lazy val messagesFK = TableQuery[MessageTableFK]
+lazy val messages = TableQuery[MessageTable]
 ```
 
 The column for the sender is now a `Long` instead of a `String`.
@@ -1032,7 +1072,7 @@ class AltMsgTable(tag: Tag) extends Table[Message](tag, "message") {
   def senderId = column[Long]("sender")
   def content  = column[String]("content")
 
-  def * = (senderId, content, id).mapTo[MessageFK]
+  def * = (senderId, content, id).mapTo[Message]
 
   def sender = foreignKey("sender_fk", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
 }
@@ -1239,6 +1279,14 @@ but it's painless for us to implement it via Slick's
 [^time]: However since Slick 3.3.0 there is built-in support for `java.time.Instant`, `LocalDate`, `LocalTime`, `LocalDateTime`, `OffsetTime`, `OffsetDateTime`, and `ZonedDateTime`.
 You'll very likely want to use these over the older Joda Time library.
 
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
 
 ```scala mdoc:silent
 import java.sql.Timestamp
@@ -1266,14 +1314,14 @@ What we're providing here is two functions to `MappedColumnType.base`:
 Once we have declared this custom column type,
 we are free to create columns containing `DateTimes`:
 
-```scala mdoc
-case class TimelyMessage(
+```scala mdoc:silent
+case class Message(
   senderId  : Long,
   content   : String,
   timestamp : DateTime,
   id        : Long = 0L)
 
-class TimelyMessageTable(tag: Tag) extends Table[TimelyMessage](tag, "message") {
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
   // Bring our implicit conversions into scope:
   import CustomColumnTypes._
@@ -1283,11 +1331,50 @@ class TimelyMessageTable(tag: Tag) extends Table[TimelyMessage](tag, "message") 
   def content   = column[String]("content")
   def timestamp = column[DateTime]("timestamp")
 
-  def * = (senderId, content, timestamp, id).mapTo[TimelyMessage]
+  def * = (senderId, content, timestamp, id).mapTo[Message]
 }
 
-lazy val timelyMessages = TableQuery[TimelyMessageTable]
-lazy val insertTimelyMessage = timelyMessages returning timelyMessages.map(_.id)
+lazy val messages = TableQuery[MessageTable]
+lazy val insertMessage = messages returning messages.map(_.id)
+```
+
+```scala mdoc:invisible
+// Re-establish scenario after last reset
+
+case class Occupant(roomId: Long, userId: Long)
+
+class OccupantTable(tag: Tag) extends Table[Occupant](tag, "occupant") {
+  def roomId = column[Long]("room")
+  def userId = column[Long]("user")
+
+  def pk = primaryKey("room_user_pk", (roomId, userId))
+
+  def * = (roomId, userId).mapTo[Occupant]
+}
+
+lazy val occupants = TableQuery[OccupantTable]
+
+case class User(id: Option[Long], name: String)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name   = column[String]("name")
+
+  def * = (id.?, name).mapTo[User]
+}
+
+lazy val users = TableQuery[UserTable]
+lazy val insertUser = users returning users.map(_.id)
+
+case class Room(title: String, id: Long = 0L)
+
+class RoomTable(tag: Tag) extends Table[Room](tag, "room") {
+ def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
+ def title = column[String]("title")
+ def * = (title, id).mapTo[Room]
+}
+
+lazy val rooms = TableQuery[RoomTable]
 ```
 
 <div class="callout callout-info">
@@ -1314,28 +1401,28 @@ exec(schemas.drop)
 </div>
 
 
-Our modified definition of `MessageTable` into `TimelyMessageTable` allows
+Our modified definition of `MessageTable` allows
 us to work directly with `Message`s containing `DateTime` timestamps,
 without having to do cumbersome type conversions by hand:
 
 ```scala mdoc
-val timelyProg = for {
-  _ <- timelyMessages.schema.create
+val program = for {
+  _ <- messages.schema.create
   _ <- users.schema.create
   daveId <- insertUser += User(None, "Dave")
-  msgId  <- insertTimelyMessage += TimelyMessage(
+  msgId  <- insertMessage += Message(
     daveId,
     "Open the pod bay doors, HAL.",
     DateTime.now)
 } yield msgId
 
-val msgId = exec(timelyProg)
+val msgId = exec(program)
 ```
 
 Fetching the database row will automatically convert the `timestamp` field into the `DateTime` value we expect:
 
 ```scala mdoc
-exec(timelyMessages.filter(_.id === msgId).result)
+exec(messages.filter(_.id === msgId).result)
 ```
 
 This model of working with semantic types is
@@ -1345,6 +1432,15 @@ to help reduce bugs and let Slick take care of the type conversions.
 
 
 ### Value Classes {#value-classes}
+
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
 
 We are currently using `Long`s to model primary keys.
 Although this is a good choice at a database level,
@@ -1361,8 +1457,8 @@ The essential approach is to model primary keys
 using [value classes][link-scala-value-classes]:
 
 ```scala mdoc
-case class SimpleMessagePK(value: Long) extends AnyVal
-case class SimpleUserPK(value: Long) extends AnyVal
+case class MessagePK(value: Long) extends AnyVal
+case class UserPK(value: Long) extends AnyVal
 ```
 
 A value class is a compile-time wrapper around a value.
@@ -1377,16 +1473,20 @@ This is the same process we used for Joda Time `DateTime`s:
 
 ```scala mdoc
 implicit val messagePKColumnType =
-  MappedColumnType.base[SimpleMessagePK, Long](_.value, SimpleMessagePK(_))
+  MappedColumnType.base[MessagePK, Long](_.value, MessagePK(_))
 
 implicit val userPKColumnType =
-   MappedColumnType.base[SimpleUserPK, Long](_.value, SimpleUserPK(_))
+   MappedColumnType.base[UserPK, Long](_.value, UserPK(_))
 ```
 
 Defining all these type class instances can be time consuming,
 especially if we're defining one for every table in our schema.
 Fortunately, Slick provides a short-hand called `MappedTo`
 to take care of this for us:
+
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+```
 
 ```scala mdoc
 case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
@@ -1407,39 +1507,50 @@ Value classes are a great fit for the `MappedTo` pattern.
 Let's redefine our tables to use our custom primary key types.
 We will convert `User`...
 
-```scala mdoc
-case class UserTypedPK(name: String, id: UserPK = UserPK(0L))
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
+case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
+```
 
-class UserTableTypedPK(tag: Tag) extends Table[UserTypedPK](tag, "user") {
+```scala mdoc
+case class User(name: String, id: UserPK = UserPK(0L))
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
-  def * = (name, id).mapTo[UserTypedPK]
+  def * = (name, id).mapTo[User]
 }
 
-lazy val usersTypedPK = TableQuery[UserTable]
-lazy val insertUser = usersTypedPK returning usersTypedPK.map(_.id)
+lazy val users = TableQuery[UserTable]
+lazy val insertUser = users returning users.map(_.id)
 ```
 
 ...and `Message`:
 
 ```scala mdoc
-case class MessageTypedPK(
+case class Message(
   senderId : UserPK,
   content  : String,
   id       : MessagePK = MessagePK(0L))
 
-class MessageTableTypedPK(tag: Tag) extends Table[MessageTypedPK](tag, "message") {
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
   def id        = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
   def senderId  = column[UserPK]("sender")
   def content   = column[String]("content")
 
-  def * = (senderId, content, id).mapTo[MessageTypedPK]
+  def * = (senderId, content, id).mapTo[Message]
 
-  def sender = foreignKey("sender_fk", senderId, usersTypedPk) (_.id, onDelete=ForeignKeyAction.Cascade)
+  def sender = foreignKey("sender_fk", senderId, users) (_.id, onDelete=ForeignKeyAction.Cascade)
 }
 
-lazy val messagesTypedPK = TableQuery[MessageTableTypedPK]
-lazy val insertMessage = messagesTypedPK returning messagesTypedPK.map(_.id)
+lazy val messages      = TableQuery[MessageTable]
+lazy val insertMessage = messages returning messages.map(_.id)
 ```
 
 Notice how we're able to be explicit:
@@ -1449,13 +1560,13 @@ and the `Message.id` is a `MessagePK`.
 We can lookup values if we have the right kind of key:
 
 ```scala mdoc
-usersTypedPK.filter(_.id === UserPK(0L))
+users.filter(_.id === UserPK(0L))
 ```
 
 ...but if we accidentally try to mix our primary keys, we'll find we cannot:
 
 ```scala mdoc:fail
-usersTypedPK.filter(_.id === MessagePK(0L))
+users.filter(_.id === MessagePK(0L))
 ```
 
 Values classes are a low-cost way to make code safer and more legible.
@@ -1464,24 +1575,33 @@ however for a large database it can still be an overhead.
 We can either use code generation to overcome this,
 or generalise our primary key type by making it generic:
 
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
+
 ```scala mdoc
 case class PK[A](value: Long) extends AnyVal with MappedTo[Long]
 
-case class UserWithPK(
+case class User(
   name : String,
-  id   : PK[UserWithPKTable])
+  id   : PK[UserTable])
 
-class UserWithPKTable(tag: Tag) extends Table[UserWithPK](tag, "user") {
-  def id    = column[PK[UserWithPKTable]]("id", O.AutoInc, O.PrimaryKey)
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id    = column[PK[UserTable]]("id", O.AutoInc, O.PrimaryKey)
   def name  = column[String]("name")
 
-  def * = (name, id).mapTo[UserWithPK]
+  def * = (name, id).mapTo[User]
 }
 
-lazy val usersWithPK = TableQuery[UserWithPLTable]
+lazy val users = TableQuery[UserTable]
 
 val exampleQuery =
-    usersWithPK.filter(_.id === PK[UserTable](0L))
+  users.filter(_.id === PK[UserTable](0L))
 ```
 
 With this approach we achieve type safety
@@ -1495,6 +1615,28 @@ This is enormously valuable and should not be overlooked.
 
 
 ### Modelling Sum Types
+
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
+case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
+
+case class User(name: String, id: UserPK = UserPK(0L))
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def * = (name, id).mapTo[User]
+}
+
+lazy val users = TableQuery[UserTable]
+```
 
 We've used case classes extensively for modelling data.
 Using the language of _algebraic data types_,
@@ -1644,7 +1786,7 @@ The most important points are:
 - We can represent rows in a variety of ways: tuples, `HList`s,
   and arbitrary classes and case classes via the `mapTo` macro.
 
-- If we need more control over a mapping from columns to other data structures, the `<>` method is available.
+- If we need more control over a mapping from columns to other data structures, the `<>` method is avaiilable.
 
 - We can represent individual values in columns
   using arbitrary Scala data types
@@ -1692,16 +1834,25 @@ and list rows matching that value.
 
 The method signature is:
 
-```scala mdoc
+```scala
 def filterByEmail(email: Option[String]) = ???
 ```
 
-Assume we only have two user records: one with an email address and one with no email address:
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
+
+Assume we only have two user records, one with an email address and one with no email address:
 
 ```scala mdoc:silent
 case class User(name: String, email: Option[String], id: Long = 0)
 
-class UserTable(tag: Tag) extends Table[User](tag, "filtering") {
+class UserTable(tag: Tag) extends Table[User](tag, "filtering_3") {
   def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name   = column[String]("name")
   def email  = column[Option[String]]("email")
@@ -1711,13 +1862,13 @@ class UserTable(tag: Tag) extends Table[User](tag, "filtering") {
 
 lazy val users = TableQuery[UserTable]
 
-val setupUsers = DBIO.seq(
+val setup = DBIO.seq(
   users.schema.create,
   users += User("Dave", Some("dave@example.org")),
   users += User("HAL ", None)
 )
 
-exec(setupUsers)
+exec(setup)
 ```
 
 We want `filterByEmail(Some("dave@example.org"))` to produce one row,
@@ -1752,6 +1903,35 @@ exec(
 
 
 ### Matching or Undecided
+
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class User(name: String, email: Option[String], id: Long = 0)
+
+class UserTable(tag: Tag) extends Table[User](tag, "filtering_2") {
+  def id     = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name   = column[String]("name")
+  def email  = column[Option[String]]("email")
+
+  def * = (name, email, id).mapTo[User]
+}
+
+lazy val users = TableQuery[UserTable]
+
+val setup = DBIO.seq(
+  users.schema.create,
+  users += User("Dave", Some("dave@example.org")),
+  users += User("HAL ", None)
+)
+
+exec(setup)
+```
 
 Not everyone has an email address, so perhaps when filtering it would be safer to exclude rows that don't match our filter criteria.
 That is, keep `NULL` addresses in the results.
@@ -1803,11 +1983,52 @@ But you could switch on the value of `email` and do something different, as we d
 
 ### Enforcement
 
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class MessagePK(value: Long) extends AnyVal with MappedTo[Long]
+case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
+
+case class User(name: String, id: UserPK = UserPK(0L))
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
+  def name = column[String]("name")
+  def * = (name, id).mapTo[User]
+}
+
+lazy val users = TableQuery[UserTable]
+
+case class Message(
+  senderId : UserPK,
+  content  : String,
+  id       : MessagePK = MessagePK(0L))
+
+class MessageTable(tag: Tag) extends Table[Message](tag, "msg_table") {
+  def id       = column[MessagePK]("id", O.PrimaryKey, O.AutoInc)
+  def senderId = column[UserPK]("sender")
+  def content  = column[String]("content")
+
+  def * = (senderId, content, id).mapTo[Message]
+
+  def sender = foreignKey("sender_fk2", senderId, users)(_.id, onDelete=ForeignKeyAction.Cascade)
+}
+
+lazy val messages = TableQuery[MessageTable]
+
+exec(messages.schema.create)
+```
+
 What happens if you try adding a message for a user ID of `3000`?
 
 For example:
 
-```scala mdoc:silent
+```scala
 messages += Message(UserPK(3000L), "Hello HAL!")
 ```
 
@@ -1849,9 +2070,26 @@ Modify the `user` table to include a `UserRole`.
 In the database store the role as a single character.
 
 <div class="solution">
+
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+case class UserPK(value: Long) extends AnyVal with MappedTo[Long]
+```
+
 The first step is to supply an implicit to and from the database values:
 
 ```scala mdoc
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+
 import UserRole._
 implicit val userRoleMapper =
   MappedColumnType.base[UserRole, String](_.toString, UserRole.withName(_))
@@ -1859,22 +2097,22 @@ implicit val userRoleMapper =
 
 Then we can use the `UserRole` in the table definition:
 
-```scala mdoc:silent
-case class UserWithRole(
+```scala mdoc
+case class User(
   name     : String,
   userRole : UserRole = Regular,
   id       : UserPK = UserPK(0L)
 )
 
-class UserWithRoleTable(tag: Tag) extends Table[UserWithRole](tag, "user_with_role") {
+class UserTable(tag: Tag) extends Table[User](tag, "user_with_role") {
   def id   = column[UserPK]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
   def role = column[UserRole]("role", O.Length(1,false))
 
-  def * = (name, role, id).mapTo[UserWithRole]
+  def * = (name, role, id).mapTo[User]
 }
 
-lazy val usersWithRole = TableQuery[UserWithRoleTable]
+lazy val users = TableQuery[UserTable]
 ```
 
 We've made the `role` column exactly 1 character in size.
@@ -1882,6 +2120,22 @@ We've made the `role` column exactly 1 character in size.
 
 
 ### Alternative Enumerations
+
+```scala mdoc:reset-object:invisible
+import slick.jdbc.H2Profile.api._
+object UserRole extends Enumeration {
+  type UserRole = Value
+  val Owner   = Value("O")
+  val Regular = Value("R")
+}
+import UserRole._
+
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter05")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+import scala.concurrent.ExecutionContext.Implicits.global
+```
 
 Modify your solution to the previous exercise to store the value in the database as an integer.
 
@@ -1891,7 +2145,7 @@ If you see an unrecognized user role value, default it to a `UserRole.Regular`.
 The only change to make is to the mapper, to go from a `UserRole` and `String`, to a `UserRole` and `Int`:
 
 ```scala mdoc
-implicit val userRoleMapper =
+implicit val userRoleIntMapper =
   MappedColumnType.base[UserRole, Int](
     _.id,
     v => UserRole.values.find(_.id == v) getOrElse Regular
@@ -1950,7 +2204,7 @@ Here are the case classes to use:
 ```scala mdoc:silent
 case class EmailContact(name: String, email: String)
 case class Address(street: String, city: String, country: String)
-case class UserTree(contact: EmailContact, address: Address, id: Long = 0L)
+case class User(contact: EmailContact, address: Address, id: Long = 0L)
 ```
 
 You'll find a definition of `UserTable` that you can copy and paste in the example code in the file _chapter-05/src/main/scala/nested_case_class.scala_.
@@ -1960,7 +2214,7 @@ You'll find a definition of `UserTable` that you can copy and paste in the examp
 In our huge legacy table we will use custom functions with `<>`...
 
 ```scala mdoc
-final class LegacyUserTable(tag: Tag) extends Table[UserTree](tag, "legacy") {
+class LegacyUserTable(tag: Tag) extends Table[User](tag, "legacy") {
   def id           = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name         = column[String]("name")
   def age          = column[Int]("age")
@@ -1991,14 +2245,14 @@ final class LegacyUserTable(tag: Tag) extends Table[UserTree](tag, "legacy") {
   type Row = (String, String, String, String, String, Long)
 
   // One function from Row to User
-  def pack(row: Row): UserTree = UserTree(
+  def pack(row: Row): User = User(
     EmailContact(row._1, row._2),
     Address(row._3, row._4, row._5),
     row._6
   )
 
   // Another method from User to Row:
-  def unpack(user: UserTree): Option[Row] = Some(
+  def unpack(user: User): Option[Row] = Some(
     (user.contact.name, user.contact.email, user.address.street,
      user.address.city, user.address.country, user.id)
   )
@@ -2011,11 +2265,12 @@ lazy val legacyUsers = TableQuery[LegacyUserTable]
 
 We can insert and query as normal:
 
+
 ```scala mdoc
 exec(legacyUsers.schema.create)
 
 exec(
-  legacyUsers += UserTree(
+  legacyUsers += User(
     EmailContact("Dr. Dave Bowman", "dave@example.org"),
     Address("123 Some Street", "Any Town", "USA")
    )
