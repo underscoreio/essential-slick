@@ -162,10 +162,11 @@ import scala.concurrent.duration._
 val db = Database.forConfig("chapter02")
 
 def exec[T](action: DBIO[T]): T =
-  Await.result(db.run(action), 2.seconds)
+  Await.result(db.run(action), 4.seconds)
 ```
 
-This is included in the example source code for this chapter, in the `main.scala` file. You can run these examples in the REPL to follow along with the text.
+This is included in the example source code for this chapter, in the `main.scala` file.
+You can run these examples in the REPL to follow along with the text.
 
 We have also set up the schema and sample data:
 
