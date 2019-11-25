@@ -31,11 +31,11 @@ and we will join across these tables to find out who sent a message.
 
 We'll start with `User`...
 
-```tut:silent
+```scala mdoc:silent
 import slick.jdbc.H2Profile.api._
 import scala.concurrent.ExecutionContext.Implicits.global
 ```
-```tut:book
+```scala mdoc
 case class User(name: String, id: Long = 0L)
 
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
@@ -51,11 +51,9 @@ lazy val insertUser = users returning users.map(_.id)
 
 ...and add `Message`:
 
-```scala
+```scala mdoc:silent
 // Note that messages have senders, which are references to users
-```
-```tut:book
-final case class Message(
+case class Message(
   senderId : Long,
   content  : String,
   id       : Long = 0L)
@@ -73,18 +71,16 @@ lazy val messages = TableQuery[MessageTable]
 lazy val insertMessages = messages returning messages.map(_.id)
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 import scala.concurrent.{Await,Future}
 import scala.concurrent.duration._
-
 val db = Database.forConfig("chapter06")
-
 def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 2.seconds)
 ```
 
 We'll populate the database with the usual movie script:
 
-```tut:book
+```scala mdoc
 def freshTestData(daveId: Long, halId: Long) = Seq(
   Message(daveId, "Hello, HAL. Do you read me, HAL?"),
   Message(halId,  "Affirmative, Dave. I read you."),
@@ -108,8 +104,8 @@ Later in this chapter we'll add more tables for more complex joins.
 
 We have seen an example of monadic joins in the previous chapter:
 
-```tut:book
-val q = for {
+```scala mdoc
+val monadicFor = for {
   msg <- messages
   usr <- msg.sender
 } yield (usr.name, msg.content)
@@ -121,8 +117,8 @@ Notice how we are using `msg.sender` which is defined as a foreign key in the `M
 
 We can express the same query without using a for comprehension:
 
-```tut:book
-val q =
+```scala mdoc
+val monadicDesugar =
   messages flatMap { msg =>
     msg.sender.map { usr =>
       (usr.name, msg.content)
@@ -132,7 +128,7 @@ val q =
 
 Either way, when we run the query Slick generates something like the following SQL:
 
-``` sql
+```sql
 select
   u."name", m."content"
 from
@@ -159,8 +155,8 @@ runMain JoinsExample
 Even if we don't have a foreign key, we can use the same style
 and control the join ourselves:
 
-```tut:book
-val q = for {
+```scala mdoc
+val monadicFilter = for {
   msg <- messages
   usr <- users if usr.id === msg.senderId
 } yield (usr.name, msg.content)
@@ -193,16 +189,16 @@ But as a quick taste of the syntax,
 here's how we can join the `messages` table
 to the `users` on the `senderId`:
 
-```tut:book
-val q: Query[(MessageTable, UserTable), (Message, User), Seq] =
+```scala mdoc
+val applicative1: Query[(MessageTable, UserTable), (Message, User), Seq] =
   messages join users on (_.senderId === _.id)
 ```
 
 As you can see, this code produces be a query of `(MessageTable, UserTable)`.
 If we want to, we can be more explicit about the values used in the `on` part:
 
-```tut:book
-val q: Query[(MessageTable, UserTable), (Message, User), Seq] =
+```scala mdoc
+val applicative2: Query[(MessageTable, UserTable), (Message, User), Seq] =
   messages join users on ( (m: MessageTable, u: UserTable) =>
     m.senderId === u.id
    )
@@ -211,15 +207,15 @@ val q: Query[(MessageTable, UserTable), (Message, User), Seq] =
 
 We can also write the join condition using pattern matching:
 
-```tut:book
-val q: Query[(MessageTable, UserTable), (Message, User), Seq] =
+```scala mdoc
+val applicative3: Query[(MessageTable, UserTable), (Message, User), Seq] =
   messages join users on { case (m, u) =>  m.senderId === u.id }
 ```
 
 Joins like this form queries that we convert to actions the usual way:
 
-```tut:book
-val action: DBIO[Seq[(Message, User)]] = q.result
+```scala mdoc
+val action: DBIO[Seq[(Message, User)]] = applicative3.result
 
 exec(action)
 ```
@@ -227,6 +223,28 @@ exec(action)
 The end result of `Seq[(Message, User)]` is each message paired with the corresponding user.
 
 ### More Tables, Longer Joins
+
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class User(name: String, id: Long = 0L)
+
+class UserTable(tag: Tag) extends Table[User](tag, "user") {
+  def id    = column[Long]("id", O.PrimaryKey, O.AutoInc)
+  def name  = column[String]("name")
+
+  def * = (name, id).mapTo[User]
+}
+
+lazy val users = TableQuery[UserTable]
+lazy val insertUser = users returning users.map(_.id)
+
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+val db = Database.forConfig("chapter06")
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 2.seconds)
+```
 
 In the rest of this section we'll work through a variety of more involved joins.
 You may find it useful to refer to figure 6.1, which sketches the schema we're using in this chapter.
@@ -241,7 +259,7 @@ Also, a _message_ can be in a _room_, which is a join to the _room_ table.
 For now we will add one more table.
 This is a `Room` that a `User` can be in, giving us channels for our chat conversations:
 
-```tut:book
+```scala mdoc:silent
 case class Room(title: String, id: Long = 0L)
 
 class RoomTable(tag: Tag) extends Table[Room](tag, "room") {
@@ -256,8 +274,8 @@ lazy val insertRoom = rooms returning rooms.map(_.id)
 
 And we'll modify a message so it can optionally be attached to a room:
 
-```tut:book
-final case class Message(
+```scala mdoc:silent
+case class Message(
   senderId : Long,
   content  : String,
   roomId   : Option[Long] = None,
@@ -279,7 +297,7 @@ lazy val insertMessages = messages returning messages.map(_.id)
 
 We'll reset our database and populate it with some messages happening in the "Air Lock" room:
 
-```tut:book
+```scala mdoc
 exec(messages.schema.drop)
 
 val daveId = 1L
@@ -318,7 +336,7 @@ If there are rows that don't match up, they won't appear in the join results.
 
 Let's look up messages that have a sender in the user table, and a room in the rooms table:
 
-```tut:book
+```scala mdoc
 val usersAndRooms =
   messages.
   join(users).on(_.senderId === _.id).
@@ -335,8 +353,8 @@ Pattern matching is our preferred syntax for unpacking these tuples
 because it explicitly clarifies the structure of the query.
 However, you may see this more concisely expressed as a binary function for both joins:
 
-```tut:book
-val usersAndRooms =
+```scala mdoc
+val usersAndRoomsBinaryFunction =
   messages.
   join(users).on(_.senderId  === _.id).
   join(rooms).on(_._1.roomId === _.id)
@@ -348,8 +366,8 @@ The result is the same either way.
 
 We can turn this query into an action as it stands:
 
-```tut:book
-val action: DBIO[Seq[((Message, User), Room)]] =
+```scala mdoc
+val usersAndRoomQuery: DBIO[Seq[((Message, User), Room)]] =
   usersAndRooms.result
 ```
 
@@ -361,14 +379,14 @@ select the columns we want.
 Rather than returning the table classes, we can pick out just the information we want.
 Perhaps the message, the name of the sender, and the title of the room:
 
-```tut:book
-val usersAndRooms =
+```scala mdoc
+val usersAndRoomTitles =
   messages.
   join(users).on(_.senderId  === _.id).
   join(rooms).on { case ((msg,user), room) => msg.roomId === room.id }.
   map { case ((msg, user), room) => (msg.content, user.name, room.title) }
 
-val action: DBIO[Seq[(String, String, String)]] = usersAndRooms.result
+val action: DBIO[Seq[(String, String, String)]] = usersAndRoomTitles.result
 
 exec(action).foreach(println)
 ```
@@ -386,18 +404,14 @@ Perhaps we want to use our join for the Air Lock room:
 
 ```scala
 // The query we've already seen...
-```
-```tut:book
 val usersAndRooms =
   messages.
   join(users).on(_.senderId === _.id).
   join(rooms).on { case ((msg,user), room) => msg.roomId === room.id }
 ```
 
-```scala
+```scala mdoc
 // ...modified to focus on one room:
-```
-```tut:book
 val airLockMsgs =
   usersAndRooms.
   filter { case (_, room) => room.title === "Air Lock" }
@@ -439,7 +453,7 @@ plus data from the rooms table for those messages that are in a room.
 
 The join would be:
 
-```tut:book
+```scala mdoc
 val left = messages.joinLeft(rooms).on(_.roomId === _.id)
 ```
 
@@ -464,8 +478,8 @@ has made the `Room` side optional for us automatically.
 If we want to just pick out the message content and the room title,
 we can `map` over the query:
 
-```tut:book
-val left =
+```scala mdoc
+val leftMapped =
   messages.
   joinLeft(rooms).on(_.roomId === _.id).
   map { case (msg, room) => (msg.content, room.map(_.title)) }
@@ -487,8 +501,8 @@ Query[
 The types `String` and `Option[String]` correspond to
 the message content and room title:
 
-```tut:book
-exec(left.result).foreach(println)
+```scala mdoc
+exec(leftMapped.result).foreach(println)
 ```
 
 ### Right Join
@@ -505,7 +519,7 @@ We can demonstrate this by reversing our left join example.
 We'll ask for all rooms together with private messages have they received.
 We'll use for comprehension syntax this time for variety:
 
-```tut:book
+```scala mdoc
 val right = for {
   (msg, room) <- messages joinRight (rooms) on (_.roomId === _.id)
 } yield (room.title, msg.map(_.content))
@@ -513,7 +527,7 @@ val right = for {
 
 Let's create another room and see how the query works out:
 
-```tut:book
+```scala mdoc
 exec(rooms += Room("Pod Bay"))
 
 exec(right.result).foreach(println)
@@ -528,7 +542,7 @@ From our schema an example would be the title of all rooms and messages in those
 Either side could be `NULL` because messages don't have to be in rooms,
 and rooms don't have to have any messages.
 
-```tut:book
+```scala mdoc
 val outer = for {
   (room, msg) <- rooms joinFull messages on (_.id === _.roomId)
 } yield (room.map(_.title), msg.map(_.content))
@@ -545,7 +559,7 @@ Query[
 
 As you can see from the results...
 
-```tut:book
+```scala mdoc
 exec(outer.result).foreach(println)
 ```
 ...some rooms have many messages, some none, some messages have rooms, and some do not.
@@ -573,7 +587,7 @@ the cross join produces 50 rows.
 
 An example:
 
-```tut:book
+```scala mdoc
 val cross = messages joinLeft users
 ```
 
@@ -584,7 +598,7 @@ Zip joins are equivalent to `zip` on a Scala collection.
 Recall that the `zip` in the collections library operates on two lists and
 returns a list of pairs:
 
-```tut:book
+```scala mdoc
 val xs = List(1, 2, 3)
 
 xs zip xs.drop(1)
@@ -593,22 +607,17 @@ xs zip xs.drop(1)
 Slick provides the equivalent `zip` method for queries, plus two variations.
 Let's say we want to pair up adjacent messages into what we'll call a "conversation":
 
-```scala
+```scala mdoc
 // Select message content, ordered by id:
-```
-```tut:book
 val msgs = messages.sortBy(_.id.asc).map(_.content)
-```
-```scala
+
 // Pair up adjacent messages:
-```
-```tut:book
 val conversations = msgs zip msgs.drop(1)
 ```
 
 This will turn into an inner join, producing output like:
 
-```tut:book
+```scala mdoc
 exec(conversations.result).foreach(println)
 ```
 
@@ -617,7 +626,7 @@ provide a mapping function along with the join.
 We can provide a function to upper-case the first part of a conversation,
 and lower-case the second part:
 
-```tut:book
+```scala mdoc
 def combiner(c1: Rep[String], c2: Rep[String]) =
   (c1.toUpperCase, c2.toLowerCase)
 
@@ -630,43 +639,39 @@ The final variant is `zipWithIndex`,
 which is as per the Scala collections method of the same name.
 Let's number each message:
 
-```tut:book
-val query = messages.map(_.content).zipWithIndex
+```scala mdoc
+val withIndexQuery = messages.map(_.content).zipWithIndex
 
-val action: DBIO[Seq[(String, Long)]] =
-  query.result
+val withIndexAction: DBIO[Seq[(String, Long)]] =
+  withIndexQuery.result
 ```
 
 For H2 the SQL `ROWNUM()` function is used to generate a number.
 The data from this query will be:
 
-```tut:book
-exec(action).foreach(println)
+```scala mdoc
+exec(withIndexAction).foreach(println)
 ```
 
 Not all databases support zip joins.
 Check for the `relational.zip` capability in the `capabilities` field
 of your chosen database profile:
 
-```scala
+```scala mdoc
 // H2 supports zip
-```
-```tut:book
 slick.jdbc.H2Profile.capabilities.
   map(_.toString).
   contains("relational.zip")
 ```
   
-```scala
+```scala mdoc
 // SQLite does not support zip
-```
-```tut:book
 slick.jdbc.SQLiteProfile.capabilities.
   map(_.toString).
   contains("relational.zip")
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 assert(false == slick.jdbc.SQLiteProfile.capabilities.map(_.toString).contains("relational.zip"), "SQLLite now supports ZIP!")
 assert(true  == slick.jdbc.H2Profile.capabilities.map(_.toString).contains("relational.zip"), "H2 no longer supports ZIP?!")
 ```
@@ -750,7 +755,7 @@ Method           SQL
 
 Using them causes no great surprises, as shown in the following examples:
 
-```tut:book
+```scala mdoc
 val numRows: DBIO[Int] = messages.length.result
 
 val numDifferentSenders: DBIO[Int] =
@@ -774,7 +779,7 @@ That's a grouping (by user) of a aggregate (count).
 
 Slick provides `groupBy` which will group rows by some expression. Here's an example:
 
-```tut:book
+```scala mdoc
 val msgPerUser: DBIO[Seq[(Long, Int)]] =
   messages.groupBy(_.senderId).
   map { case (senderId, msgs) => senderId -> msgs.length }.
@@ -786,7 +791,7 @@ The input to the `map` will be the grouping key (`senderId`) and a query for the
 
 When we run the query, it'll work, but it will be in terms of a user's primary key:
 
-```tut:book
+```scala mdoc
 exec(msgPerUser)
 ```
 
@@ -794,7 +799,7 @@ exec(msgPerUser)
 
 It'd be nicer to see the user's name. We can do that using our join skills:
 
-```tut:book
+```scala mdoc
 val msgsPerUser =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user)   => user.name }.
@@ -804,7 +809,7 @@ val msgsPerUser =
 
 The results would be:
 
-```tut:book
+```scala mdoc
 exec(msgsPerUser).foreach(println)
 ```
 
@@ -835,7 +840,7 @@ Vector(
 
 We have all the aggregate functions we need to do this:
 
-```tut:book
+```scala mdoc
 val stats =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user) => user.name }.
@@ -875,7 +880,7 @@ That leads to us having to split it further to access the message's ID field.
 
 Let's pull that part out as a method:
 
-```tut:book
+```scala mdoc
 import scala.language.higherKinds
 
 def idOf[S[_]](group: Query[(MessageTable,UserTable), (Message,User), S]) =
@@ -891,7 +896,7 @@ We don't really care what our results go into, but we do care we're working with
 
 With this little piece of domain specific language in place, the query becomes:
 
-```tut:book
+```scala mdoc
 val nicerStats =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user)   => user.name }.
@@ -919,13 +924,13 @@ select min(id), max(id) from message where content like '%read%'
 
 It's pretty easy to get either `min` or `max`:
 
-```tut:book
+```scala mdoc
 messages.filter(_.content like "%read%").map(_.id).min
 ```
 
 But you want both `min` and `max` in one query. This is where `groupBy { _ => true}` comes into play:
 
-```tut:book
+```scala mdoc
 messages.
  filter(_.content like "%read%").
  groupBy(_ => true).
@@ -953,7 +958,7 @@ Vector(
 
 ...assuming we add a message from Frank:
 
-```tut:book
+```scala mdoc
 val addFrank = for {
   kitchenId <- insertRoom += Room("Kitchen")
   frankId   <- insertUser += User("Frank")
@@ -969,7 +974,7 @@ exec(addFrank)
 
 To run the report we're going to need to group by room and then by user, and finally count the number of rows in each group:
 
-```tut:book
+```scala mdoc
 val msgsPerRoomPerUser =
    rooms.
    join(messages).on(_.id === _.roomId).
@@ -993,7 +998,7 @@ Hopefully you're now in a position where you can unpick this:
 
 Running the action produces our expected report:
 
-```tut:book
+```scala mdoc
 exec(msgsPerRoomPerUser.result).foreach(println)
 ```
 
@@ -1036,7 +1041,7 @@ These exercises will get your fingers familiar with writing joins.
 <div class="solution">
 These queries are all items we've covered in the text:
 
-```tut:book
+```scala mdoc
 val ex1 = for {
   m <- messages
   u <- users
@@ -1064,15 +1069,15 @@ val ex4 =
 Write a method to fetch all the message sent by a particular user.
 The signature is:
 
-```tut:book:silent
+```scala
 def findByName(name: String): Query[Rep[Message], Message, Seq] = ???
 ```
 
 <div class="solution">
 This is a filter, a join, and a map:
 
-```tut:book
-def findByName(name: String): Query[Rep[Message], Message, Seq] = for {
+```scala mdoc
+def findByNameMonadic(name: String): Query[Rep[Message], Message, Seq] = for {
   u <- users    if u.name === name
   m <- messages if m.senderId === u.id
 } yield m
@@ -1080,8 +1085,8 @@ def findByName(name: String): Query[Rep[Message], Message, Seq] = for {
 
 ...or...
 
-```tut:book
-def findByName(name: String): Query[Rep[Message], Message, Seq] =
+```scala mdoc
+def findByNameApplicative(name: String): Query[Rep[Message], Message, Seq] =
   users.filter(_.name === name).
   join(messages).on(_.id === _.senderId).
   map{ case (user, msg) => msg }
@@ -1093,7 +1098,7 @@ def findByName(name: String): Query[Rep[Message], Message, Seq] =
 
 Modify the `msgsPerUser` query...
 
-```tut:book
+```scala
 val msgsPerUser =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user)  => user.name }.
@@ -1105,8 +1110,8 @@ val msgsPerUser =
 <div class="solution">
 SQL distinguishes between `WHERE` and `HAVING`. In Slick you use `filter` for both:
 
-```tut:book
-val msgsPerUser =
+```scala mdoc
+val modifiedMsgsPerUser =
    messages.join(users).on(_.senderId === _.id).
    groupBy { case (msg, user)  => user.name }.
    map     { case (name, group) => name -> group.length }.
@@ -1115,14 +1120,12 @@ val msgsPerUser =
 
 At this point in the book, only Frank has more than two messages:
 
-```tut:book
-exec(msgsPerUser.result)
+```scala mdoc
+exec(modifiedMsgsPerUser.result)
 ```
 
-```scala
+```scala mdoc
 // Let's check:
-```
-```tut:book
 val frankMsgs = 
   messages.join(users).on {
     case (msg,user) => msg.senderId === user.id && user.name === "Frank" 
@@ -1153,7 +1156,7 @@ Sometimes you'll really want something like a `Map[User, Seq[Message]]`.
 
 There's no built-in way to do that in Slick, but you can do it in Scala using the collections `groupBy` method.
 
-```tut:book
+```scala mdoc
 val almost = Seq(
   ("HAL"  -> "Hello"),
   ("Dave" -> "How are you?"),
@@ -1164,12 +1167,12 @@ val almost = Seq(
 That's close, but the values in the map are still a tuple of the name and the message.
 We can go further and reduce this to:
 
-```tut:book:silent
+```scala mdoc:silent
 val correct = almost.view.mapValues { values =>
   values.map{ case (name, msg) => msg }
 }
 ```
-```tut:book
+```scala mdoc
 correct.foreach(println)
 ```
 
@@ -1178,14 +1181,14 @@ A future version of Scala will remove the need for the `.view` call.
 
 Go ahead and write a method to encapsulate this for a join:
 
-```tut:book:silent
+```scala
 def userMessages: DBIO[Map[User, Seq[Message]]] = ???
 ```
 
 <div class="solution">
 You need all the code in the question and also what you know about action combinators:
 
-```tut:book
+```scala mdoc
 def userMessages: DBIO[Map[User,Seq[Message]]] =
   users.join(messages).on(_.id === _.senderId).result.
   map { rows => rows
