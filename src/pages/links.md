@@ -3,18 +3,18 @@
 [link-book-pr]:              https://github.com/underscoreio/essential-slick/pulls
 [link-book-repo]:            https://github.com/underscoreio/essential-slick/
 
-[link-slick]:                http://slick.lightbend.com/
-[link-ref-dbs]:              http://slick.lightbend.com/doc/3.3.0/supported-databases.html
-[link-ref-gen]:              http://slick.lightbend.com/doc/3.3.0/code-generation.html
-[link-ref-h2driver]:         http://slick.lightbend.com/doc/3.3.0/api/#slick.jdbc.H2Profile
-[link-ref-orm]:              http://slick.lightbend.com/doc/3.3.0/orm-to-slick.html
-[link-ref-actions]:          http://slick.lightbend.com/doc/3.3.0/dbio.html
-[link-slick-column-options]: http://slick.lightbend.com/doc/3.3.0/api/index.html#slick.ast.ColumnOption
-[link-slick-hlist]:          http://slick.lightbend.com/doc/3.3.0/api/#slick.collection.heterogeneous.HList
-[link-source-dbPublisher]:   http://slick.lightbend.com/doc/3.3.0/api/index.html#slick.basic.DatabasePublisher
-[link-slick-streaming]:      http://slick.lightbend.com/doc/3.3.0/dbio.html#streaming
-[link-slick-ug-time]:        http://slick.lightbend.com/doc/3.3.0/upgrade.html#support-for-java.time-columns 
-[link-source-extmeth]:       https://github.com/slick/slick/blob/v3.3.0/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
+[link-slick]:                https://scala-slick.org/
+[link-ref-dbs]:              https://scala-slick.org/doc/3.3.2/supported-databases.html
+[link-ref-gen]:              https://scala-slick.org/doc/3.3.2/code-generation.html
+[link-ref-h2driver]:         https://scala-slick.org/doc/3.3.2/api/#slick.jdbc.H2Profile
+[link-ref-orm]:              https://scala-slick.org/doc/3.3.2/orm-to-slick.html
+[link-ref-actions]:          https://scala-slick.org/doc/3.3.2/dbio.html
+[link-slick-column-options]: https://scala-slick.org/doc/3.3.2/api/index.html#slick.ast.ColumnOption
+[link-slick-hlist]:          https://scala-slick.org/doc/3.3.2/api/#slick.collection.heterogeneous.HList
+[link-source-dbPublisher]:   https://scala-slick.org/doc/3.3.2/api/index.html#slick.basic.DatabasePublisher
+[link-slick-streaming]:      https://scala-slick.org/doc/3.3.2/dbio.html#streaming
+[link-slick-ug-time]:        https://scala-slick.org/doc/3.3.2/upgrade.html#support-for-java.time-columns 
+[link-source-extmeth]:       https://github.com/slick/slick/blob/v3.3.2/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
 
 [link-hikari]:               https://brettwooldridge.github.io/HikariCP/
 [link-config]:               https://github.com/typesafehub/config
