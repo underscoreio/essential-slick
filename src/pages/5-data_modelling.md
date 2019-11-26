@@ -379,7 +379,7 @@ for these reasons.
 
 We've seen how Slick can map database tables to tuples and case classes.
 Scala veterans identify a key weakness in this approach---tuples
-and case classes don't run into limitations at 22 fields[^scala211-limit22].
+and case classes run into limitations at 22 fields[^scala211-limit22].
 
 [^scala211-limit22]: Scala 2.11 introduced the ability
 to define case classes with more than 22 fields,
