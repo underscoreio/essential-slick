@@ -13,7 +13,7 @@
 [link-slick-hlist]:          https://scala-slick.org/doc/3.3.2/api/#slick.collection.heterogeneous.HList
 [link-source-dbPublisher]:   https://scala-slick.org/doc/3.3.2/api/index.html#slick.basic.DatabasePublisher
 [link-slick-streaming]:      https://scala-slick.org/doc/3.3.2/dbio.html#streaming
-[link-slick-ug-time]:        https://scala-slick.org/doc/3.3.2/upgrade.html#support-for-java.time-columns 
+[link-slick-ug-time]:        https://scala-slick.org/doc/3.3.2/upgrade.html
 [link-source-extmeth]:       https://github.com/slick/slick/blob/v3.3.2/slick/src/main/scala/slick/lifted/ExtensionMethods.scala
 
 [link-hikari]:               https://brettwooldridge.github.io/HikariCP/
@@ -65,7 +65,7 @@
 [link-sbt-tutorial]:         https://www.scala-sbt.org/1.x/docs/Getting-Started.html
 
 [link-essential-play]:       https://underscore.io/training/courses/essential-play/
-[link-tut]:                  https://github.com/tpolecat/tut
+[link-mdoc]:                 https://scalameta.org/mdoc/
 [link-renato]:               https://twitter.com/renatocaval
 [link-ottinger]:             https://github.com/jottinger
 [link-meredith]:             https://twitter.com/Gentmen
