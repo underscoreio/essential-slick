@@ -379,7 +379,7 @@ tsql {
 
 Note the `$` in the profile class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of _Programming in Scala_][link-pins-interop].
 
-You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick profile (`slick.jdbcr.H2Profile`) and the JDBC driver (`org.h2.Drvier`) in one entry.
+You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick profile (`slick.jdbc.H2Profile`) and the JDBC driver (`org.h2.Drvier`) in one entry.
 
 A consequence of supplying a `@StaticDatabaseConfig` is that you can define one databases configuration for your application and a different one for the compiler to use. That is, perhaps you are running an application, or test suite, against an in-memory database, but validating the queries at compile time against a full-populated production-like integration database.
 
