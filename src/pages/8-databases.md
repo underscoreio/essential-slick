@@ -8,7 +8,7 @@ This restriction was removed in early 2016[^slick-blog-open].
 However, there was an effort to build free and open profiles, resulting in the FreeSlick project.
 These profiles continue to be available, and you can find out more about this from the [FreeSlick GitHub page](https://github.com/smootoo/freeslick).
 
-[^slick-blog-open]: [http://slick.lightbend.com/news/2016/02/01/slick-extensions-licensing-change.html](http://slick.lightbend.com/news/2016/02/01/slick-extensions-licensing-change.html).
+[^slick-blog-open]: [https://scala-slick.org/news/2016/02/01/slick-extensions-licensing-change.html](https://scala-slick.org/news/2016/02/01/slick-extensions-licensing-change.html).
 
 ## Changes
 
@@ -28,8 +28,6 @@ Each chapter uses its own database---so these steps will need to be applied for 
 We've given detailed instructions for two populate databases below.
 
 ## PostgreSQL
-
-If it is not currently installed, it can be downloaded from the [PostgreSQL website][link-postgres-download].
 
 ### Create a Database
 
@@ -95,8 +93,6 @@ slick.jdbc.PostgresProfile.api._
 
 
 ## MySQL
-
-If it is not currently installed, it can be downloaded from the [MySQL website][link-mysql-download].
 
 ### Create a Database
 
