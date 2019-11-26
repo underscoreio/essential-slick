@@ -639,7 +639,7 @@ exec(messageRows ++= conversation).foreach(println)
 Write a query to delete messages that contain "sorry".
 
 <div class="solution">
-The pattern is to fine a query to select the data, and then use it with `delete`:
+The pattern is to define a query to select the data, and then use it with `delete`:
 
 ```scala mdoc
 messages.filter(_.content like "%sorry%").delete
