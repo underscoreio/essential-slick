@@ -134,11 +134,11 @@ Replace `Database.forURL` parameters with:
 
 ~~~ json
 chapter01 = {
-  connectionPool      = jdbc:mysql://localhost:3306/chapter-01
+  connectionPool      = disabled
+  url                 = jdbc:mysql://localhost:3306/chapter-01
                                       &useUnicode=true
                                       &amp;characterEncoding=UTF-8
                                       &amp;autoReconnect=true
-  url                 = jdbc:postgresql:chapter-01
   driver              = com.mysql.jdbc.Driver
   keepAliveConnection = true
   users               = essential
