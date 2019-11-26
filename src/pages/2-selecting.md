@@ -12,10 +12,9 @@ In [Chapter 6](#joins) we'll look at more complex queries involving joins, aggre
 
 The simplest select query is the `TableQuery` generated from a `Table`. In the following example, `messages` is a `TableQuery` for `MessageTable`:
 
-```scala mdoc:silent
-import slick.jdbc.H2Profile.api._
-```
 ```scala mdoc
+import slick.jdbc.H2Profile.api._
+
 case class Message(
   sender:  String,
   content: String,
@@ -923,8 +922,8 @@ exec(queryHalExists.result)
 
 ```scala mdoc:invisible
 {
-val found = exec(query.result)
-assert(found.isEmpty == false, s"Expected to find HAL, not: $found")
+val found = exec(queryHalExists.result)
+assert(found, s"Expected to find HAL, not: $found")
 }
 ```
 
@@ -932,7 +931,7 @@ The query will return `true` as we do have records from HAL,
 and Slick will generate the following SQL:
 
 ```scala mdoc
-query.result.statements.head
+queryHalExists.result.statements.head
 ```
 </div>
 
