@@ -5,11 +5,11 @@
 [Slick][link-slick] is a Scala library for working with relational databases.
 That means it allows you to model a schema, run queries, insert data, and update data.
 
-Using Slick you write queries in Scala and they are type checked by the compiler.
-This makes working with a database like working with regular Scala collections.
+Using Slick, you can write queries in Scala, giving you typed-checked database access.
+The style of queries makes working with a database similar to working with regular Scala collections.
 
 We've seen that developers using Slick for the first time often need help getting the most from it.
-For example, key concepts that need to be known include:
+For example, you need to know a few key concepts, such as:
 
 - _queries_: which compose using combinators such as `map`, `flatMap`, and `filter`;
 
