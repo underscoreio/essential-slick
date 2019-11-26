@@ -160,12 +160,12 @@ name := "essential-slick-chapter-01"
 
 version := "1.0.0"
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.13.1"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "3.3.0",
-  "com.h2database"      % "h2"              % "1.4.185",
-  "ch.qos.logback"      % "logback-classic" % "1.1.2"
+  "com.typesafe.slick" %% "slick"           % "3.3.2",
+  "com.h2database"      % "h2"              % "1.4.200",
+  "ch.qos.logback"      % "logback-classic" % "1.2.3"
 )
 ~~~
 
@@ -183,7 +183,7 @@ If we were using a separate database like MySQL or PostgreSQL, we would substitu
 
 Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *profile*. For example, we access most of the Slick API for H2 via the following `import`:
 
-```tut:silent
+```scala mdoc:silent
 import slick.jdbc.H2Profile.api._
 ```
 
@@ -193,8 +193,8 @@ Slick makes heavy use of implicit conversions and extension methods, so we gener
 
 Our first job is to tell Slick what tables we have in our database and how to map them onto Scala values and types. The most common representation of data in Scala is a case class, so we start by defining a `Message` class representing a row in our single example table:
 
-```tut:book
-final case class Message(
+```scala mdoc
+case class Message(
   sender:  String,
   content: String,
   id:      Long = 0L)
@@ -203,8 +203,8 @@ final case class Message(
 
 Next we define a `Table` object, which corresponds to our database table and tells Slick how to map back and forth between database data and instances of our case class:
 
-```tut:book
-final class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
+```scala mdoc
+class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
   def id      = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def sender  = column[String]("sender")
@@ -229,13 +229,13 @@ Think of it like a table alias in SQL. We don't need to provide tags in our user
 
 Slick allows us to define and compose queries in advance of running them against the database. We start by defining a `TableQuery` object that represents a simple `SELECT *` style query on our message table:
 
-```tut:book
+```scala mdoc
 val messages = TableQuery[MessageTable]
 ```
 
 Note that we're not *running* this query at the moment---we're simply defining it as a means to build other queries. For example, we can create a `SELECT * WHERE` style query using a combinator called `filter`:
 
-```tut:book
+```scala mdoc
 val halSays = messages.filter(_.sender === "HAL")
 ```
 
@@ -259,7 +259,7 @@ Lifted embedding is the standard way to work with Slick. We will discuss the oth
 
 We've written all of the code so far without connecting to the database. Now it's time to open a connection and run some SQL. We start by defining a `Database` object which acts as a factory for managing connections and transactions:
 
-```tut:book
+```scala mdoc
 val db = Database.forConfig("chapter01")
 ```
 
@@ -307,7 +307,7 @@ Now that we have a database configured as `db`, we can use it.
 
 Let's start with a `CREATE` statement for `MessageTable`, which we build using methods of our `TableQuery` object, `messages`. The Slick method `schema` gets the schema description. We can see what that would be via the `createStatements` method:
 
-```tut:book
+```scala mdoc
 messages.schema.createStatements.mkString
 ```
 
@@ -315,7 +315,7 @@ But we've not sent this to the database yet. We've just printed the statement, t
 
 In Slick, what we run against the database is an _action_. This is how we create an action for the `messages` schema:
 
-```tut:book
+```scala mdoc
 val action: DBIO[Unit] = messages.schema.create
 ```
 
@@ -333,10 +333,8 @@ But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 
 Let's run this action:
 
-```tut:silent
+```scala mdoc
 import scala.concurrent.Future
-```
-```tut:book
 val future: Future[Unit] = db.run(action)
 ```
 
@@ -344,20 +342,17 @@ The result of `run` is a `Future[T]`, where `T` is the type of result returned b
 
 `Future`s are asynchronous. That's to say, they are placeholders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can block until our action completes:
 
-```tut:silent
+```scala mdoc
 import scala.concurrent.Await
 import scala.concurrent.duration._
-```
-```tut:book
 val result = Await.result(future, 2.seconds)
 ```
-
 
 ### Inserting Data
 
 Once our table is set up, we need to insert some test data. We'll define a helper method to create a few test `Messages` for demonstration purposes:
 
-```tut:book
+```scala mdoc
 def freshTestData = Seq(
   Message("Dave", "Hello, HAL. Do you read me, HAL?"),
   Message("HAL",  "Affirmative, Dave. I read you."),
@@ -368,22 +363,22 @@ def freshTestData = Seq(
 
 The insert of this test data is an action:
 
-```tut:book
+```scala mdoc
 val insert: DBIO[Option[Int]] = messages ++= freshTestData
 ```
 
 The `++=` method of `message` accepts a sequence of `Message` objects and translates them to a bulk `INSERT` query (`freshTestData` is a regular Scala `Seq[Message]`).
 We run the `insert` via `db.run`, and when the future completes our table is populated with data:
 
-```tut:book
-val result: Future[Option[Int]] = db.run(insert)
+```scala mdoc
+val insertAction: Future[Option[Int]] = db.run(insert)
 ```
 
 The result of an insert operation is the number of rows inserted.
 The `freshTestData` contains four messages, so in this case the result is `Some(4)` when the future completes:
 
-```tut:book
-val rowCount = Await.result(result, 2.seconds)
+```scala mdoc
+val rowCount = Await.result(insertAction, 2.seconds)
 ```
 
 The result is optional because the underlying Java APIs do not guarantee a count of rows for batch inserts---some databases simply return `None`.
@@ -393,7 +388,7 @@ We discuss single and batch inserts and updates further in [Chapter 3](#Modifyin
 
 Now our database has a few rows in it, we can start selecting data. We do this by taking a query, such as `messages` or `halSays`, and turning it into an action via the `result` method:
 
-```tut:book
+```scala mdoc
 val messagesAction: DBIO[Seq[Message]] = messages.result
 
 val messagesFuture: Future[Seq[Message]] = db.run(messagesAction)
@@ -401,17 +396,17 @@ val messagesFuture: Future[Seq[Message]] = db.run(messagesAction)
 val messagesResults = Await.result(messagesFuture, 2.seconds)
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 assert(messagesResults.length == 4, "Expected 4 results")
 ```
 
 We can see the SQL issued to H2 using the `statements` method on the action:
 
-```tut:book
+```scala mdoc
 val sql = messages.result.statements.mkString
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 assert(sql == """select "sender", "content", "id" from "message"""", s"Expected: $sql")
 ```
 
@@ -422,7 +417,7 @@ In our applications we should avoid blocking on `Future`s whenever possible.
 However, in the examples in this book we'll be making heavy use of `Await.result`.
 We will introduce a helper method called `exec` to make the examples easier to read:
 
-```tut:book
+```scala mdoc
 def exec[T](action: DBIO[T]): T =
   Await.result(db.run(action), 2.seconds)
 ```
@@ -445,21 +440,21 @@ we can run a modified version of our query.
 For example, calling `filter` on `messages` creates a modified query with
 a `WHERE` expression that retrieves the expected rows:
 
-```tut:book
+```scala mdoc
 messages.filter(_.sender === "HAL").result.statements.mkString
 ```
 
 To run this query, we convert it to an action using `result`,
 run it against the database with `db.run`, and await the final result with `exec`:
 
-```tut:book
+```scala mdoc
 exec(messages.filter(_.sender === "HAL").result)
 ```
 
 We actually generated this query earlier and stored it in the variable `halSays`.
 We can get exactly the same results from the database by running this variable instead:
 
-```tut:book
+```scala mdoc
 exec(halSays.result)
 ```
 
@@ -470,7 +465,7 @@ We can even stack modifiers to create queries with multiple additional clauses.
 For example, we can `map` over the query to retrieve a subset of the columns.
 This modifies the `SELECT` clause in the SQL and the return type of the `result`:
 
-```tut:book
+```scala mdoc
 halSays.map(_.id).result.statements.mkString
 
 exec(halSays.map(_.id).result)
@@ -481,7 +476,7 @@ exec(halSays.map(_.id).result)
 `Query` is a *monad*. It implements the methods `map`, `flatMap`, `filter`, and `withFilter`, making it compatible with Scala for comprehensions.
 For example, you will often see Slick queries written in this style:
 
-```tut:book
+```scala mdoc
 val halSays2 = for {
   message <- messages if message.sender === "HAL"
 } yield message
@@ -491,7 +486,7 @@ Remember that for comprehensions are aliases for chains of method calls.
 All we are doing here is building a query with a `WHERE` clause on it.
 We don't touch the database until we execute the query:
 
-```tut:book
+```scala mdoc
 exec(halSays2.result)
 ```
 
@@ -502,7 +497,7 @@ Like `Query`, `DBIOAction` is also a monad. It implements the same methods descr
 We can combine the actions to create the schema, insert the data, and query results into one action. We can do this before we have a database connection, and we run the action like any other.
 To do this, Slick provides a number of useful action combinators. We can use `andThen`, for example:
 
-```tut:book
+```scala mdoc
 val actions: DBIO[Seq[Message]] = (
   messages.schema.create       andThen
   (messages ++= freshTestData) andThen
@@ -515,7 +510,7 @@ The end result of the above `actions` is the last action in the `andThen` chain.
 
 If you want to get funky, `>>` is another name for `andThen`:
 
-```tut:book
+```scala mdoc
 val sameActions: DBIO[Seq[Message]] = (
   messages.schema.create       >>
   (messages ++= freshTestData) >>
@@ -581,7 +576,7 @@ Start by inserting an extra line of dialog into the database.
 This line hit the cutting room floor late in the development of the film 2001,
 but we're happy to reinstate it here:
 
-```tut:book
+```scala mdoc
 Message("Dave","What if I say 'Pretty please'?")
 ```
 
@@ -592,7 +587,7 @@ We've included some common pitfalls in the solution in case you get stuck.
 <div class="solution">
 Here's the solution:
 
-```tut:book
+```scala mdoc
 exec(messages += Message("Dave","What if I say 'Pretty please'?"))
 ```
 
@@ -604,18 +599,18 @@ Here are some things that might go wrong:
 
 If you don't pass the action created by `+=` to `db` to be run, you'll get back the `Action` object instead.
 
-```tut:book
+```scala mdoc
 messages += Message("Dave","What if I say 'Pretty please'?")
 ```
 
 If you don't wait for the future to complete, you'll see just the future itself:
 
-```tut:book
+```scala mdoc
 val f = db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
 ```
 
 
-```tut:invisible
+```scala mdoc:invisible
 
   // Post-exercise clean up
   // We inserted a new message for Dave twice in the last solution.
@@ -631,8 +626,8 @@ val f = db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
     _ <- messages.forceInsert(m)
     count <- messages.filter(_.content === "What if I say 'Pretty please'?").length.result
   } yield count
-  val rowCount = exec(ex1cleanup)
-  assert(rowCount == 1, s"Wrong number of rows after cleaning up ex1: $rowCount")
+  val rowCountCheck = exec(ex1cleanup)
+  assert(rowCountCheck == 1, s"Wrong number of rows after cleaning up ex1: $rowCountCheck")
 ```
 </div>
 
@@ -645,17 +640,16 @@ Again, we've included some common pitfalls in the solution.
 <div class="solution">
 Here's the code:
 
-
-```tut:book
+```scala mdoc
 exec(messages.filter(_.sender === "Dave").result)
 ```
 
 If that's hard to read, we can print each message in turn.
 As the `Future` will evaluate to a collection of `Message`, we can `foreach` over that with a function of `Message => Unit`, such as `println`:
 
-```tut:book
-val result: Seq[Message] = exec(messages.filter(_.sender === "Dave").result)
-result.foreach(println)
+```scala mdoc
+val sentByDave: Seq[Message] = exec(messages.filter(_.sender === "Dave").result)
+sentByDave.foreach(println)
 ```
 
 
@@ -664,7 +658,7 @@ Here are some things that might go wrong:
 Note that the parameter to `filter` is built using a triple-equals operator, `===`, not a regular `==`.
 If you use `==` you'll get an interesting compile error:
 
-```tut:book:fail
+```scala mdoc:fail
 exec(messages.filter(_.sender == "Dave").result)
 ```
 
@@ -676,7 +670,7 @@ The error message is baffling when you first see it but makes sense once you und
 Finally, if you forget to call `result`,
 you'll end up with a compilation error as `exec` and the call it is wrapping `db.run` both expect actions:
 
-```tut:book:fail
+```scala mdoc:fail
 exec(messages.filter(_.sender === "Dave"))
 ```
 

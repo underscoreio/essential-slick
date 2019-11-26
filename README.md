@@ -5,7 +5,7 @@
 [slick]: http://slick.lightbend.com
 [download]: https://underscore.io/books/essential-slick/
 [ebook-template]: https://github.com/underscoreio/underscore-ebook-template
-[tut]: https://github.com/tpolecat/tut
+[mdoc]: https://scalameta.org/mdoc/
 
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons Licence" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br /><span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/Text" property="dct:title" rel="dct:type">Essential Slick</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="https://underscore.io" property="cc:attributionName" rel="cc:attributionURL">Richard Dallaway, Jonathan Ferguson, Underscore Consulting LLP</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
 
@@ -65,14 +65,8 @@ Within `sbt` you can issue the commands `pdf`, `html`, `epub`, or `all` to build
 
 ## Writing
 
-Essential Slick uses [tut] to check the Scala code on the book.
-To avoid running out of MetaSpace you'll also want to:
-
-```
-export JAVA_OPTS="-Xmx3g -XX:+TieredCompilation -XX:ReservedCodeCacheSize=256m -XX:+UseNUMA -XX:+UseParallelGC -XX:+CMSClassUnloadingEnabled"
-```
-
+Essential Slick uses [mdoc] to check the Scala code on the book.
 The source files are in `src/pages`.
-The tut converted sources are output to `target/pages`.
+The converted sources are output to `target/pages`.
 
 

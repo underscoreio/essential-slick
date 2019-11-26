@@ -1,4 +1,4 @@
-```tut:invisible
+```scala mdoc:invisible
 import slick.jdbc.H2Profile.api._
 import scala.concurrent.{Await,Future}
 import scala.concurrent.duration._
@@ -28,7 +28,7 @@ In this section we will see that:
 For the examples that follow, we'll set up a table for rooms.
 For now we'll do this as  we have in other chapters using the lifted embedded style:
 
-```tut:book
+```scala mdoc
 case class Room(title: String, id: Long = 0L)
 
 class RoomTable(tag: Tag) extends Table[Room](tag, "room") {
@@ -52,7 +52,7 @@ val setupResult = exec(roomSetup)
 
 Let's start with a simple example of returning a list of room IDs.
 
-```tut:book
+```scala mdoc
 val action = sql""" select "id" from "room" """.as[Long]
 
 Await.result(db.run(action), 2.seconds)
@@ -65,7 +65,7 @@ And the result we get back is an action to run, rather than a `Query`.
 
 The `as[T]` method is pretty flexible.  Let's get back the room ID and room title:
 
-```tut:book
+```scala mdoc
 val roomInfo = sql""" select "id", "title" from "room" """.as[(Long,String)]
 
 exec(roomInfo)
@@ -77,7 +77,7 @@ Using `as[T]` we can build up arbitrary result types.  Later we'll see how we ca
 
 One of the most useful features of the SQL interpolators is being able to reference Scala values in a query:
 
-```tut:book
+```scala mdoc
 val roomName = "Pod"
 
 val podRoomAction = sql"""
@@ -100,7 +100,7 @@ That is, you don't have to worry about SQL injection attacks when you use the SQ
 
 The SQL interpolators are essential for situations where you need full control over the SQL to be run. Be aware there  is some loss of compile-time safety. For example:
 
-```tut:book
+```scala mdoc
 val t = 42
 
 val badAction =
@@ -109,7 +109,7 @@ val badAction =
 
 This compiles, but fails at runtime as the type of the `title` column is a `String` and we've provided an `Int`:
 
-```tut:book
+```scala mdoc
 exec(badAction.asTry)
 ```
 
@@ -118,9 +118,9 @@ The `tsql` interpolator, described later in this chapter, helps here by connecti
 
 Another danger is with the `#$` style of substitution. This is called _splicing_, and is used when you _don't_ want SQL escaping to apply. For example, perhaps the name of the table you want to use may change:
 
-```tut:book
+```scala mdoc
 val table = "room"
-val action = sql""" select "id" from "#$table" """.as[Long]
+val splicedAction = sql""" select "id" from "#$table" """.as[Long]
 ```
 
 In this situation we do not want the value of `table` to be treated as a `String`. If we did, it'd be an invalid query: `select "id" from "'message'"` (notice the double quotes and single quotes around the table name, which is not valid SQL).
@@ -139,7 +139,7 @@ If we want to work with a type that Slick doesn't know about, we need to provide
 
 For an example, let's set up a table for messages with some interesting structure:
 
-```tut:book
+```scala mdoc
 import org.joda.time.DateTime
 
 case class Message(
@@ -156,19 +156,19 @@ This is from Joda Time, and Slick does not ship with built-in support for this t
 
 This is the query we want to run:
 
-```tut:book:fail
+```scala mdoc:fail
 sql""" select "created" from "message" """.as[DateTime]
 ```
 
 OK, that won't compile as Slick doesn't know anything about `DateTime`.
 For this to compile we need to provide an instance of `GetResult[DateTime]`:
 
-```tut:silent
+```scala mdoc:silent
 import slick.jdbc.GetResult
 import java.sql.Timestamp
 import org.joda.time.DateTimeZone.UTC
 ```
-```tut:book
+```scala mdoc
 implicit val GetDateTime =
   GetResult[DateTime](r => new DateTime(r.nextTimestamp(), UTC))
 ```
@@ -181,7 +181,7 @@ This allows the compiler to lookup our conversion function when we mention a `Da
 
 Now we can construct our action:
 
-```tut:book
+```scala mdoc
 sql""" select "created" from "message" """.as[DateTime]
 ```
 
@@ -199,7 +199,7 @@ So that leaves us with `Option[DateTime]` and the `Message` itself.
 For optional values, Slick provides `nextXXXOption` methods, such as `nextLongOption`.
 For the optional date time we read the database value using `nextTimestampOption` and then `map` to the right type:
 
-```tut:book
+```scala mdoc
 implicit val GetOptionalDateTime = GetResult[Option[DateTime]](r =>
   r.nextTimestampOption.map(ts => new DateTime(ts, UTC))
 )
@@ -214,7 +214,7 @@ There are two helper methods which make it easier to construct these instances:
 
 We can use them like this:
 
-```tut:book
+```scala mdoc
 implicit val GetMessage = GetResult(r =>
    Message(sender  = r.<<,
            content = r.<<,
@@ -229,8 +229,8 @@ As the types of the fields are known, `<<` and `<<?` can use the implicit `GetRe
 
 Now we can select into `Message` values:
 
-```tut:book
-val action: DBIO[Seq[Message]] =
+```scala mdoc
+val messageAction: DBIO[Seq[Message]] =
   sql""" select * from "message" """.as[Message]
 ```
 
@@ -262,8 +262,8 @@ UPDATE "message" SET "content" = CONCAT("content", '!')
 
 Plain SQL updates will allow us to do this. The interpolator is `sqlu`:
 
-```tut:book
-val action =
+```scala mdoc
+val updateAction =
   sqlu"""UPDATE "message" SET "content" = CONCAT("content", '!')"""
 ```
 
@@ -271,9 +271,9 @@ The `action` we have constructed, just like other actions, is not run until we e
 
 Just like the `sql` interpolator, we also have access to `$` for binding to variables:
 
-```tut:book
+```scala mdoc
 val char = "!"
-val action =
+val interpolatorAction =
   sqlu"""UPDATE "message" SET "content" = CONCAT("content", $char)"""
 ```
 
@@ -282,8 +282,8 @@ but also the input is sanitized against [SQL injection attacks][link-wikipedia-i
 
 In this case, the statement that Slick generates will be:
 
-```tut:book
-action.statements.head
+```scala mdoc
+interpolatorAction.statements.head
 ```
 
 
@@ -294,7 +294,7 @@ We saw the `GetResult` type class for mapping select results, and for updates th
 
 We can teach Slick how to set `DateTime` parameters like this:
 
-```tut:book
+```scala mdoc
 import slick.jdbc.SetParameter
 
 implicit val SetDateTime = SetParameter[DateTime](
@@ -309,14 +309,22 @@ In addition to a `Timestamp` (via `setTimestamp`), you can set: `Boolean`, `Byte
 
 There's further symmetry with `GetResuts` in that we could have used `>>` in our `SetParameter`:
 
-```tut:book
+```scala
 implicit val SetDateTime = SetParameter[DateTime](
   (dt, pp) => pp >> new Timestamp(dt.getMillis))
 ```
 
+```scala mdoc:invisible
+// validate the above code without introducing a duplicate implicit:
+object Hidden1 {
+  implicit val SetDateTime = SetParameter[DateTime](
+    (dt, pp) => pp >> new Timestamp(dt.getMillis))
+}
+```
+
 With this in place we can construct Plain SQL updates using `DateTime` instances:
 
-```tut:book
+```scala mdoc
 val now =
   sqlu"""UPDATE "message" SET "created" = ${DateTime.now}"""
 ```
@@ -371,7 +379,7 @@ tsql {
 
 Note the `$` in the profile class name is not a typo. The class name is being passed to Java's `Class.forName`, but of course Java doesn't have a singleton as such. The Slick configuration does the right thing to load `$MODULE` when it sees `$`. This interoperability with Java is described in [Chapter 29 of _Programming in Scala_][link-pins-interop].
 
-You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick profile (`slick.jdbcr.H2Profile`) and the JDBC driver (`org.h2.Drvier`) in one entry.
+You won't have seen this when we introduced the database configuration in Chapter 1. That's because this `tsql` configuration has a different format, and combines the Slick profile (`slick.jdbc.H2Profile`) and the JDBC driver (`org.h2.Drvier`) in one entry.
 
 A consequence of supplying a `@StaticDatabaseConfig` is that you can define one databases configuration for your application and a different one for the compiler to use. That is, perhaps you are running an application, or test suite, against an in-memory database, but validating the queries at compile time against a full-populated production-like integration database.
 
@@ -487,7 +495,18 @@ The `tsql` interpolator will check Plain SQL queries against a database at compi
 For these exercises we will use a  combination of messages and users.
 We'll set this up using the lifted embedded style:
 
-```tut:silent
+```scala mdoc:reset:invisible
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.{Await,Future}
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+val db = Database.forConfig("chapter07")
+
+def exec[T](action: DBIO[T]): T = Await.result(db.run(action), 4.seconds)
+```
+
+```scala mdoc:silent
 case class User(
   name  : String,
   email : Option[String] = None,
@@ -527,7 +546,7 @@ val setup = for {
    )
 } yield rowsAdded
 
-val setupResult = exec(setup)
+exec(setup)
 ```
 
 ### Plain Selects
@@ -553,7 +572,7 @@ Tips:
 <div class="solution">
 The SQL statements are relatively simple. You need to take care to make the `as[T]` align to the result of the query.
 
-```tut:book
+```scala mdoc
 val q1 = sql""" select count(*) from "message" """.as[Int]
 val a1 = exec(q1)
 
@@ -569,7 +588,7 @@ val a4 = exec(q4)
 a4.foreach(println)
 ```
 
-```tut:invisible
+```scala mdoc:invisible
 assert(a1.head == 4, s"Expected 4 results for a1, not $a1")
 assert(a2.length == 4, s"Expected 4 results for a2, not $a2")
 assert(a3 == Seq(32,30,28,44), s"Expected specific lenghts, not $a3")
@@ -581,7 +600,7 @@ assert(a4.length == 4, s"Expected 4 results for a4, not $a4")
 
 Convert the following lifted embedded query to a Plain SQL query.
 
-```tut:book
+```scala mdoc
 val whoSaidThat =
   messages.join(users).on(_.senderId === _.id).
   filter{ case (message,user) =>
@@ -603,8 +622,8 @@ Tips:
 <div class="solution">
 There are various ways to implement this query in SQL.  Here's one of them...
 
-```tut:book
-val whoSaidThat = sql"""
+```scala mdoc
+val whoSaidThatPlain = sql"""
   select
     "name" from "user" u
   join
@@ -613,7 +632,7 @@ val whoSaidThat = sql"""
     m."content" = 'Open the pod bay doors, HAL.'
   """.as[String]
 
-exec(whoSaidThat)
+exec(whoSaidThatPlain)
 ```
 </div>
 
@@ -622,7 +641,7 @@ exec(whoSaidThat)
 
 Complete the implementation of this method using a Plain SQL query:
 
-```tut:book
+```scala
 def whoSaid(content: String): DBIO[Seq[String]] =
   ???
 ```
@@ -634,7 +653,7 @@ This should be a small change to your solution to the last exercise.
 <div class="solution">
 The solution requires the use of a `$` substitution:
 
-```tut:book
+```scala mdoc
 def whoSaid(content: String): DBIO[Seq[String]] =
   sql"""
     select
@@ -656,7 +675,7 @@ exec(whoSaid("Affirmative, Dave. I read you."))
 
 This H2 query returns the alphabetically first and last messages:
 
-```tut:book
+```scala mdoc
 exec(sql"""
   select min("content"), max("content")
   from "message" """.as[(String,String)]
@@ -665,7 +684,7 @@ exec(sql"""
 
 In this exercise we want you to write a `GetResult` type class instance so that the result of the query is one of these:
 
-```tut:book:silent
+```scala mdoc:silent
 case class FirstAndLast(first: String, last: String)
 ```
 
@@ -678,7 +697,7 @@ The steps are:
 3. Make the query use `as[FirstAndLast]`
 
 <div class="solution">
-```tut:book
+```scala mdoc
 import slick.jdbc.GetResult
 
 implicit val GetFirstAndLast =
@@ -704,7 +723,7 @@ Just store a song title. Insert a row into the table.
 <div class="solution">
 For modifications we use `sqlu`, not `sql`:
 
-```tut:book
+```scala mdoc
 exec(sqlu""" create table "jukebox" ("title" text) """)
 
 exec(sqlu""" insert into "jukebox"("title")
@@ -719,7 +738,7 @@ exec(sql""" select "title" from "jukebox" """.as[String])
 
 We're building a web site that allows searching for users by their email address:
 
-```tut:book
+```scala mdoc
 def lookup(email: String) =
   sql"""select "id" from "user" where "email" = '#${email}'"""
 
@@ -735,9 +754,9 @@ the title of the exercise has probably tipped you off:  `#$` does not escape inp
 
 This means a user could use a carefully crafted email address to do evil:
 
-```tut:book
-val action = lookup("""';DROP TABLE "user";--- """).as[Long]
-exec(action)
+```scala mdoc
+val evilAction = lookup("""';DROP TABLE "user";--- """).as[Long]
+exec(evilAction)
 ```
 
 This "email address" turns into two queries:
@@ -754,7 +773,7 @@ DROP TABLE "user";
 
 Trying to access the users table after this will produce:
 
-```tut:book
+```scala mdoc
 exec(users.result.asTry)
 ```
 
