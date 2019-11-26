@@ -333,10 +333,8 @@ But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
 
 Let's run this action:
 
-```scala mdoc:silent
-import scala.concurrent.Future
-```
 ```scala mdoc
+import scala.concurrent.Future
 val future: Future[Unit] = db.run(action)
 ```
 
@@ -344,14 +342,11 @@ The result of `run` is a `Future[T]`, where `T` is the type of result returned b
 
 `Future`s are asynchronous. That's to say, they are placeholders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can block until our action completes:
 
-```scala mdoc:silent
+```scala mdoc
 import scala.concurrent.Await
 import scala.concurrent.duration._
-```
-```scala mdoc
 val result = Await.result(future, 2.seconds)
 ```
-
 
 ### Inserting Data
 
