@@ -52,6 +52,7 @@ The simplest way to build the book is to use [Docker Compose](http://docker.com)
 
 This will open a `bash` shell running inside the Docker container which contains all the dependencies to build the book. From the shell run:
 
+- `mkdir dist`
 - `npm install`; and then
 - `sbt`.
 
