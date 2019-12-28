@@ -309,17 +309,9 @@ In addition to a `Timestamp` (via `setTimestamp`), you can set: `Boolean`, `Byte
 
 There's further symmetry with `GetResuts` in that we could have used `>>` in our `SetParameter`:
 
-```scala
+```scala mdoc:nest
 implicit val SetDateTime = SetParameter[DateTime](
   (dt, pp) => pp >> new Timestamp(dt.getMillis))
-```
-
-```scala mdoc:invisible
-// validate the above code without introducing a duplicate implicit:
-object Hidden1 {
-  implicit val SetDateTime = SetParameter[DateTime](
-    (dt, pp) => pp >> new Timestamp(dt.getMillis))
-}
 ```
 
 With this in place we can construct Plain SQL updates using `DateTime` instances:
