@@ -524,7 +524,7 @@ val tryAction = DBIO.failed(new RuntimeException("Boom!"))
 We can place this inside `Try` by combining the action with `asTry`:
 
 ```scala mdoc
-exec(work.asTry)
+exec(tryAction.asTry)
 ```
 
 And successful actions will evaluate to a `Success[T]`:
