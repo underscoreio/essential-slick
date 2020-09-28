@@ -7,8 +7,8 @@ lazy val root = project
     scalaVersion := "2.13.1",
     version := "3.0.0",
     libraryDependencies ++= Seq(
-      "com.typesafe.slick" %% "slick"           % "3.3.2",
-      "com.typesafe.slick" %% "slick-hikaricp"  % "3.3.2",
+      "com.typesafe.slick" %% "slick"           % "3.3.3",
+      "com.typesafe.slick" %% "slick-hikaricp"  % "3.3.3",
       "com.h2database"      % "h2"              % "1.4.200",
       "ch.qos.logback"      % "logback-classic" % "1.2.3",
       "joda-time"           % "joda-time"       % "2.10.5",

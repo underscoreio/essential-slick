@@ -1,16 +1,21 @@
-sudo: required
+os: linux
+
 services:
 - docker
+
 language: scala
 scala:
-- 2.12.2
+- 2.13.1
+
 cache:
   directories:
+  - $HOME/.cache/coursier
   - "$HOME/.ivy2/cache"
-  - "$HOME/.sbt/boot"
+  - "$HOME/.sbt"
+
 script:
-- sudo mkdir .sbt
-- sudo mkdir dist
+- mkdir .sbt
+- mkdir dist
 - docker-compose run book npm install
 - docker-compose run book ./sbt.sh pdf html epub ; export SBT_RESULT=$?
 - test "$SBT_RESULT" == "0"
