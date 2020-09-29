@@ -4,7 +4,7 @@ lazy val root = project
   .settings(
     mdocIn := sourceDirectory.value / "pages",
     mdocOut := target.value / "pages",
-    scalaVersion := "2.13.1",
+    scalaVersion := "2.13.3",
     version := "3.0.0",
     libraryDependencies ++= Seq(
       "com.typesafe.slick" %% "slick"           % "3.3.3",

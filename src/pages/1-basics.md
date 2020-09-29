@@ -162,7 +162,7 @@ name := "essential-slick-chapter-01"
 
 version := "1.0.0"
 
-scalaVersion := "2.13.1"
+scalaVersion := "2.13.3"
 
 libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick"           % "3.3.3",
