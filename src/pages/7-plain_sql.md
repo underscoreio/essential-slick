@@ -197,11 +197,11 @@ And Slick knows how to handle `Long` and `String`.
 So that leaves us with `Option[DateTime]` and the `Message` itself.
 
 For optional values, Slick provides `nextXXXOption` methods, such as `nextLongOption`.
-For the optional date time we read the database value using `nextTimestampOption` and then `map` to the right type:
+For the optional date time we read the database value using `nextTimestampOption()` and then `map` to the right type:
 
 ```scala mdoc
 implicit val GetOptionalDateTime = GetResult[Option[DateTime]](r =>
-  r.nextTimestampOption.map(ts => new DateTime(ts, UTC))
+  r.nextTimestampOption().map(ts => new DateTime(ts, UTC))
 )
 ```
 
@@ -693,7 +693,7 @@ The steps are:
 import slick.jdbc.GetResult
 
 implicit val GetFirstAndLast =
-  GetResult[FirstAndLast](r => FirstAndLast(r.nextString, r.nextString))
+  GetResult[FirstAndLast](r => FirstAndLast(r.nextString(), r.nextString()))
 
 
 val query =  sql""" select min("content"), max("content")

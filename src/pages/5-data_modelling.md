@@ -248,7 +248,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
     class UserTable3(tag: Tag) extends Table[User](tag, "user") {
       def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
       def name = column[String]("name")
-      def * = (name, id) <> (User.tupled, User.unapply)
+      def * = (name, id).<>(User.tupled, User.unapply)
     }
 ```
 
@@ -288,7 +288,7 @@ and Slick builds the resulting shape. Here our `B` is the `User` case class:
     class UserTable3(tag: Tag) extends Table[User](tag, "user") {
       def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
       def name = column[String]("name")
-      def * = (name, id) <> (User.tupled, User.unapply)
+      def * = (name, id).<>(User.tupled, User.unapply)
     }
     ```
     <!-- If you change this ^^ code update the invisible block above -->
@@ -327,7 +327,7 @@ and write:
 class UserTable(tag: Tag) extends Table[User](tag, "user") {
   def id   = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def name = column[String]("name")
-  def * = (name, id) <> (intoUser, fromUser)
+  def * = (name, id).<>(intoUser, fromUser)
 }
 ```
 
@@ -1786,7 +1786,7 @@ The most important points are:
 - We can represent rows in a variety of ways: tuples, `HList`s,
   and arbitrary classes and case classes via the `mapTo` macro.
 
-- If we need more control over a mapping from columns to other data structures, the `<>` method is avaiilable.
+- If we need more control over a mapping from columns to other data structures, the `<>` method is available.
 
 - We can represent individual values in columns
   using arbitrary Scala data types
@@ -2257,7 +2257,7 @@ class LegacyUserTable(tag: Tag) extends Table[User](tag, "legacy") {
      user.address.city, user.address.country, user.id)
   )
 
-  def * = (name, email, street, city, country, id) <> (pack, unpack)
+  def * = (name, email, street, city, country, id).<>(pack, unpack)
 }
 
 lazy val legacyUsers = TableQuery[LegacyUserTable]
