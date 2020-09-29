@@ -4,35 +4,36 @@
 
 Slick is a Scala library for accessing relational databases using an interface similar to the Scala collections library. You can treat queries like collections, transforming and combining them with methods like `map`, `flatMap`, and `filter` before sending them to the database to fetch results. This is how we'll be working with Slick for the majority of this text.
 
-Standard Slick queries are written in plain Scala. These are *type safe* expressions that benefit from compile time error checking. They also *compose*, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also allows you to write plain SQL queries.
+Standard Slick queries are written in plain Scala. These are _type safe_ expressions that benefit from compile time error checking. They also _compose_, allowing us to build complex queries from simple fragments before running them against the database. If writing queries in Scala isn't your style, you'll be pleased to know that Slick also allows you to write plain SQL queries.
 
 In addition to querying, Slick helps you with all the usual trappings of relational database, including connecting to a database, creating a schema, setting up transactions, and so on. You can even drop down below Slick to deal with JDBC (Java Database Connectivity) directly, if that's something you're familiar with and find you need.
 
 This book provides a compact, no-nonsense guide to everything you need to know to use Slick in a commercial setting:
 
- - Chapter 1 provides an abbreviated overview of the library as a whole, demonstrating the fundamentals of data modelling, connecting to the database, and running queries.
- - Chapter 2 covers basic select queries, introducing Slick's query language and delving into some of the details of type inference and type checking.
- - Chapter 3 covers queries for inserting, updating, and deleting data.
- - Chapter 4 discusses data modelling, including defining custom column and table types.
- - Chapter 5 looks at actions and how you combine multiple actions together.
- - Chapter 6 explores advanced select queries, including joins and aggregates.
- - Chapter 7 provides a brief overview of _Plain SQL_ queries---a useful tool when you need fine control over the SQL sent to your database.
+- Chapter 1 provides an abbreviated overview of the library as a whole, demonstrating the fundamentals of data modelling, connecting to the database, and running queries.
+- Chapter 2 covers basic select queries, introducing Slick's query language and delving into some of the details of type inference and type checking.
+- Chapter 3 covers queries for inserting, updating, and deleting data.
+- Chapter 4 discusses data modelling, including defining custom column and table types.
+- Chapter 5 looks at actions and how you combine multiple actions together.
+- Chapter 6 explores advanced select queries, including joins and aggregates.
+- Chapter 7 provides a brief overview of _Plain SQL_ queries---a useful tool when you need fine control over the SQL sent to your database.
 
 <div class="callout callout-info">
 **Slick isn't an ORM**
 
-If you're familiar with other database libraries such as [Hibernate][link-hibernate] or [Active Record][link-active-record], you might expect Slick to be an *Object-Relational Mapping (ORM)* tool. It is not, and it's best not to think of Slick in this way.
+If you're familiar with other database libraries such as [Hibernate][link-hibernate] or [Active Record][link-active-record], you might expect Slick to be an _Object-Relational Mapping (ORM)_ tool. It is not, and it's best not to think of Slick in this way.
 
 ORMs attempt to map object oriented data models onto relational database backends. By contrast, Slick provides a more database-like set of tools such as queries, rows and columns. We're not going to argue the pros and cons of ORMs here, but if this is an area that interests you, take a look at the [Coming from ORM to Slick][link-ref-orm] article in the Slick manual.
 
 If you aren't familiar with ORMs, congratulations. You already have one less thing to worry about!
+
 </div>
 
 ## Running the Examples and Exercises
 
 The aim of this first chapter is to provide a high-level overview of the core concepts involved in Slick, and get you up and running with a simple end-to-end example. You can grab this example now by cloning the Git repo of exercises for this book:
 
-~~~ bash
+```bash
 bash$ git clone git@github.com:underscoreio/essential-slick-code.git
 Cloning into 'essential-slick-code'...
 
@@ -47,15 +48,15 @@ chapter-04
 chapter-05
 chapter-06
 chapter-07
-~~~
+```
 
 Each chapter of the book is associated with a separate sbt project that provides a combination of examples and exercises. We've bundled everything you need to run sbt in the directory for each chapter.
 
-We'll be using a running example of a chat application similar to *Slack*, *Gitter*, or *IRC*. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
+We'll be using a running example of a chat application similar to _Slack_, _Gitter_, or _IRC_. The app will grow and evolve as we proceed through the book. By the end it will have users, messages, and rooms, all modelled using tables, relationships, and queries.
 
 For now, we will start with a simple conversation between two famous celebrities. Change to the `chapter-01` directory now, use the `sbt` command to start sbt, and compile and run the example to see what happens:
 
-~~~ bash
+```bash
 bash$ cd chapter-01
 
 bash$ sbt
@@ -78,7 +79,7 @@ Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
 Selecting only messages from HAL:
 Message("HAL","Affirmative, Dave. I read you.",2)
 Message("HAL","I'm sorry, Dave. I'm afraid I can't do that.",4)
-~~~
+```
 
 If you get output similar to the above, congratulations! You're all set up and ready to run with the examples and exercises throughout the rest of this book. If you encounter any errors, let us know on our [Gitter channel][link-underscore-gitter] and we'll do what we can to help out.
 
@@ -87,10 +88,11 @@ If you get output similar to the above, congratulations! You're all set up and r
 
 The first time you run sbt, it will download a lot of library dependencies from the Internet and cache them on your hard drive. This means two things:
 
- - you need a working Internet connection to get started; and
- - the first `compile` command you issue could take a while to complete.
+- you need a working Internet connection to get started; and
+- the first `compile` command you issue could take a while to complete.
 
 If you haven't used sbt before, you may find the [sbt Getting Started Guide][link-sbt-tutorial] useful.
+
 </div>
 
 ## Working Interactively in the sbt Console
@@ -103,7 +105,7 @@ the example projects define an `exec` method and import the base requirements to
 You can see this by starting `sbt` and then running the `console` command.
 Which will give output similar to:
 
-~~~ scala
+```scala
 > console
 [info] Starting scala interpreter...
 [info]
@@ -119,7 +121,7 @@ db: slick.jdbc.H2Profile.backend.Database = slick.jdbc.JdbcBackend$DatabaseDef@a
 exec: [T](program: slick.jdbc.H2Profile.api.DBIO[T])T
 res0: Option[Int] = Some(4)
 scala>
-~~~
+```
 
 Our `exec` helper runs a query and waits for the output.
 There is a complete explanation of `exec` and these imports later in the chapter.
@@ -138,7 +140,6 @@ But we're getting ahead of ourselves.
 We'll work though building up queries and running them, and using `exec`, as we work through this chapter.
 If the above works for you, great---you have a development environment set up and ready to go.
 
-
 ## Example: A Sequel Odyssey
 
 The test application we saw above creates an in-memory database using [H2][link-h2-home], creates a single table, populates it with test data, and then runs some example queries. The rest of this section will walk you through the code and provide an overview of things to come. We'll reproduce the essential parts of the code in the text, but you can follow along in the codebase for the exercises as well.
@@ -148,14 +149,15 @@ The test application we saw above creates an in-memory database using [H2][link-
 
 All of the examples in this book use the [H2][link-h2-home] database. H2 is written in Java and runs in-process beside our application code. We've picked H2 because it allows us to forego any system administration and skip to writing Scala.
 
-You might prefer to use *MySQL*, *PostgreSQL*, or some other database---and you can. In [Appendix A](#altdbs) we point you at the changes you'll need to make to work with other databases. However, we recommend sticking with H2 for at least this first chapter so you can build confidence using Slick without running into database-specific complications.
+You might prefer to use _MySQL_, _PostgreSQL_, or some other database---and you can. In [Appendix A](#altdbs) we point you at the changes you'll need to make to work with other databases. However, we recommend sticking with H2 for at least this first chapter so you can build confidence using Slick without running into database-specific complications.
+
 </div>
 
 ### Library Dependencies
 
 Before diving into Scala code, let's look at the sbt configuration. You'll find this in `build.sbt` in the example:
 
-~~~ scala
+```scala
 name := "essential-slick-chapter-01"
 
 version := "1.0.0"
@@ -163,11 +165,11 @@ version := "1.0.0"
 scalaVersion := "2.13.1"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick"           % "3.3.2",
+  "com.typesafe.slick" %% "slick"           % "3.3.3",
   "com.h2database"      % "h2"              % "1.4.200",
   "ch.qos.logback"      % "logback-classic" % "1.2.3"
 )
-~~~
+```
 
 This file declares the minimum library dependencies for a Slick project:
 
@@ -181,7 +183,7 @@ If we were using a separate database like MySQL or PostgreSQL, we would substitu
 
 ### Importing Library Code
 
-Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific *profile*. For example, we access most of the Slick API for H2 via the following `import`:
+Database management systems are not created equal. Different systems support different data types, different dialects of SQL, and different querying capabilities. To model these capabilities in a way that can be checked at compile time, Slick provides most of its API via a database-specific _profile_. For example, we access most of the Slick API for H2 via the following `import`:
 
 ```scala mdoc:silent
 import slick.jdbc.H2Profile.api._
@@ -200,7 +202,6 @@ case class Message(
   id:      Long = 0L)
 ```
 
-
 Next we define a `Table` object, which corresponds to our database table and tells Slick how to map back and forth between database data and instances of our case class:
 
 ```scala mdoc
@@ -216,7 +217,7 @@ class MessageTable(tag: Tag) extends Table[Message](tag, "message") {
 
 `MessageTable` defines three `column`s: `id`, `sender`, and `content`. It defines the names and types of these columns, and any constraints on them at the database level. For example, `id` is a column of `Long` values, which is also an auto-incrementing primary key.
 
-The `*` method provides a *default projection* that maps between columns in the table and instances of our case class. 
+The `*` method provides a _default projection_ that maps between columns in the table and instances of our case class.
 Slick's `mapTo` macro creates a two-way mapping between the three columns and the three fields in `Message`.
 
 We'll cover projections and default projections in detail in [Chapter 5](#Modelling).
@@ -233,27 +234,26 @@ Slick allows us to define and compose queries in advance of running them against
 val messages = TableQuery[MessageTable]
 ```
 
-Note that we're not *running* this query at the moment---we're simply defining it as a means to build other queries. For example, we can create a `SELECT * WHERE` style query using a combinator called `filter`:
+Note that we're not _running_ this query at the moment---we're simply defining it as a means to build other queries. For example, we can create a `SELECT * WHERE` style query using a combinator called `filter`:
 
 ```scala mdoc
 val halSays = messages.filter(_.sender === "HAL")
 ```
 
-Again, we haven't run this query yet---we've defined it as a building block for yet more queries. This demonstrates an important part of Slick's query language---it is made from *composable* elements that permit a lot of valuable code re-use.
+Again, we haven't run this query yet---we've defined it as a building block for yet more queries. This demonstrates an important part of Slick's query language---it is made from _composable_ elements that permit a lot of valuable code re-use.
 
 <div class="callout callout-info">
 **Lifted Embedding**
 
-If you're a fan of terminology, know that what we have discussed so far is called the *lifted embedding* approach in Slick:
+If you're a fan of terminology, know that what we have discussed so far is called the _lifted embedding_ approach in Slick:
 
- - define data types to store row data (case classes, tuples, or other types);
- - define `Table` objects representing mappings between our data types and the database;
- - define `TableQueries` and combinators to build useful queries before we run them against the database.
+- define data types to store row data (case classes, tuples, or other types);
+- define `Table` objects representing mappings between our data types and the database;
+- define `TableQueries` and combinators to build useful queries before we run them against the database.
 
-Lifted embedding is the standard way to work with Slick. We will discuss the other approach, called *Plain SQL querying*, in [Chapter 7](#PlainSQL).
+Lifted embedding is the standard way to work with Slick. We will discuss the other approach, called _Plain SQL querying_, in [Chapter 7](#PlainSQL).
+
  </div>
-
-
 
 ### Configuring the Database
 
@@ -293,12 +293,13 @@ We'll look at transactions in [Chapter 4](#combining).
 <div class="callout callout-info">
 **JDBC**
 
-If you don't have a background working with Java, you may not have heard of Java Database Connectivity (JDBC).  It's a specification for accessing databases in a vendor
+If you don't have a background working with Java, you may not have heard of Java Database Connectivity (JDBC). It's a specification for accessing databases in a vendor
 neutral way. That is, it aims to be independent of the specific database you are connecting to.
 
-The specification is mirrored by a library implemented for each database you want to connect to. This library is called  the *JDBC driver*.
+The specification is mirrored by a library implemented for each database you want to connect to. This library is called the _JDBC driver_.
 
-JDBC works with *connection strings*, which are URLs like the one above that tell the driver where your database is and how to connect to it (e.g. by providing login credentials).
+JDBC works with _connection strings_, which are URLs like the one above that tell the driver where your database is and how to connect to it (e.g. by providing login credentials).
+
 </div>
 
 ### Creating the Schema
@@ -329,6 +330,7 @@ In this book we will talk about actions as having the type `DBIO[T]`.
 This is a simplification. The more general type is `DBIOAction`, and specifically for this example, it is a `DBIOAction[Unit, NoStream, Effect.Schema]`. The details of all of this we will get to later in the book.
 
 But `DBIO[T]` is a type alias supplied by Slick, and is perfectly fine to use.
+
 </div>
 
 Let's run this action:
@@ -340,7 +342,7 @@ val future: Future[Unit] = db.run(action)
 
 The result of `run` is a `Future[T]`, where `T` is the type of result returned by the database. Creating a schema is a side-effecting operation so the result type is `Future[Unit]`. This matches the type `DBIO[Unit]` of the action we started with.
 
-`Future`s are asynchronous. That's to say, they are placeholders for values that will eventually appear. We say that a future _completes_ at some point. In production code,  futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can block until our action completes:
+`Future`s are asynchronous. That's to say, they are placeholders for values that will eventually appear. We say that a future _completes_ at some point. In production code, futures allow us to chain together computations without blocking to wait for a result. However, in simple examples like this we can block until our action completes:
 
 ```scala mdoc
 import scala.concurrent.Await
@@ -425,14 +427,15 @@ def exec[T](action: DBIO[T]): T =
 All `exec` does is run the supplied action and wait for the result.
 For example, to run a select query we can write:
 
-~~~ scala
+```scala
 exec(messages.result)
-~~~
+```
 
 Use of `Await.result` is strongly discouraged in production code.
 Many web frameworks provide direct means of working with `Future`s without blocking.
 In these cases, the best approach is simply to transform the `Future` query result
 to a `Future` of an HTTP response and send that to the client.
+
 </div>
 
 If we want to retrieve a subset of the messages in our table,
@@ -473,7 +476,7 @@ exec(halSays.map(_.id).result)
 
 ### Combining Queries with For Comprehensions
 
-`Query` is a *monad*. It implements the methods `map`, `flatMap`, `filter`, and `withFilter`, making it compatible with Scala for comprehensions.
+`Query` is a _monad_. It implements the methods `map`, `flatMap`, `filter`, and `withFilter`, making it compatible with Scala for comprehensions.
 For example, you will often see Slick queries written in this style:
 
 ```scala mdoc
@@ -522,21 +525,21 @@ Combining actions is an important feature of Slick.
 For example, one reason for combining actions is to wrap them inside a transaction.
 In [Chapter 4](#combining) we'll see this, and also that actions can be composed with for comprehensions, just like queries.
 
-
 <div class="callout callout-danger">
 *Queries, Actions, Futures... Oh My!*
 
 The difference between queries, actions, and futures is a big point of confusion for newcomers to Slick 3. The three types share many properties: they all have methods like `map`, `flatMap`, and `filter`, they are all compatible with for comprehensions, and they all flow seamlessly into one another through methods in the Slick API. However, their semantics are quite different:
 
- - `Query` is used to build SQL for a single query. Calls to `map` and `filter` modify clauses to the SQL, but only one query is created.
+- `Query` is used to build SQL for a single query. Calls to `map` and `filter` modify clauses to the SQL, but only one query is created.
 
- - `DBIOAction` is used to build sequences of SQL queries. Calls to `map` and `filter` chain queries together and transform their results once they are retrieved in the database. `DBIOAction` is also used to delineate transactions.
+- `DBIOAction` is used to build sequences of SQL queries. Calls to `map` and `filter` chain queries together and transform their results once they are retrieved in the database. `DBIOAction` is also used to delineate transactions.
 
- - `Future` is used to transform the asynchronous result of running a `DBIOAction`. Transformations on `Future`s happen after we have finished speaking to the database.
+- `Future` is used to transform the asynchronous result of running a `DBIOAction`. Transformations on `Future`s happen after we have finished speaking to the database.
 
-In many cases (for example select queries) we create a `Query` first and convert it to a `DBIOAction` using the `result` method. In other cases (for example insert queries), the Slick API gives us a `DBIOAction` immediately, bypassing `Query`. In all cases, we *run* a `DBIOAction` using `db.run(...)`, turning it into a `Future` of the result.
+In many cases (for example select queries) we create a `Query` first and convert it to a `DBIOAction` using the `result` method. In other cases (for example insert queries), the Slick API gives us a `DBIOAction` immediately, bypassing `Query`. In all cases, we _run_ a `DBIOAction` using `db.run(...)`, turning it into a `Future` of the result.
 
 We recommend taking the time to thoroughly understand `Query`, `DBIOAction`, and `Future`. Learn how they are used, how they are similar, how they differ, what their type parameters represent, and how they flow into one another. This is perhaps the single biggest step you can take towards demystifying Slick 3.
+
 </div>
 
 ## Take Home Points
@@ -561,7 +564,7 @@ Start sbt using the `sbt` command and type `console` to enter the interactive Sc
 We've configured sbt to run the example application before giving you control,
 so you should start off with the test database set up and ready to go:
 
-~~~ bash
+```bash
 bash$ sbt
 # sbt logging...
 
@@ -570,7 +573,7 @@ bash$ sbt
 # Application runs...
 
 scala>
-~~~
+```
 
 Start by inserting an extra line of dialog into the database.
 This line hit the cutting room floor late in the development of the film 2001,
@@ -609,7 +612,6 @@ If you don't wait for the future to complete, you'll see just the future itself:
 val f = db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
 ```
 
-
 ```scala mdoc:invisible
 
   // Post-exercise clean up
@@ -629,6 +631,7 @@ val f = db.run(messages += Message("Dave","What if I say 'Pretty please'?"))
   val rowCountCheck = exec(ex1cleanup)
   assert(rowCountCheck == 1, s"Wrong number of rows after cleaning up ex1: $rowCountCheck")
 ```
+
 </div>
 
 Now retrieve the new dialog by selecting all messages sent by Dave.
@@ -651,7 +654,6 @@ As the `Future` will evaluate to a collection of `Message`, we can `foreach` ove
 val sentByDave: Seq[Message] = exec(messages.filter(_.sender === "Dave").result)
 sentByDave.foreach(println)
 ```
-
 
 Here are some things that might go wrong:
 
@@ -677,4 +679,5 @@ exec(messages.filter(_.sender === "Dave"))
 `Query` types tend to be verbose, which can be distracting from the actual cause of the problem
 (which is that we're not expecting a `Query` object at all).
 We will discuss `Query` types in more detail next chapter.
+
 </div>
