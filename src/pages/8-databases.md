@@ -25,7 +25,7 @@ In summary you will need to ensure that:
 
 Each chapter uses its own database---so these steps will need to be applied for each chapter.
 
-We've given detailed instructions for two populate databases below.
+We've given detailed instructions for two populated databases below.
 
 ## PostgreSQL
 

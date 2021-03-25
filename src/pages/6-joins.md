@@ -1150,7 +1150,7 @@ users.join(messages).on(_.id === _.senderId)
 //  Seq] = Rep(Join Inner)
 ```
 
-The return type is effectively type is `Seq[User, Message]`.
+The return type is effectively `Seq[(User, Message)]`.
 
 Sometimes you'll really want something like a `Map[User, Seq[Message]]`.
 
