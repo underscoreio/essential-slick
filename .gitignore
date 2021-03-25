@@ -6,6 +6,9 @@ Thumbs.db
 
 !.gitkeep
 
+/.vscode/
+/.metals/
+
 .rbenv-version
 .rvmrc
 /dist/

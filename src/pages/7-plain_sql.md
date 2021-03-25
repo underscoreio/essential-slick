@@ -532,7 +532,7 @@ val setupResult = exec(setup)
 
 ### Plain Selects
 
-Let's get warmed up some some simple exercises.
+Let's get warmed up with some simple exercises.
 
 Write the following four queries as Plain SQL queries:
 
