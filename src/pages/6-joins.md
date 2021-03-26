@@ -766,14 +766,14 @@ val firstSent: DBIO[Option[Long]] =
 ```
 
 While `length` returns an `Int`, the other functions return an `Option`.
-This is because there may be no rows returned by the query, meaning the is no minimum, maximum and so on.
+This is because there may be no rows returned by the query, meaning there is no minimum, no maximum and so on.
 
 
 ### Grouping
 
 Aggregate functions are often used with column grouping.
 For example, how many messages has each user sent?
-That's a grouping (by user) of a aggregate (count).
+That's a grouping (by user) of an aggregate (count).
 
 #### `groupBy`
 
