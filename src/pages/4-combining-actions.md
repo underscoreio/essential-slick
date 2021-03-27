@@ -370,7 +370,7 @@ val manyUpdates: DBIO[Seq[DBIO[Int]]] =
 Note the crazy type signature.
 
 You can find yourself in this awkward situation when you're trying to do something like a join, but not quite.
-The puzzle is how to run this kind of a beast.
+The puzzle is how to run this kind of beast.
 
 This is where `DBIO.sequence` saves us.
 Rather than produce many actions via `msgs.map(reverse)` we use `DBIO.sequence` to return a single action:

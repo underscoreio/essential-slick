@@ -194,7 +194,7 @@ val applicative1: Query[(MessageTable, UserTable), (Message, User), Seq] =
   messages join users on (_.senderId === _.id)
 ```
 
-As you can see, this code produces be a query of `(MessageTable, UserTable)`.
+As you can see, this code produces a query of `(MessageTable, UserTable)`.
 If we want to, we can be more explicit about the values used in the `on` part:
 
 ```scala mdoc
@@ -567,7 +567,7 @@ exec(outer.result).foreach(println)
 <div class="callout callout-info">
 At the time of writing H2 does not support full outer joins.
 Whereas earlier versions of Slick would throw a runtime exception,
-Slick 3 compiles the query into to something that will run,
+Slick 3 compiles the query into something that will run,
 emulating a full outer join.
 </div>
 
