@@ -271,7 +271,7 @@ This all means that `map` is a powerful combinator for controlling the `SELECT` 
 Sometimes we are less interested in the contents of a queries result than if results exist at all.
 For this we have `exists`, which will return `true` if the result set is not empty and false otherwise.
 
-Let's look at quick example to show how we can use an existing query with the `exists` keyword:
+Let's look at a quick example to show how we can use an existing query with the `exists` keyword:
 
 ```scala mdoc
 val containsBay = for {

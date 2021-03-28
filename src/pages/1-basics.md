@@ -137,7 +137,7 @@ exec(messages.result)
 ```
 
 But we're getting ahead of ourselves.
-We'll work though building up queries and running them, and using `exec`, as we work through this chapter.
+We'll work through building up queries and running them, and using `exec`, as we work through this chapter.
 If the above works for you, great---you have a development environment set up and ready to go.
 
 ## Example: A Sequel Odyssey
@@ -224,7 +224,7 @@ We'll cover projections and default projections in detail in [Chapter 5](#Modell
 For now, all we need to know is that this line allows us to query the database and get back `Messages` instead of tuples of `(String, String, Long)`.
 
 The `tag` on the first line is an implementation detail that allows Slick to manage multiple uses of the table in a single query.
-Think of it like a table alias in SQL. We don't need to provide tags in our user code---Slick takes case of them automatically.
+Think of it like a table alias in SQL. We don't need to provide tags in our user code---Slick takes care of them automatically.
 
 ### Example Queries
 
