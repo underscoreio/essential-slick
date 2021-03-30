@@ -123,7 +123,7 @@ exec(messages.filter(_.id === 1000L).result)
 
 ### Retrieving Primary Keys on Insert
 
-When the database allocates primary keys for us it's often the case that we want get the key back after an insert.
+When the database allocates primary keys for us it's often the case that we want to get the key back after an insert.
 Slick supports this via the `returning` method:
 
 ```scala mdoc
@@ -537,7 +537,7 @@ Databases have different capabilities. The limitations of each profile is listed
 
 ## Exercises
 
-The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against a H2 database.
+The code for this chapter is in the [GitHub repository][link-example] in the _chapter-03_ folder.  As with chapter 1 and 2, you can use the `run` command in SBT to execute the code against an H2 database.
 
 
 <div class="callout callout-info">

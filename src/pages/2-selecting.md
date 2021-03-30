@@ -637,7 +637,7 @@ Scala Code             SQL Equivalent
 
 :  Methods for ordering, skipping, and limiting the results of a query.
 
-We'll look at each in turn, starting with an example of `sortBy`. Say we want want messages in order of the sender's name:
+We'll look at each in turn, starting with an example of `sortBy`. Say we want messages in order of the sender's name:
 
 ```scala mdoc
 exec(messages.sortBy(_.sender).result).foreach(println)
@@ -770,7 +770,7 @@ queryIf.result.statements.mkString
 ```
 
 Here we see a condition of `ID > 100` added to the query because `hideOldMessages` is `true`.
-If it where false, the query would not contain the where clause.
+If it were false, the query would not contain the where clause.
 
 The great convenience of `filterIf` and `filterOpt` is that you can chain them one after another
 to build up concise dynamic queries:
