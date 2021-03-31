@@ -616,7 +616,7 @@ val conversation = List(
   Message("Bob",  "Oh, nothing, just wondering."),
   Message("Alice","Ten was too many messages"),
   Message("Bob",  "I could do with a sleep"),
-  Message("Alice","Let's just to to the point"),
+  Message("Alice","Let's just get to the point"),
   Message("Bob",  "Okay okay, no need to be tetchy."),
   Message("Alice","Humph!"))
 ```

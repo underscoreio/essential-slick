@@ -605,7 +605,7 @@ parameter - \--------+---------------------------/
 
 ## Transactions {#Transactions}
 
-So far each of the changes we've made to the database have run independently of the others. That is, each insert, update, or delete query we run can succeed or fail independently of the rest.
+So far each of the changes we've made to the database run independently of the others. That is, each insert, update, or delete query we run can succeed or fail independently of the rest.
 
 We often want to tie sets of modifications together in a *transaction* so that they either *all* succeed or *all* fail. We can do this in Slick using the `transactionally` method.
 
