@@ -130,7 +130,7 @@ when we instantiate the database code:
 val anotherDatabaseLayer = new DatabaseLayer(slick.jdbc.PostgresProfile)
 ```
 
-This basic pattern is reasonable way of structuring your application.
+This basic pattern is a reasonable way of structuring your application.
 
 <!--
 ### Namespacing Queries
