@@ -42,7 +42,8 @@ You can provide feedback on this text via:
 
 * email to [hello@underscore.io][link-email-underscore] using the subject line of "Essential Slick".
 
-The [Underscore Newsletter][link-newsletter] contains announcements regarding this and other publications from Underscore.
+## Getting help using Slick {-}
 
-You can follow us on Twitter as [\@underscoreio][link-twitter-underscore].
+If you have questions about using Slick, ask a question on the [Slick Gitter channel][link-slick-gitter] or use the ["slick" tag at Stackoverflow][link-slick-so].
+
 

@@ -3,6 +3,8 @@
 [link-book-pr]: https://github.com/underscoreio/essential-slick/pulls
 [link-book-repo]: https://github.com/underscoreio/essential-slick/
 [link-slick]: https://scala-slick.org/
+[link-slick-gitter]:https://gitter.im/slick/slick
+[link-slick-so]: https://stackoverflow.com/questions/tagged/slick
 [link-ref-dbs]: https://scala-slick.org/doc/3.3.3/supported-databases.html
 [link-ref-gen]: https://scala-slick.org/doc/3.3.3/code-generation.html
 [link-ref-h2driver]: https://scala-slick.org/doc/3.3.3/api/#slick.jdbc.H2Profile
